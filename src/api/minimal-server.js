@@ -12,14 +12,44 @@ import { createOrchestrator } from '../core/orchestrator.js';
 import { createStrategyRegistry } from '../core/strategies.js';
 import { createAnalysisRequirements } from '../core/types.js';
 
-// Simple HTTP response utilities
-const sendJSON = (res, data, status = 200) => {
-  res.writeHead(status, { 
+// Secure ID generation
+const generateSecureId = (prefix = '') => {
+  const crypto = require('crypto');
+  const timestamp = Date.now();
+  const random = crypto.randomBytes(16).toString('hex');
+  return prefix ? `${prefix}_${timestamp}_${random}` : `${timestamp}_${random}`;
+};
+
+// Secure CORS configuration
+const getAllowedOrigins = () => {
+  const origins = process.env.CORS_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000';
+  return origins.split(',').map(o => o.trim());
+};
+
+const setCORSHeaders = (req, res, origin = null) => {
+  const allowedOrigins = getAllowedOrigins();
+  const requestOrigin = req.headers.origin;
+  
+  if (!origin && requestOrigin && allowedOrigins.includes(requestOrigin)) {
+    origin = requestOrigin;
+  } else if (!origin) {
+    origin = allowedOrigins[0];
+  }
+  
+  return {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-  });
+    'Access-Control-Allow-Origin': origin || 'null',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key',
+    'Access-Control-Allow-Credentials': 'false',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY'
+  };
+};
+
+// Simple HTTP response utilities
+const sendJSON = (res, data, status = 200, req = null) => {
+  res.writeHead(status, setCORSHeaders(req, res));
   res.end(JSON.stringify(data));
 };
 
@@ -76,7 +106,7 @@ const createWebSocketManager = (orchestrator) => {
   const sessions = new Map();
   
   const handleConnection = (ws, request) => {
-    const sessionId = Date.now() + Math.random().toString(36);
+    const sessionId = generateSecureId('session');
     const session = {
       id: sessionId,
       ws,

@@ -5,11 +5,11 @@
  */
 
 import { createOrchestrator } from '../src/core/orchestrator.js';
-import { createBlazeFacePipeline } from '../src/pipelines/blazeface-pipeline.js';
+import { createBlazeFacePipeline } from '../src/pipelines/blazeface-pipeline-hybrid.js';
 import { createEyeTrackingPipeline } from '../src/pipelines/eye-tracking-pipeline.js';
-import { createMediaPipeFaceMeshPipeline } from '../src/pipelines/mediapipe-pipeline.js';
+import { createMediaPipeFaceMeshPipeline } from '../src/pipelines/mediapipe-pipeline-hybrid.js';
 import { createIrisTrackingPipeline } from '../src/pipelines/iris-tracking-pipeline.js';
-import { createEmotionAnalysisPipeline } from '../src/pipelines/emotion-analysis-pipeline.js';
+import { createEmotionAnalysisPipeline } from '../src/pipelines/emotion-analysis-pipeline-hybrid.js';
 import { createAgeEstimationPipeline } from '../src/pipelines/age-estimation-pipeline.js';
 import { Capability } from '../src/core/types.js';
 import { isDependencyAvailable, checkSystemCapabilities } from '../src/utils/dependency-loader.js';

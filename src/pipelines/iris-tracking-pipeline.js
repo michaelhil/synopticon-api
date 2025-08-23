@@ -461,6 +461,18 @@ export const createIrisTrackingPipeline = (config = {}) => {
         console.warn('⚠️ MediaPipe Iris cleanup error:', error);
         return false;
       }
-    }
+    },
+
+    // Pipeline health status
+    getHealthStatus: () => ({
+      healthy: !!iris,
+      runtime: 'browser', // MediaPipe Iris browser-only
+      backend: 'mediapipe-iris',
+      modelLoaded: !!iris,
+      smoothingEnabled: !!eyeTrackingFilter
+    }),
+
+    // Check if pipeline is initialized
+    isInitialized: () => !!iris
   });
 };

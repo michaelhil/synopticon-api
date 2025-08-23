@@ -15,7 +15,12 @@ export const Capability = {
   AGE_ESTIMATION: 'age_estimation',
   GENDER_DETECTION: 'gender_detection',
   GAZE_ESTIMATION: 'gaze_estimation',
-  DEVICE_CONTROL: 'device_control'
+  DEVICE_CONTROL: 'device_control',
+  SPEECH_RECOGNITION: 'speech_recognition',
+  SPEECH_ANALYSIS: 'speech_analysis',
+  CONVERSATION_CONTEXT: 'conversation_context',
+  MULTI_PROMPT_ANALYSIS: 'multi_prompt_analysis',
+  REAL_TIME_TRANSCRIPTION: 'real_time_transcription'
 };
 
 // Performance profile factory
@@ -743,4 +748,239 @@ export const createDeviceStatus = (config = {}) => ({
   charging: config.charging || false,
   temperature: config.temperature || null,
   timestamp: config.timestamp || Date.now()
+});
+
+// === SPEECH ANALYSIS DATA TYPES ===
+
+// Speech recognition result factory
+export const createSpeechRecognitionResult = (config = {}) => ({
+  timestamp: config.timestamp || Date.now(),
+  source: config.source || 'speech_recognition',
+  
+  // Transcription data
+  transcript: config.transcript || '',
+  confidence: config.confidence || 0,
+  isFinal: config.isFinal !== undefined ? config.isFinal : true,
+  isInterim: config.isInterim !== undefined ? config.isInterim : false,
+  
+  // Word-level breakdown
+  words: config.words || [],
+  
+  // Audio metadata
+  audioLength: config.audioLength || 0,
+  sampleRate: config.sampleRate || 16000,
+  
+  // Processing metadata
+  processingTime: config.processingTime || 0,
+  language: config.language || 'en-US',
+  
+  metadata: config.metadata || {}
+});
+
+// Speech word data factory
+export const createSpeechWord = (config = {}) => ({
+  word: config.word || '',
+  confidence: config.confidence || 0,
+  startTime: config.startTime || 0,
+  endTime: config.endTime || 0,
+  
+  // Alternative interpretations
+  alternatives: config.alternatives || [],
+  
+  metadata: config.metadata || {}
+});
+
+// Speech analysis result factory
+export const createSpeechAnalysisResult = (config = {}) => ({
+  timestamp: config.timestamp || Date.now(),
+  source: config.source || 'speech_analysis',
+  
+  // Original text being analyzed
+  text: config.text || '',
+  context: config.context || '',
+  
+  // Analysis results from multiple prompts
+  analyses: config.analyses || [],
+  
+  // Conversation context info
+  conversationContext: {
+    chunkIndex: config.conversationContext?.chunkIndex || 0,
+    totalChunks: config.conversationContext?.totalChunks || 1,
+    summary: config.conversationContext?.summary || '',
+    recentChunks: config.conversationContext?.recentChunks || []
+  },
+  
+  // Processing metadata
+  processingTime: config.processingTime || 0,
+  llmModel: config.llmModel || 'unknown',
+  systemPrompt: config.systemPrompt || '',
+  
+  metadata: config.metadata || {}
+});
+
+// Individual analysis result factory
+export const createAnalysisPromptResult = (config = {}) => ({
+  prompt: config.prompt || '',
+  result: config.result || '',
+  confidence: config.confidence || 0,
+  processingTime: config.processingTime || 0,
+  
+  // Error info if analysis failed
+  error: config.error || null,
+  
+  metadata: config.metadata || {}
+});
+
+// Conversation context factory
+export const createConversationContext = (config = {}) => ({
+  // Context identification
+  sessionId: config.sessionId || crypto.randomUUID(),
+  contextId: config.contextId || crypto.randomUUID(),
+  
+  // Current conversation chunks
+  chunks: config.chunks || [],
+  summary: config.summary || '',
+  
+  // Context management settings
+  maxChunks: config.maxChunks || 10,
+  summaryThreshold: config.summaryThreshold || 20,
+  
+  // Context statistics
+  totalChunks: config.totalChunks || 0,
+  totalWords: config.totalWords || 0,
+  averageConfidence: config.averageConfidence || 0,
+  
+  // Timestamps
+  startTime: config.startTime || Date.now(),
+  lastUpdate: config.lastUpdate || Date.now(),
+  
+  metadata: config.metadata || {}
+});
+
+// Speech chunk factory
+export const createSpeechChunk = (config = {}) => ({
+  // Chunk identification
+  chunkId: config.chunkId || crypto.randomUUID(),
+  index: config.index || 0,
+  
+  // Speech content
+  text: config.text || '',
+  confidence: config.confidence || 0,
+  
+  // Timing
+  timestamp: config.timestamp || Date.now(),
+  startTime: config.startTime || 0,
+  endTime: config.endTime || 0,
+  duration: config.duration || 0,
+  
+  // Audio characteristics
+  volume: config.volume || 0,
+  pitch: config.pitch || null,
+  
+  // Processing status
+  isProcessed: config.isProcessed || false,
+  analysisResults: config.analysisResults || [],
+  
+  metadata: config.metadata || {}
+});
+
+// LLM configuration factory
+export const createLLMConfig = (config = {}) => ({
+  // Model selection and priority
+  preferredBackend: config.preferredBackend || 'webllm',
+  fallbackBackends: config.fallbackBackends || ['transformers-js', 'mock'],
+  
+  // Model parameters
+  model: config.model || 'Llama-3.2-1B-Instruct-q4f32_1',
+  temperature: config.temperature || 0.7,
+  maxTokens: config.maxTokens || 100,
+  topP: config.topP || 0.9,
+  topK: config.topK || 40,
+  
+  // Performance settings
+  maxConcurrentRequests: config.maxConcurrentRequests || 3,
+  requestTimeout: config.requestTimeout || 30000,
+  
+  // Caching
+  enableCache: config.enableCache !== false,
+  cacheSize: config.cacheSize || 100,
+  
+  // System prompts
+  defaultSystemPrompt: config.defaultSystemPrompt || 'You are a helpful AI assistant analyzing speech. Keep responses to 25 words or less.',
+  
+  metadata: config.metadata || {}
+});
+
+// Speech pipeline status factory
+export const createSpeechPipelineStatus = (config = {}) => ({
+  // Pipeline state
+  isInitialized: config.isInitialized || false,
+  isListening: config.isListening || false,
+  isProcessing: config.isProcessing || false,
+  
+  // Speech recognition status
+  speechRecognition: {
+    available: config.speechRecognition?.available || false,
+    isActive: config.speechRecognition?.isActive || false,
+    language: config.speechRecognition?.language || 'en-US',
+    continuous: config.speechRecognition?.continuous || true,
+    interimResults: config.speechRecognition?.interimResults || true
+  },
+  
+  // LLM status
+  llm: {
+    backend: config.llm?.backend || null,
+    modelLoaded: config.llm?.modelLoaded || false,
+    model: config.llm?.model || null,
+    isReady: config.llm?.isReady || false
+  },
+  
+  // Conversation context status
+  context: {
+    activeSession: config.context?.activeSession || null,
+    chunkCount: config.context?.chunkCount || 0,
+    summaryLength: config.context?.summaryLength || 0,
+    lastActivity: config.context?.lastActivity || null
+  },
+  
+  // Performance metrics
+  metrics: {
+    totalTranscriptions: config.metrics?.totalTranscriptions || 0,
+    totalAnalyses: config.metrics?.totalAnalyses || 0,
+    averageLatency: config.metrics?.averageLatency || 0,
+    errorRate: config.metrics?.errorRate || 0,
+    uptime: config.metrics?.uptime || 0
+  },
+  
+  // Health indicators
+  health: {
+    overall: config.health?.overall || 'unknown',
+    speechRecognition: config.health?.speechRecognition || 'unknown',
+    llmBackend: config.health?.llmBackend || 'unknown',
+    performance: config.health?.performance || 'unknown'
+  },
+  
+  timestamp: config.timestamp || Date.now(),
+  metadata: config.metadata || {}
+});
+
+// Speech processing event factory
+export const createSpeechEvent = (config = {}) => ({
+  // Event identification
+  eventId: config.eventId || crypto.randomUUID(),
+  type: config.type || 'unknown', // 'speech_start', 'speech_end', 'analysis_complete', etc.
+  
+  // Event data
+  timestamp: config.timestamp || Date.now(),
+  data: config.data || {},
+  
+  // Context
+  sessionId: config.sessionId || null,
+  chunkId: config.chunkId || null,
+  
+  // Event metadata
+  source: config.source || 'speech_pipeline',
+  severity: config.severity || 'info', // 'info', 'warning', 'error'
+  
+  metadata: config.metadata || {}
 });

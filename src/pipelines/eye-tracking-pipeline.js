@@ -6,8 +6,7 @@
 
 import { createPipeline } from '../core/pipeline.js';
 import { createEyeTracker } from '../eye-tracking/index.js';
-import { createEyeTrackingResult, createGazeData } from '../core/types.js';
-import { Capability } from '../core/types.js';
+import { createEyeTrackingResult, createGazeData, Capability, createPerformanceProfile } from '../core/types.js';
 
 // Eye tracking pipeline factory
 export const createEyeTrackingPipeline = (config = {}) => {
@@ -350,6 +349,28 @@ export const createEyeTrackingPipeline = (config = {}) => {
     // Direct access to eye tracker for advanced usage
     getEyeTracker: () => eyeTracker,
     
+    // Pipeline health status (compatibility with hybrid pipelines)
+    getHealthStatus: () => ({
+      healthy: eyeTracker && eyeTracker.getStatus().connected,
+      runtime: 'universal', // Works in both browser and Node.js
+      backend: 'pupil-labs-neon',
+      modelLoaded: !!eyeTracker,
+      deviceConnected: eyeTracker ? eyeTracker.getStatus().connected : false
+    }),
+
+    // Check if pipeline is initialized (compatibility with hybrid pipelines)
+    isInitialized: () => !!eyeTracker,
+    
+    // Performance profile (standardization)
+    performance: createPerformanceProfile({
+      fps: 30,
+      latency: '5-15ms',
+      modelSize: 'Variable (hardware)',
+      cpuUsage: 'low',
+      memoryUsage: 'medium',
+      batteryImpact: 'high' // Hardware device
+    }),
+
     // Pipeline metadata
     name: 'eye-tracking',
     version: '1.0.0',

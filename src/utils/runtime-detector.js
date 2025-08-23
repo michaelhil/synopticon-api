@@ -64,12 +64,24 @@ export const createUniversalCanvas = async (width = 640, height = 480) => {
     canvas.height = height;
     return canvas;
   } else if (features.isNode) {
-    // Node.js environment - use node-canvas if available
+    // Node.js environment - enhanced canvas integration
     try {
-      const { createCanvas } = await import('canvas');
-      return createCanvas(width, height);
+      const { createCanvas, loadImage } = await import('canvas');
+      const canvas = createCanvas(width, height);
+      
+      // Enhance with browser-compatible methods
+      canvas.toBlob = (callback, type = 'image/png', quality = 1) => {
+        const buffer = canvas.toBuffer(type.replace('image/', ''));
+        const blob = new Blob([buffer], { type });
+        callback(blob);
+      };
+      
+      canvas.loadImage = loadImage;
+      
+      return canvas;
     } catch (error) {
-      // Fallback to mock canvas
+      console.warn('⚠️ node-canvas not available, using mock canvas:', error.message);
+      // Enhanced fallback with better compatibility
       return createMockCanvas(width, height);
     }
   } else {

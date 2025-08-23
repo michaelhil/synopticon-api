@@ -480,7 +480,19 @@ export const createMediaPipeFaceMeshPipeline = (config = {}) => {
         console.warn('⚠️ MediaPipe cleanup error:', error);
         return false;
       }
-    }
+    },
+
+    // Pipeline health status (standardization)
+    getHealthStatus: () => ({
+      healthy: !!faceMesh,
+      runtime: 'browser',
+      backend: 'mediapipe-legacy',
+      modelLoaded: !!faceMesh,
+      irisEnabled: !!iris
+    }),
+
+    // Check if pipeline is initialized (standardization)
+    isInitialized: () => !!faceMesh
   });
 };
 

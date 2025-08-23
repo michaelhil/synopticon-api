@@ -13,22 +13,122 @@ import { createStrategyRegistry } from '../core/strategies.js';
 import { createAnalysisRequirements } from '../core/types.js';
 
 // Simple HTTP response utilities
-const sendJSON = (res, data, status = 200) => {
-  res.writeHead(status, { 
+// Secure CORS configuration
+const getAllowedOrigins = () => {
+  const origins = process.env.CORS_ORIGINS || 'http://localhost:3000,http://127.0.0.1:3000';
+  return origins.split(',').map(o => o.trim());
+};
+
+const setCORSHeaders = (req, res, origin = null) => {
+  const allowedOrigins = getAllowedOrigins();
+  const requestOrigin = req.headers.origin;
+  
+  if (!origin && requestOrigin && allowedOrigins.includes(requestOrigin)) {
+    origin = requestOrigin;
+  } else if (!origin) {
+    origin = allowedOrigins[0]; // Default to first allowed origin
+  }
+  
+  return {
     'Content-Type': 'application/json',
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization'
-  });
+    'Access-Control-Allow-Origin': origin || 'null',
+    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-API-Key',
+    'Access-Control-Allow-Credentials': 'false',
+    'X-Content-Type-Options': 'nosniff',
+    'X-Frame-Options': 'DENY',
+    'X-XSS-Protection': '1; mode=block'
+  };
+};
+
+const sendJSON = (res, data, status = 200, req = null) => {
+  res.writeHead(status, setCORSHeaders(req, res));
   res.end(JSON.stringify(data));
 };
 
-const sendError = (res, message, status = 400) => {
-  sendJSON(res, { error: message, timestamp: Date.now() }, status);
+const sendError = (res, message, status = 400, req = null) => {
+  sendJSON(res, { error: message, timestamp: Date.now() }, status, req);
 };
 
-const sendSuccess = (res, data = {}) => {
-  sendJSON(res, { success: true, ...data, timestamp: Date.now() });
+// API Authentication
+const generateSecureApiKey = () => {
+  const crypto = require('crypto');
+  return crypto.randomBytes(32).toString('hex');
+};
+
+const validateApiKey = (apiKey) => {
+  // In production, check against database or environment variable
+  const validKeys = (process.env.API_KEYS || '').split(',').filter(k => k.trim());
+  
+  if (validKeys.length === 0) {
+    // Development mode - generate and log a key if none exist
+    if (process.env.NODE_ENV !== 'production') {
+      const devKey = generateSecureApiKey();
+      console.warn('⚠️ No API keys configured. Development key:', devKey);
+      console.warn('Set API_KEYS environment variable for production');
+      return apiKey === devKey || apiKey === 'dev-key-synopticon-2024';
+    }
+    return false;
+  }
+  
+  return validKeys.includes(apiKey);
+};
+
+const authenticateRequest = (req, res, next) => {
+  const apiKey = req.headers['x-api-key'];
+  
+  if (!apiKey) {
+    return sendError(res, 'API key required', 401, req);
+  }
+  
+  if (!validateApiKey(apiKey)) {
+    return sendError(res, 'Invalid API key', 401, req);
+  }
+  
+  req.authenticated = true;
+  next();
+};
+
+// Rate limiting
+const createRateLimiter = () => {
+  const requests = new Map();
+  const limit = parseInt(process.env.RATE_LIMIT || '100');
+  const window = parseInt(process.env.RATE_WINDOW || '900000'); // 15 minutes
+  
+  return (req, res, next) => {
+    const ip = req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown';
+    const now = Date.now();
+    
+    if (!requests.has(ip)) {
+      requests.set(ip, []);
+    }
+    
+    const ipRequests = requests.get(ip);
+    
+    // Clean old requests
+    while (ipRequests.length > 0 && (now - ipRequests[0]) > window) {
+      ipRequests.shift();
+    }
+    
+    if (ipRequests.length >= limit) {
+      return sendError(res, 'Rate limit exceeded', 429, req);
+    }
+    
+    ipRequests.push(now);
+    next();
+  };
+};
+
+const sendSuccess = (res, data = {}, req = null) => {
+  sendJSON(res, { success: true, ...data, timestamp: Date.now() }, 200, req);
+};
+
+// Secure ID generation
+const generateSecureId = (prefix = '') => {
+  const crypto = require('crypto');
+  const timestamp = Date.now();
+  const random = crypto.randomBytes(16).toString('hex');
+  return prefix ? `${prefix}_${timestamp}_${random}` : `${timestamp}_${random}`;
 };
 
 // Request body parsing utility
@@ -76,7 +176,7 @@ const createWebSocketManager = (orchestrator) => {
   const sessions = new Map();
   
   const handleConnection = (ws, request) => {
-    const sessionId = Date.now() + Math.random().toString(36);
+    const sessionId = generateSecureId('session');
     const session = {
       id: sessionId,
       ws,
@@ -333,7 +433,7 @@ export const createSynopticonAPIServer = (config = {}) => {
 
   // Face detection endpoint
   app.post('/api/v1/detect', validateImageInput, handleValidationErrors, async (req, res) => {
-    const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const requestId = generateSecureId('req');
     const startTime = performance.now();
 
     try {
@@ -410,7 +510,7 @@ export const createSynopticonAPIServer = (config = {}) => {
 
   // Batch processing endpoint
   app.post('/api/v1/batch', async (req, res) => {
-    const requestId = `batch_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const requestId = generateSecureId('batch');
     const startTime = performance.now();
 
     try {

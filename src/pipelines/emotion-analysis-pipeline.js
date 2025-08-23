@@ -503,7 +503,19 @@ export const createEmotionAnalysisPipeline = (config = {}) => {
         console.warn('⚠️ Emotion Analysis cleanup error:', error);
         return false;
       }
-    }
+    },
+
+    // Pipeline health status (standardization)
+    getHealthStatus: () => ({
+      healthy: !!cnn,
+      runtime: 'browser',
+      backend: 'cnn-legacy',
+      modelLoaded: !!cnn,
+      filterEnabled: !!emotionFilter
+    }),
+
+    // Check if pipeline is initialized (standardization)
+    isInitialized: () => !!cnn
   });
 };
 

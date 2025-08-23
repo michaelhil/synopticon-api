@@ -715,7 +715,19 @@ export const createAgeEstimationPipeline = (config = {}) => {
         console.warn('⚠️ Age Estimation cleanup error:', error);
         return false;
       }
-    }
+    },
+
+    // Pipeline health status
+    getHealthStatus: () => ({
+      healthy: !!ageEstimator && !!genderDetector,
+      runtime: 'browser', // Age estimation works in browser only for now
+      backend: 'feature-analysis',
+      modelLoaded: !!ageEstimator && !!genderDetector,
+      smoothingEnabled: !!smoothingFilter
+    }),
+
+    // Check if pipeline is initialized
+    isInitialized: () => !!ageEstimator
   });
 };
 

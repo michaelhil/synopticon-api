@@ -1,6 +1,6 @@
 {
   "name": "synopticon-api",
-  "version": "0.1.0-beta.1",
+  "version": "0.4.0",
   "description": "synopticon-api: an open-source platform for real-time multi-modal behavioral analysis and sensor synchronization",
   "main": "src/index.js",
   "type": "module",
@@ -38,7 +38,7 @@
   "trustedDependencies": ["@tensorflow/tfjs-node", "core-js", "esbuild", "vite", "vitest"],
   "peerDependencies": {},
   "optionalDependencies": {
-    "canvas": "^2.11.2"
+    "canvas": "^3.2.0"
   },
   "dependencies": {
     "@tensorflow-models/blazeface": "^0.1.0",

@@ -194,7 +194,18 @@ export const createBlazeFacePipeline = (config = {}) => {
         model = null;
       }
       return true;
-    }
+    },
+
+    // Pipeline health status (standardization)
+    getHealthStatus: () => ({
+      healthy: !!model,
+      runtime: 'browser',
+      backend: 'blazeface-legacy',
+      modelLoaded: !!model
+    }),
+
+    // Check if pipeline is initialized (standardization)
+    isInitialized: () => !!model
   });
 };
 
