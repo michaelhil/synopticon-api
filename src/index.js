@@ -8,7 +8,8 @@ import { createOrchestrator } from './core/orchestrator.js';
 export { createOrchestrator };
 
 // Export hybrid pipelines (primary interfaces)
-export { createBlazeFacePipeline } from './pipelines/blazeface-pipeline-hybrid.js';
+export { createMediaPipeFacePipeline } from './pipelines/mediapipe-face-pipeline.js'; // New lightweight face detection
+export { createBlazeFacePipeline } from './pipelines/blazeface-pipeline-hybrid.js'; // Legacy TensorFlow.js (deprecated)
 export { createMediaPipeFaceMeshPipeline } from './pipelines/mediapipe-pipeline-hybrid.js';
 export { createEmotionAnalysisPipeline } from './pipelines/emotion-analysis-pipeline-hybrid.js';
 export { createIrisTrackingPipeline } from './pipelines/iris-tracking-pipeline-hybrid.js';

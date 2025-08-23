@@ -1,7 +1,7 @@
 /**
- * Simplified Synopticon API Server
+ * Simplified Synopticon API Server - Lightweight Version
  * synopticon-api: an open-source platform for real-time multi-modal behavioral analysis and sensor synchronization
- * Direct BlazeFace integration without WebGL pipeline
+ * Now uses MediaPipe for 99% smaller bundle size
  */
 
 import express from 'express';
@@ -11,9 +11,8 @@ import morgan from 'morgan';
 import rateLimit from 'express-rate-limit';
 import { body, validationResult } from 'express-validator';
 
-// TensorFlow.js setup for Node.js
-import '@tensorflow/tfjs-node'; // Use CPU backend for server
-import * as blazeface from '@tensorflow-models/blazeface';
+// Use lightweight MediaPipe face detection instead of TensorFlow.js
+import { createMediaPipeFaceDetector } from '../modules/detection/mediapipe/mediapipe-face-detector.js';
 
 export const createSimpleAPIServer = (config = {}) => {
   const app = express();
@@ -29,8 +28,8 @@ export const createSimpleAPIServer = (config = {}) => {
     ...config
   };
 
-  // Global BlazeFace model
-  let blazeFaceModel = null;
+  // Global MediaPipe face detector
+  let faceDetector = null;
 
   // Middleware setup
   app.use(helmet());

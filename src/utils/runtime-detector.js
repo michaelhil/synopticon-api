@@ -53,7 +53,7 @@ export const checkFeatures = () => {
   };
 };
 
-// Create appropriate canvas for environment
+// Create appropriate canvas for environment (with optional canvas dependency)
 export const createUniversalCanvas = async (width = 640, height = 480) => {
   const features = checkFeatures();
   
@@ -64,8 +64,9 @@ export const createUniversalCanvas = async (width = 640, height = 480) => {
     canvas.height = height;
     return canvas;
   } else if (features.isNode) {
-    // Node.js environment - enhanced canvas integration
+    // Node.js environment - optional canvas dependency
     try {
+      // Try to load canvas dynamically (optional dependency)
       const { createCanvas, loadImage } = await import('canvas');
       const canvas = createCanvas(width, height);
       
@@ -80,7 +81,7 @@ export const createUniversalCanvas = async (width = 640, height = 480) => {
       
       return canvas;
     } catch (error) {
-      console.warn('⚠️ node-canvas not available, using mock canvas:', error.message);
+      console.warn('⚠️ Optional canvas dependency not available, using lightweight fallback');
       // Enhanced fallback with better compatibility
       return createMockCanvas(width, height);
     }
