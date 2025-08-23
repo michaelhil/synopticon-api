@@ -1,0 +1,778 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Synopticon API - Basic Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: #fff;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .demo-section {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .video-container {
+            position: relative;
+            flex: 1;
+        }
+        
+        canvas {
+            border: 2px solid #333;
+            border-radius: 8px;
+            max-width: 100%;
+            height: auto;
+        }
+        
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+        }
+        
+        .controls {
+            flex: 0 0 300px;
+            background: #2a2a2a;
+            padding: 20px;
+            border-radius: 8px;
+            height: fit-content;
+        }
+        
+        .control-group {
+            margin-bottom: 20px;
+        }
+        
+        .control-group h4 {
+            margin: 0 0 10px 0;
+            color: #4CAF50;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            flex: 1;
+        }
+        
+        button:hover:not(:disabled) {
+            background: #45a049;
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .slider-control {
+            margin-bottom: 15px;
+        }
+        
+        .slider-control label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        
+        .slider-control input[type="range"] {
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        
+        .slider-value {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        
+        .stats {
+            background: #333;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .stat-value {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        
+        .features {
+            background: #333;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .feature-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+        }
+        
+        .feature-status {
+            font-weight: bold;
+        }
+        
+        .feature-enabled {
+            color: #4CAF50;
+        }
+        
+        .feature-disabled {
+            color: #f44336;
+        }
+        
+        .error-panel {
+            background: #f44336;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .error-content {
+            margin-bottom: 10px;
+            word-break: break-all;
+        }
+        
+        .error-buttons {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .error-buttons button {
+            background: rgba(255, 255, 255, 0.2);
+            flex: none;
+            padding: 8px 12px;
+        }
+        
+        .debug-panel {
+            background: #2a2a2a;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .debug-header {
+            background: #333;
+            padding: 15px;
+            border-radius: 8px 8px 0 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .debug-content {
+            font-family: monospace;
+            font-size: 12px;
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            border-radius: 0 0 8px 8px;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Synopticon API Demo</h1>
+        <p><em>synopticon-api: an open-source platform for real-time multi-modal behavioral analysis and sensor synchronization</em></p>
+            <p>Real-time face detection and landmark tracking using WebGL2</p>
+        </div>
+        
+        <div class="error-panel" id="error-panel">
+            <div class="error-content" id="error-content"></div>
+            <div class="error-buttons">
+                <button onclick="copyError()">Copy</button>
+                <button onclick="document.getElementById('error-panel').style.display='none'">Dismiss</button>
+            </div>
+        </div>
+        
+        <div class="demo-section">
+            <div class="video-container">
+                <!-- Hidden WebGL canvas for processing -->
+                <canvas id="webgl-canvas" style="display: none;"></canvas>
+                <!-- Visible canvas for displaying video -->
+                <canvas id="canvas" width="640" height="480"></canvas>
+                <!-- Overlay canvas for detection results -->
+                <canvas id="overlay" class="overlay" width="640" height="480"></canvas>
+            </div>
+            
+            <div class="controls">
+                <div class="control-group">
+                    <h4>Camera Controls</h4>
+                    <div class="button-group">
+                        <button id="start-btn" disabled>Start</button>
+                        <button id="stop-btn" disabled>Stop</button>
+                    </div>
+                    <button id="switch-camera-btn" disabled>Switch Camera</button>
+                </div>
+                
+                <div class="control-group">
+                    <h4>Detection Settings</h4>
+                    <div class="slider-control">
+                        <label for="confidence-slider">Confidence Threshold:</label>
+                        <input type="range" id="confidence-slider" min="0" max="1" step="0.1" value="0.7">
+                        <div class="slider-value" id="confidence-value">0.7</div>
+                    </div>
+                    <div class="slider-control">
+                        <label for="max-faces-slider">Max Faces:</label>
+                        <input type="range" id="max-faces-slider" min="1" max="10" step="1" value="5">
+                        <div class="slider-value" id="max-faces-value">5</div>
+                    </div>
+                </div>
+                
+                <div class="stats">
+                    <h4>Performance Stats</h4>
+                    <div class="stat-item">
+                        <span>FPS:</span>
+                        <span class="stat-value" id="fps-value">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Frame Time:</span>
+                        <span class="stat-value" id="frame-time-value">0ms</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Detection:</span>
+                        <span class="stat-value" id="detection-time-value">0ms</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Landmarks:</span>
+                        <span class="stat-value" id="landmark-time-value">0ms</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Faces:</span>
+                        <span class="stat-value" id="faces-count-value">0</span>
+                    </div>
+                </div>
+                
+                <div class="features">
+                    <h4>Available Features</h4>
+                    <div class="feature-item">
+                        <span>Face Detection</span>
+                        <span id="face-detection-status" class="feature-status">Loading...</span>
+                    </div>
+                    <div class="feature-item">
+                        <span>Landmark Detection</span>
+                        <span id="landmark-detection-status" class="feature-status">Loading...</span>
+                    </div>
+                    <div class="feature-item">
+                        <span>Pose Estimation</span>
+                        <span id="pose-estimation-status" class="feature-status feature-disabled">Phase 3</span>
+                    </div>
+                    <div class="feature-item">
+                        <span>Emotion Analysis</span>
+                        <span id="emotion-analysis-status" class="feature-status feature-disabled">Phase 3</span>
+                    </div>
+                    <div class="feature-item">
+                        <span>Eye Tracking</span>
+                        <span id="eye-tracking-status" class="feature-status feature-disabled">Phase 3</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="debug-panel">
+            <div class="debug-header">
+                <h4>Debug Log</h4>
+                <button onclick="clearDebugLog()">Clear</button>
+            </div>
+            <div class="debug-content" id="debug-content"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import createFaceAnalysisEngine from '../src/index.js';
+        
+        // Add global error handler to catch any import/initialization errors
+        window.addEventListener('error', (event) => {
+            console.error('Global error:', event.error);
+            debugLog(`Global error: ${event.error.message}`);
+            debugLog(`Error stack: ${event.error.stack}`);
+        });
+        
+        window.addEventListener('unhandledrejection', (event) => {
+            console.error('Unhandled promise rejection:', event.reason);
+            debugLog(`Unhandled promise rejection: ${event.reason}`);
+        });
+        
+        // Test if the import worked
+        debugLog(`createFaceAnalysisEngine imported: ${typeof createFaceAnalysisEngine}`);
+        
+        const createFaceAnalysisDemo = () => {
+            debugLog('FaceAnalysisDemo factory starting...');
+            
+            // Separate canvases: WebGL for processing, 2D for display
+            const webglCanvas = document.getElementById('webgl-canvas');
+            const canvas = document.getElementById('canvas');
+            const overlayCanvas = document.getElementById('overlay');
+            
+            debugLog(`WebGL canvas found: ${!!webglCanvas}`);
+            debugLog(`Display canvas found: ${!!canvas}`);
+            debugLog(`Overlay canvas found: ${!!overlayCanvas}`);
+            
+            if (canvas) {
+                debugLog(`Display canvas dimensions: ${canvas.width}x${canvas.height}`);
+                // Test 2D context creation immediately
+                const testCtx = canvas.getContext('2d');
+                debugLog(`Display canvas 2D context test: ${!!testCtx}`);
+            }
+            
+            if (overlayCanvas) {
+                debugLog(`Overlay canvas dimensions: ${overlayCanvas.width}x${overlayCanvas.height}`);
+                // Test 2D overlay context creation
+                const overlayCtx = overlayCanvas.getContext('2d');
+                debugLog(`Overlay canvas 2D context test: ${!!overlayCtx}`);
+            }
+            
+            const ctx = canvas ? canvas.getContext('2d') : null;
+            let overlayCtx = overlayCanvas ? overlayCanvas.getContext('2d') : null;
+            
+            debugLog(`Canvas contexts:`);
+            debugLog(`  ctx: ${!!ctx}`);
+            debugLog(`  overlayCtx: ${!!overlayCtx}`);
+            
+            let engine = null;
+            let isRunning = false;
+            
+            debugLog('FaceAnalysisDemo factory completed');
+
+            const init = async () => {
+                debugLog('Initializing Synopticon API...');
+                try {
+                    // Initialize the engine with WebGL canvas
+                    debugLog('Creating FaceAnalysisEngine instance');
+                    engine = createFaceAnalysisEngine(webglCanvas);
+                    
+                    debugLog('Calling engine.initialize() with new modular system...');
+                    const initResult = await engine.initialize({
+                        camera: false, // We'll initialize camera separately
+                        pipelineType: 'fast', // Use fast BlazeFace pipeline
+                        algorithms: {
+                            faceDetection: 'blazeface' // Use BlazeFace instead of Haar
+                        }
+                    });
+                    
+                    debugLog(`Engine initialized successfully: ${JSON.stringify(initResult)}`);
+                    updateFeatureStatus(initResult.features);
+                    
+                    document.getElementById('start-btn').disabled = false;
+                    debugLog('Start button enabled');
+                    
+                } catch (error) {
+                    debugLog(`Engine initialization failed: ${error.message}`);
+                    debugLog(`Error stack: ${error.stack}`);
+                    showError('Failed to initialize engine: ' + error.message);
+                }
+            };
+
+            const initializeUI = () => {
+                // Button handlers
+                document.getElementById('start-btn').onclick = () => startCamera();
+                document.getElementById('stop-btn').onclick = () => stop();
+                document.getElementById('switch-camera-btn').onclick = () => switchCamera();
+                
+                // Slider handlers
+                const confidenceSlider = document.getElementById('confidence-slider');
+                const confidenceValue = document.getElementById('confidence-value');
+                confidenceSlider.oninput = () => {
+                    confidenceValue.textContent = confidenceSlider.value;
+                };
+                
+                const maxFacesSlider = document.getElementById('max-faces-slider');
+                const maxFacesValue = document.getElementById('max-faces-value');
+                maxFacesSlider.oninput = () => {
+                    maxFacesValue.textContent = maxFacesSlider.value;
+                };
+            };
+
+            const startCamera = async () => {
+                debugLog('Starting camera...');
+                try {
+                    if (!engine) {
+                        throw new Error('Engine not initialized');
+                    }
+                    
+                    debugLog('Requesting camera permissions...');
+                    // Initialize camera
+                    await engine.initialize({
+                        camera: true,
+                        cameraConstraints: {
+                            video: {
+                                width: { ideal: 640 },
+                                height: { ideal: 480 },
+                                frameRate: { ideal: 30 }
+                            }
+                        }
+                    });
+                    
+                    debugLog('Camera initialized, starting processing...');
+                    // Start processing
+                    engine.startProcessing({
+                        onResults: (results) => handleResults(results),
+                        onError: (error) => {
+                            debugLog(`Processing error: ${error.message}`);
+                            showError(error.message);
+                        }
+                    });
+                    
+                    isRunning = true;
+                    updateButtons();
+                    debugLog('Camera started successfully');
+                    
+                } catch (error) {
+                    debugLog(`Camera start failed: ${error.message}`);
+                    debugLog(`Error stack: ${error.stack}`);
+                    showError('Failed to start camera: ' + error.message);
+                }
+            };
+
+            const stop = () => {
+                if (engine) {
+                    engine.stopProcessing();
+                }
+                isRunning = false;
+                updateButtons();
+                clearOverlay();
+            };
+
+            const switchCamera = async () => {
+                if (engine && isRunning) {
+                    try {
+                        await engine.switchCamera('environment');
+                    } catch (error) {
+                        console.warn('Could not switch to back camera, staying on front:', error);
+                    }
+                }
+            };
+
+            const handleResults = (results) => {
+                debugLog('handleResults called');
+                
+                // Update stats
+                updateStats(results.stats);
+                
+                // Draw frame to main canvas
+                debugLog('Getting main canvas context...');
+                const mainCtx = canvas.getContext('2d');
+                debugLog(`Main canvas context: ${!!mainCtx}`);
+                
+                if (!mainCtx) {
+                    debugLog('ERROR: Main canvas context is null!');
+                    debugLog(`Canvas element: ${!!canvas}`);
+                    debugLog(`Canvas dimensions: ${canvas.width}x${canvas.height}`);
+                    showError('Main canvas context is null - cannot draw video frame');
+                    return;
+                }
+                
+                if (results.frameData && results.frameData.canvas) {
+                    debugLog(`Drawing frame data canvas: ${results.frameData.canvas.width}x${results.frameData.canvas.height}`);
+                    try {
+                        mainCtx.drawImage(results.frameData.canvas, 0, 0, canvas.width, canvas.height);
+                        debugLog('Frame drawn to main canvas successfully');
+                    } catch (error) {
+                        debugLog(`Main canvas drawImage failed: ${error.message}`);
+                        showError(`Failed to draw frame: ${error.message}`);
+                    }
+                } else {
+                    debugLog('No frame data canvas available');
+                }
+                
+                // Draw detection results on overlay
+                drawDetections(results.faces);
+                
+                // Update face count
+                document.getElementById('faces-count-value').textContent = results.faces.length;
+            };
+
+            const drawDetections = (faces) => {
+                debugLog(`drawDetections called with ${faces.length} faces`);
+                debugLog(`Overlay context exists: ${!!overlayCtx}`);
+                
+                if (!overlayCtx) {
+                    debugLog('ERROR: Overlay context is null!');
+                    debugLog(`Overlay canvas exists: ${!!overlayCanvas}`);
+                    if (overlayCanvas) {
+                        debugLog(`Trying to get overlay context again...`);
+                        overlayCtx = overlayCanvas.getContext('2d');
+                        debugLog(`New overlay context: ${!!overlayCtx}`);
+                    }
+                    if (!overlayCtx) {
+                        showError('Overlay canvas context is null - cannot draw detections');
+                        return;
+                    }
+                }
+                
+                clearOverlay();
+                
+                if (faces.length === 0) return;
+                
+                overlayCtx.strokeStyle = '#00ff00';
+                overlayCtx.lineWidth = 2;
+                overlayCtx.fillStyle = '#00ff00';
+                overlayCtx.font = '14px Arial';
+                
+                faces.forEach((face, index) => {
+                    // Draw face bounding box
+                    overlayCtx.strokeRect(face.x, face.y, face.width, face.height);
+                    
+                    // Draw confidence
+                    const confidence = Math.round(face.confidence * 100);
+                    overlayCtx.fillText(
+                        `Face ${index + 1}: ${confidence}%`,
+                        face.x,
+                        face.y - 5
+                    );
+                    
+                    // Draw landmarks if available
+                    if (face.landmarks && face.landmarks.length > 0) {
+                        drawLandmarks(face.landmarks);
+                    }
+                });
+            };
+
+            const drawLandmarks = (landmarks) => {
+                overlayCtx.fillStyle = '#ff0000';
+                
+                landmarks.forEach((landmark, index) => {
+                    // Draw landmark point
+                    overlayCtx.beginPath();
+                    overlayCtx.arc(landmark.x, landmark.y, 2, 0, 2 * Math.PI);
+                    overlayCtx.fill();
+                    
+                    // Draw landmark index for debugging
+                    if (index % 5 === 0) { // Only show every 5th landmark number to avoid clutter
+                        overlayCtx.fillStyle = '#ffffff';
+                        overlayCtx.font = '10px Arial';
+                        overlayCtx.fillText(index.toString(), landmark.x + 3, landmark.y - 3);
+                        overlayCtx.fillStyle = '#ff0000';
+                    }
+                });
+            };
+
+            const clearOverlay = () => {
+                if (!overlayCtx) {
+                    debugLog('clearOverlay: overlay context is null');
+                    return;
+                }
+                try {
+                    overlayCtx.clearRect(0, 0, overlayCanvas.width, overlayCanvas.height);
+                } catch (error) {
+                    debugLog(`clearOverlay failed: ${error.message}`);
+                }
+            };
+
+            const updateStats = (stats) => {
+                document.getElementById('fps-value').textContent = stats.fps;
+                document.getElementById('frame-time-value').textContent = Math.round(stats.frameTime) + 'ms';
+                document.getElementById('detection-time-value').textContent = Math.round(stats.detectionTime) + 'ms';
+                document.getElementById('landmark-time-value').textContent = Math.round(stats.landmarkTime) + 'ms';
+            };
+
+            const updateFeatureStatus = (features) => {
+                const statusElements = {
+                    'face-detection-status': features.faceDetection,
+                    'landmark-detection-status': features.landmarkDetection,
+                    'pose-estimation-status': features.poseEstimation,
+                    'emotion-analysis-status': features.emotionAnalysis,
+                    'eye-tracking-status': features.eyeTracking
+                };
+                
+                Object.entries(statusElements).forEach(([id, enabled]) => {
+                    const element = document.getElementById(id);
+                    if (enabled) {
+                        element.textContent = 'Enabled';
+                        element.className = 'feature-status feature-enabled';
+                    } else {
+                        element.textContent = element.textContent.includes('Phase') ? element.textContent : 'Disabled';
+                        element.className = 'feature-status feature-disabled';
+                    }
+                });
+            };
+
+            const updateButtons = () => {
+                document.getElementById('start-btn').disabled = isRunning;
+                document.getElementById('stop-btn').disabled = !isRunning;
+                document.getElementById('switch-camera-btn').disabled = !isRunning;
+            };
+
+            const showError = (message) => {
+                debugLog(`Error occurred: ${message}`);
+                
+                const errorPanel = document.getElementById('error-panel');
+                const errorContent = document.getElementById('error-content');
+                
+                // Store error message globally for copying
+                window.lastErrorMessage = message;
+                
+                errorContent.textContent = message;
+                errorPanel.style.display = 'block';
+                
+                // Hide error after 10 seconds (longer for reading/copying)
+                setTimeout(() => {
+                    errorPanel.style.display = 'none';
+                }, 10000);
+            };
+
+            // Initialize UI
+            initializeUI();
+
+            // Return public API
+            return {
+                init,
+                startCamera,
+                stop,
+                switchCamera,
+                engine: () => engine
+            };
+        };
+        
+        // Debug logging function
+        function debugLog(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const debugContent = document.getElementById('debug-content');
+            if (debugContent) {
+                const logLine = `[${timestamp}] ${message}\n`;
+                debugContent.textContent += logLine;
+                debugContent.scrollTop = debugContent.scrollHeight;
+            }
+            console.log(message); // Still log to console too
+        }
+        
+        // Clear debug log
+        function clearDebugLog() {
+            const debugContent = document.getElementById('debug-content');
+            if (debugContent) {
+                debugContent.textContent = '';
+            }
+        }
+
+        // Global function to copy error message
+        function copyError() {
+            debugLog('Copy button clicked');
+            
+            const errorContent = document.getElementById('error-content');
+            const errorMessage = errorContent ? errorContent.textContent : (window.lastErrorMessage || 'No error message available');
+            
+            debugLog(`Error message to copy: "${errorMessage}"`);
+            
+            // Try modern clipboard API first
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                debugLog('Using modern clipboard API');
+                navigator.clipboard.writeText(errorMessage).then(() => {
+                    debugLog('Clipboard write successful!');
+                    const copyBtn = document.getElementById('copy-error-btn');
+                    if (copyBtn) {
+                        copyBtn.textContent = 'Copied!';
+                        copyBtn.style.background = '#4CAF50';
+                        setTimeout(() => {
+                            copyBtn.textContent = 'Copy';
+                            copyBtn.style.background = '#f44336';
+                        }, 2000);
+                    }
+                }).catch((err) => {
+                    debugLog(`Clipboard API failed: ${err.message}`);
+                    fallbackCopyError(errorMessage);
+                });
+            } else {
+                debugLog('Modern clipboard API not available, using fallback');
+                fallbackCopyError(errorMessage);
+            }
+        }
+        
+        // Fallback copy method for older browsers
+        function fallbackCopyError(text) {
+            debugLog(`Using fallback copy method with ${text.length} chars`);
+            
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.left = '-999999px';
+            textArea.style.top = '-999999px';
+            textArea.style.opacity = '0';
+            textArea.setAttribute('readonly', '');
+            
+            document.body.appendChild(textArea);
+            
+            try {
+                textArea.focus();
+                textArea.select();
+                textArea.setSelectionRange(0, text.length);
+                
+                const successful = document.execCommand('copy');
+                debugLog(`execCommand copy result: ${successful}`);
+                
+                const copyBtn = document.getElementById('copy-error-btn');
+                if (copyBtn) {
+                    if (successful) {
+                        debugLog('Fallback copy successful!');
+                        copyBtn.textContent = 'Copied!';
+                        copyBtn.style.background = '#4CAF50';
+                        setTimeout(() => {
+                            copyBtn.textContent = 'Copy';
+                            copyBtn.style.background = '#f44336';
+                        }, 2000);
+                    } else {
+                        debugLog('Fallback copy failed - showing manual option');
+                        copyBtn.textContent = 'Failed';
+                        copyBtn.style.background = '#ff9800';
+                        setTimeout(() => {
+                            copyBtn.textContent = 'Copy';
+                            copyBtn.style.background = '#f44336';
+                        }, 2000);
+                    }
+                }
+            } catch (err) {
+                debugLog(`Fallback copy error: ${err.message}`);
+            } finally {
+                document.body.removeChild(textArea);
+            }
+        }
+
+        // Initialize demo when page loads
+        const demo = createFaceAnalysisDemo();
+        demo.init();
+        
+        // Handle page unload
+        window.addEventListener('beforeunload', () => {
+            const engine = demo.engine();
+            if (engine) {
+                engine.cleanup();
+            }
+        });
+    </script>
+</body>
+</html>

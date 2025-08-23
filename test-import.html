@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Import</title>
+</head>
+<body>
+    <div id="log"></div>
+    <script>
+        const log = (msg) => {
+            console.log(msg);
+            document.getElementById('log').innerHTML += '<div>' + msg + '</div>';
+        };
+    </script>
+    <script type="module">
+        log('Starting import test...');
+        
+        try {
+            log('Importing createFaceAnalysisEngine...');
+            const { createFaceAnalysisEngine } = await import('./src/index.js');
+            log('Import successful: ' + typeof createFaceAnalysisEngine);
+            
+            log('Creating canvas...');
+            const canvas = document.createElement('canvas');
+            canvas.width = 640;
+            canvas.height = 480;
+            
+            log('Creating engine instance...');
+            const engine = createFaceAnalysisEngine(canvas);
+            log('Engine created: ' + typeof engine);
+            
+            log('Testing initialize...');
+            const result = await engine.initialize({
+                pipelineType: 'fast',
+                algorithms: { faceDetection: 'blazeface' }
+            });
+            log('Initialize successful: ' + JSON.stringify(result));
+            
+        } catch (error) {
+            log('ERROR: ' + error.message);
+            log('Stack: ' + error.stack);
+        }
+    </script>
+</body>
+</html>

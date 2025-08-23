@@ -1,0 +1,89 @@
+{
+  "name": "synopticon-api",
+  "version": "0.1.0-beta.1",
+  "description": "synopticon-api: an open-source platform for real-time multi-modal behavioral analysis and sensor synchronization",
+  "main": "src/index.js",
+  "type": "module",
+  "scripts": {
+    "dev": "bunx --bun vite",
+    "build": "bunx --bun vite build",
+    "preview": "bunx --bun vite preview",
+    "test": "bun test",
+    "test:performance": "bun run tests/performance/benchmark.js",
+    "build:shaders": "bun run scripts/compile-shaders.js",
+    "start": "bun run dev",
+    "serve": "bun dev-server.js",
+    "demo": "bun dev-server.js",
+    "api:dev": "bun --watch src/api/simple-server.js",
+    "api:start": "bun src/api/simple-server.js",
+    "api:test": "curl http://localhost:3001/api/health",
+    "api:full": "bun --watch src/api/server.js"
+  },
+  "keywords": [
+    "face-detection",
+    "computer-vision",
+    "webgl",
+    "eye-tracking",
+    "emotion-analysis",
+    "facial-landmarks",
+    "pose-estimation",
+    "browser"
+  ],
+  "author": "Synopticon API Team",
+  "license": "MIT",
+  "devDependencies": {
+    "vite": "^5.0.0",
+    "vitest": "^1.0.0"
+  },
+  "trustedDependencies": ["@tensorflow/tfjs-node", "core-js", "esbuild", "vite", "vitest"],
+  "peerDependencies": {},
+  "optionalDependencies": {
+    "canvas": "^2.11.2"
+  },
+  "dependencies": {
+    "@tensorflow-models/blazeface": "^0.1.0",
+    "@tensorflow/tfjs": "^4.22.0",
+    "@tensorflow/tfjs-node": "^4.22.0",
+    "cors": "^2.8.5",
+    "express": "^5.1.0",
+    "express-rate-limit": "^8.0.1",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.1.0",
+    "morgan": "^1.10.1"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "bun": ">=1.0.0"
+  },
+  "browserslist": [
+    "Chrome >= 56",
+    "Firefox >= 51",
+    "Safari >= 15",
+    "Edge >= 79"
+  ],
+  "documentation": {
+    "performance": "PERFORMANCE_OPTIMIZATION_LOG.md",
+    "audit": "FINAL_AUDIT_REPORT.md",
+    "placeholders": "PLACEHOLDERS_AND_MOCKS.md",
+    "readme": "README.md"
+  },
+  "notes": {
+    "performance_tracking": "IMPORTANT: The PERFORMANCE_OPTIMIZATION_LOG.md file contains all performance-related information, optimizations, measurements, and trade-offs. This file must be continuously checked and updated with any new performance improvements, measurements, or identified opportunities. All performance-related work should be documented there.",
+    "last_performance_update": "2025-08-23",
+    "latest_optimizations": "Phase 2 complete: All 5 immediate optimizations implemented (GPU Compute Shaders, Image Pyramid, Feature Caching, Memory Pooling, WASM Integration). Expected 40-60% performance improvement.",
+    "optimization_modules": {
+      "compute_shaders": "src/core/compute-shader.js",
+      "image_pyramid": "src/core/image-pyramid.js",
+      "feature_cache": "src/core/feature-cache.js",
+      "memory_pool": "src/core/memory-pool.js",
+      "wasm_bridge": "src/core/wasm-bridge.js"
+    },
+    "performance_targets": {
+      "frame_time": "< 16.67ms (60 FPS ideal, 24-40 FPS acceptable)",
+      "detection_time": "< 10ms",
+      "landmark_time": "< 5ms",
+      "memory_growth": "< 100MB/hour",
+      "expected_with_optimizations": "15-25ms frame time (40-65+ FPS)"
+    }
+  }
+}

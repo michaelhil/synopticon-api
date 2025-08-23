@@ -1,0 +1,43 @@
+[build]
+  # No build command needed for static site
+  command = ""
+  publish = "."
+
+[[redirects]]
+  # Redirect root to demo
+  from = "/"
+  to = "/demo-mediapipe.html"
+  status = 200
+
+[[headers]]
+  # Add CORS headers for MediaPipe CDN
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    Permissions-Policy = "camera=*, microphone=*, display-capture=*"
+    Cross-Origin-Embedder-Policy = "require-corp"
+    Cross-Origin-Opener-Policy = "same-origin"
+
+[[headers]]
+  # Allow CORS for JavaScript modules
+  for = "/src/*"
+  [headers.values]
+    Access-Control-Allow-Origin = "*"
+    Access-Control-Allow-Methods = "GET, POST, OPTIONS"
+    Access-Control-Allow-Headers = "Content-Type"
+
+[[headers]]
+  # Special headers for MediaPipe resources
+  for = "/*.js"
+  [headers.values]
+    Content-Type = "application/javascript"
+    Cache-Control = "public, max-age=3600"
+
+[[headers]]
+  # HTML files
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=300"
