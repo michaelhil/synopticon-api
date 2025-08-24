@@ -13,7 +13,7 @@ Production-ready platform for behavioral research environments with 6 specialize
 - ✅ **Zero Configuration**: Automatically detects and adapts to runtime
 
 ### ✅ **Production-Ready Pipelines (6/6)**
-- ✅ **BlazeFace Detection**: TensorFlow.js model for fast real-time face detection and landmarks
+- ✅ **MediaPipe Face Detection**: Lightweight real-time face detection with 468 facial landmarks
 - ✅ **MediaPipe Face Mesh**: 468 landmarks with 6DOF pose estimation and eye tracking
 - ✅ **Neon Eye Tracking**: Pupil Labs hardware integration with calibration and recording capabilities
 - ✅ **Iris Tracking**: MediaPipe Iris for high-precision eye tracking and gaze estimation
@@ -31,7 +31,7 @@ Production-ready platform for behavioral research environments with 6 specialize
 
 | Pipeline | Target FPS | Latency | Model Size | Status |
 |----------|------------|---------|------------|---------|
-| **BlazeFace** | 60 | 10-20ms | 1.2MB | ✅ Optimized |
+| **MediaPipe Face** | 60 | 15-30ms | 5MB | ✅ Optimized |
 | **MediaPipe Face Mesh** | 30 | 30-50ms | 11MB | ✅ Production |
 | **Neon Eye Tracking** | 30 | 5-15ms | - | ✅ Hardware Ready |
 | **Iris Tracking** | 30 | 25-40ms | 3MB | ✅ Optimized |
@@ -41,7 +41,7 @@ Production-ready platform for behavioral research environments with 6 specialize
 ## 🛠️ **Available Pipelines**
 
 ### **Face Detection & Analysis**
-- **`blazeface-pipeline`**: TensorFlow.js BlazeFace model for fast real-time face detection and landmarks
+- **`mediapipe-face-pipeline`**: MediaPipe Face Detection with 468 landmarks and 3DOF pose estimation
 - **`mediapipe-pipeline`**: MediaPipe Face Mesh with 468 landmarks and 6DOF pose estimation
 
 ### **Eye Tracking & Gaze**
@@ -75,7 +75,7 @@ Production-ready platform for behavioral research environments with 6 specialize
 
 ```javascript
 import { createOrchestrator } from './src/core/orchestrator.js';
-import { createBlazeFacePipeline } from './src/pipelines/blazeface-pipeline.js';
+import { createMediaPipeFacePipeline } from './src/pipelines/mediapipe-face-pipeline.js';
 import { createEmotionAnalysisPipeline } from './src/pipelines/emotion-analysis-pipeline.js';
 import { Capability } from './src/core/types.js';
 
@@ -85,7 +85,7 @@ const orchestrator = createOrchestrator({
 });
 
 // Register multiple pipelines
-await orchestrator.registerPipeline(createBlazeFacePipeline());
+await orchestrator.registerPipeline(createMediaPipeFacePipeline());
 await orchestrator.registerPipeline(createEmotionAnalysisPipeline());
 
 // Multi-modal analysis with automatic pipeline selection
@@ -134,7 +134,7 @@ const analysis = await response.json();
 
 ## 🎯 **Capabilities Matrix**
 
-| Capability | BlazeFace | MediaPipe | Eye Tracking | Iris | Emotion | Age |
+| Capability | MediaPipe Face | MediaPipe Mesh | Eye Tracking | Iris | Emotion | Age |
 |------------|-----------|-----------|--------------|------|---------|-----|
 | **Face Detection** | ✅ Fast | ✅ Accurate | ❌ | ❌ | ❌ | ❌ |
 | **Landmarks** | ✅ Basic | ✅ 468pts | ❌ | ❌ | ❌ | ❌ |

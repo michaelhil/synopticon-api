@@ -839,14 +839,21 @@
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script>
-        // Debug MediaPipe loading
+        // Debug MediaPipe loading with cleanup
+        const debugController = new AbortController();
+        
         window.addEventListener('load', () => {
             console.log('🔍 MediaPipe availability check:');
             console.log('  - window.FaceMesh:', typeof window.FaceMesh);
             console.log('  - window.Iris:', typeof window.Iris);
             console.log('  - window.Camera:', typeof window.Camera);
             console.log('  - MediaPipe objects:', Object.keys(window).filter(k => k.includes('Face') || k.includes('Iris') || k.includes('mediapipe')));
-        });
+        }, { signal: debugController.signal });
+        
+        // Cleanup debug event listener on page unload
+        window.addEventListener('beforeunload', () => {
+            debugController.abort();
+        }, { once: true });
     </script>
     
     <!-- Load Three.js for 3D visualization -->
@@ -857,6 +864,10 @@
         import { createAvailableProcessor } from './src/utils/direct-mediapipe.js';
         import { createPose3DVisualization } from './src/visualization/pose-3d.js';
         import { createPerformanceComparison } from './src/utils/mediapipe-integration.js';
+
+        // Global AbortController for cleanup
+        const globalEventController = new AbortController();
+        const globalSignal = globalEventController.signal;
 
         // Application state
         const state = {
@@ -917,8 +928,8 @@
                 // Setup video stream
                 await setupVideoStream();
 
-                // Setup UI event handlers
-                setupEventHandlers();
+                // Setup UI event handlers and capture controller for cleanup
+                state.eventController = setupEventHandlers();
 
                 // Initialize UI state to match app state
                 initializeUIState();
@@ -1558,12 +1569,16 @@
 
         // Setup event handlers
         const setupEventHandlers = () => {
+            // Create AbortController for event listener cleanup
+            const eventController = new AbortController();
+            const signal = eventController.signal;
+            
             // Pipeline selection
             document.querySelectorAll('.pipeline-option').forEach(option => {
                 option.addEventListener('click', () => {
                     const pipeline = option.dataset.pipeline;
                     selectPipeline(pipeline);
-                });
+                }, { signal });
             });
 
             // Strategy selection
@@ -1571,33 +1586,33 @@
                 btn.addEventListener('click', () => {
                     const strategy = btn.dataset.strategy;
                     selectStrategy(strategy);
-                });
+                }, { signal });
             });
-
+            
             // Calibration buttons
-            document.getElementById('calibrateBtn').addEventListener('click', startCalibration);
-            document.getElementById('autoCalibrateBtn').addEventListener('click', startAutoCalibration);
+            document.getElementById('calibrateBtn').addEventListener('click', startCalibration, { signal });
+            document.getElementById('autoCalibrateBtn').addEventListener('click', startAutoCalibration, { signal });
             
             // Eye tracking calibration buttons
-            document.getElementById('eyeCalibrateBtn').addEventListener('click', startEyeCalibration);
-            document.getElementById('eyeResetBtn').addEventListener('click', resetEyeTracking);
+            document.getElementById('eyeCalibrateBtn').addEventListener('click', startEyeCalibration, { signal });
+            document.getElementById('eyeResetBtn').addEventListener('click', resetEyeTracking, { signal });
 
             // Display toggles
             document.getElementById('showLandmarks').addEventListener('change', (e) => {
                 state.displayOptions.showLandmarks = e.target.checked;
-            });
+            }, { signal });
 
             document.getElementById('showAxes').addEventListener('change', (e) => {
                 state.displayOptions.showAxes = e.target.checked;
-            });
+            }, { signal });
 
             document.getElementById('showBbox').addEventListener('change', (e) => {
                 state.displayOptions.showBbox = e.target.checked;
-            });
+            }, { signal });
 
             document.getElementById('showEyes').addEventListener('change', (e) => {
                 state.displayOptions.showEyes = e.target.checked;
-            });
+            }, { signal });
 
             // Trace length control
             document.getElementById('traceLength').addEventListener('input', (e) => {
@@ -1605,7 +1620,10 @@
                 document.getElementById('traceLengthValue').textContent = e.target.value + 's';
                 // Clear existing trace when changing length
                 state.gazeTrace = [];
-            });
+            }, { signal });
+            
+            // Return the controller for cleanup integration
+            return eventController;
         };
 
         // Select pipeline
@@ -1999,10 +2017,35 @@
                     tooltip.classList.remove('visible');
                 });
             }
-        });
+        }, { signal: globalSignal });
+
+        // Global cleanup function
+        const cleanup = () => {
+            console.log('🧹 Performing global cleanup...');
+            globalEventController.abort();
+            
+            // Cleanup local event controller
+            if (state.eventController) {
+                state.eventController.abort();
+            }
+            
+            // Cleanup application state
+            if (state.processor && state.processor.cleanup) {
+                state.processor.cleanup();
+            }
+            if (state.comparison && state.comparison.cleanup) {
+                state.comparison.cleanup();
+            }
+            if (state.pose3d && state.pose3d.cleanup) {
+                state.pose3d.cleanup();
+            }
+        };
+
+        // Setup cleanup on page unload
+        window.addEventListener('beforeunload', cleanup, { signal: globalSignal });
 
         // Initialize when DOM is ready
-        document.addEventListener('DOMContentLoaded', initialize);
+        document.addEventListener('DOMContentLoaded', initialize, { signal: globalSignal });
     </script>
 </body>
 </html>

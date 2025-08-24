@@ -5,18 +5,28 @@
  */
 
 import { createPipeline } from '../core/pipeline.js';
+import { createPipelineConfig } from '../core/pipeline-config.js';
+import { createImageProcessor } from '../core/image-processor.js';
+import { getGlobalResourcePool } from '../core/resource-pool.js';
 import { createEyeTracker } from '../eye-tracking/index.js';
 import { createEyeTrackingResult, createGazeData, Capability, createPerformanceProfile } from '../core/types.js';
+import { handleError, ErrorCategory, ErrorSeverity } from '../utils/error-handler.js';
 
 // Eye tracking pipeline factory
-export const createEyeTrackingPipeline = (config = {}) => {
-  let eyeTracker = null;
-  let currentDeviceId = null;
-  let isCalibrated = false;
-  let lastGazeData = null;
+export const createEyeTrackingPipeline = (userConfig = {}) => {
+  // Use unified configuration system
+  const config = createPipelineConfig('eye-tracking', userConfig);
 
   const state = {
-    initialized: false,
+    eyeTracker: null,
+    currentDeviceId: null,
+    isCalibrated: false,
+    lastGazeData: null,
+    imageProcessor: null,
+    resourcePool: null,
+    isInitialized: false,
+    config: config,
+    // Pipeline-specific state
     connected: false,
     streaming: false,
     sessionActive: false,
@@ -28,35 +38,51 @@ export const createEyeTrackingPipeline = (config = {}) => {
   };
 
   // Initialize the eye tracking system
-  const initialize = async (options = {}) => {
-    if (state.initialized) return true;
+  const initialize = async (initConfig = {}) => {
+    if (state.isInitialized) return true;
 
     try {
+      handleError(
+        'Initializing Eye Tracking pipeline',
+        ErrorCategory.INITIALIZATION,
+        ErrorSeverity.INFO,
+        { config: state.config }
+      );
+
+      // Initialize shared resources
+      state.resourcePool = getGlobalResourcePool();
+      state.imageProcessor = createImageProcessor({ resourcePool: state.resourcePool });
+
       // Merge pipeline config with options
       const eyeTrackerConfig = {
-        useMockDevices: config.useMockDevices !== false,
+        useMockDevices: state.config.useMockDevices !== false,
         autoStart: true,
         enableSynchronization: true,
-        ...options.eyeTracking
+        ...initConfig.eyeTracking
       };
 
-      eyeTracker = createEyeTracker(eyeTrackerConfig);
-      await eyeTracker.initialize();
+      state.eyeTracker = createEyeTracker(eyeTrackerConfig);
+      await state.eyeTracker.initialize();
 
       // Setup event handlers for pipeline integration
       setupEventHandlers();
 
-      state.initialized = true;
-      console.log('Eye tracking pipeline initialized successfully');
+      state.isInitialized = true;
+      console.log('✅ Eye tracking pipeline initialized successfully');
 
       // Auto-connect if enabled
-      if (config.autoConnect !== false) {
+      if (state.config.autoConnect !== false) {
         await autoConnectToDevice();
       }
 
       return true;
     } catch (error) {
-      console.error('Eye tracking pipeline initialization failed:', error);
+      handleError(
+        `Eye tracking pipeline initialization failed: ${error.message}`,
+        ErrorCategory.INITIALIZATION,
+        ErrorSeverity.ERROR,
+        { error }
+      );
       throw new Error(`Eye tracking pipeline initialization failed: ${error.message}`);
     }
   };
@@ -302,66 +328,46 @@ export const createEyeTrackingPipeline = (config = {}) => {
   };
 
   // Cleanup pipeline resources
-  const cleanup = async () => {
+  const cleanup = () => {
     try {
-      if (state.sessionActive && currentDeviceId) {
-        await eyeTracker.stopRecording(currentDeviceId);
+      if (state.sessionActive && state.currentDeviceId) {
+        state.eyeTracker.stopRecording(state.currentDeviceId);
       }
       
-      if (eyeTracker) {
-        await eyeTracker.shutdown();
+      if (state.eyeTracker) {
+        state.eyeTracker.shutdown();
+      }
+      
+      // Clean up image processor cache
+      if (state.imageProcessor) {
+        state.imageProcessor.cleanup();
       }
       
       // Reset state
-      Object.assign(state, {
-        initialized: false,
-        connected: false,
-        streaming: false,
-        sessionActive: false,
-        calibrationStatus: 'not_started'
-      });
+      state.eyeTracker = null;
+      state.currentDeviceId = null;
+      state.isCalibrated = false;
+      state.lastGazeData = null;
+      state.isInitialized = false;
+      state.connected = false;
+      state.streaming = false;
+      state.sessionActive = false;
+      state.calibrationStatus = 'not_started';
       
-      eyeTracker = null;
-      currentDeviceId = null;
-      isCalibrated = false;
-      lastGazeData = null;
-      
-      console.log('Eye tracking pipeline cleaned up');
+      console.log('🧹 Eye tracking pipeline cleaned up');
     } catch (error) {
-      console.warn('Eye tracking pipeline cleanup error:', error);
+      console.warn('⚠️ Eye tracking pipeline cleanup error:', error);
     }
   };
 
-  // Return pipeline interface
-  return {
-    // Standard pipeline interface
-    initialize,
-    process,
-    cleanup,
-    getCapabilities,
-    getStatus,
-    
-    // Eye tracking specific methods
-    startRecording,
-    stopRecording,
-    performCalibration,
-    
-    // Direct access to eye tracker for advanced usage
-    getEyeTracker: () => eyeTracker,
-    
-    // Pipeline health status (compatibility with hybrid pipelines)
-    getHealthStatus: () => ({
-      healthy: eyeTracker && eyeTracker.getStatus().connected,
-      runtime: 'universal', // Works in both browser and Node.js
-      backend: 'pupil-labs-neon',
-      modelLoaded: !!eyeTracker,
-      deviceConnected: eyeTracker ? eyeTracker.getStatus().connected : false
-    }),
-
-    // Check if pipeline is initialized (compatibility with hybrid pipelines)
-    isInitialized: () => !!eyeTracker,
-    
-    // Performance profile (standardization)
+  // Return standardized pipeline interface
+  return createPipeline({
+    name: 'eye-tracking',
+    capabilities: [
+      Capability.EYE_TRACKING,
+      Capability.GAZE_ESTIMATION,
+      Capability.DEVICE_CONTROL
+    ],
     performance: createPerformanceProfile({
       fps: 30,
       latency: '5-15ms',
@@ -370,12 +376,30 @@ export const createEyeTrackingPipeline = (config = {}) => {
       memoryUsage: 'medium',
       batteryImpact: 'high' // Hardware device
     }),
-
-    // Pipeline metadata
-    name: 'eye-tracking',
-    version: '1.0.0',
-    type: 'eye_tracking'
-  };
+    initialize,
+    process,
+    cleanup,
+    getConfig: () => state.config,
+    updateConfig: (updates) => {
+      state.config = { ...state.config, ...updates };
+    },
+    isInitialized: () => state.isInitialized,
+    getHealthStatus: () => ({
+      healthy: state.eyeTracker && state.eyeTracker.getStatus().connected,
+      runtime: 'universal', // Works in both browser and Node.js
+      backend: 'pupil-labs-neon',
+      modelLoaded: !!state.eyeTracker,
+      deviceConnected: state.eyeTracker ? state.eyeTracker.getStatus().connected : false
+    }),
+    
+    // Eye tracking specific methods
+    startRecording,
+    stopRecording,
+    performCalibration,
+    getCapabilities,
+    getStatus,
+    getEyeTracker: () => state.eyeTracker
+  });
 };
 
 // Factory function for pipeline registration

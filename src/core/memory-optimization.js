@@ -6,11 +6,8 @@
 
 import { createEnhancedMemoryPool } from '../utils/enhanced-memory-pool.js';
 
-// Legacy memory pool factory - now delegates to enhanced version
-export const createMemoryPool = (config = {}) => {
-  console.warn('⚠️ createMemoryPool is deprecated, use createEnhancedMemoryPool instead');
-  return createEnhancedMemoryPool(config);
-};
+// Legacy memory pool factory - REMOVED (deprecated function eliminated)
+// Use createEnhancedMemoryPool directly instead
 
 // Enhanced memory pool factory for efficient object reuse
 export const createOptimizedMemoryPool = (config = {}) => {
@@ -236,7 +233,7 @@ export const createCircularBuffer = (config = {}) => {
 // Memory optimization manager for streaming systems
 export const createMemoryOptimizer = (config = {}) => {
   const state = {
-    memoryPool: createMemoryPool(config.pool),
+    memoryPool: createEnhancedMemoryPool(config.pool),
     buffers: new Map(),
     monitoringInterval: null,
     gcScheduled: false,
@@ -257,64 +254,34 @@ export const createMemoryOptimizer = (config = {}) => {
   // Initialize common object pools for eye tracking
   const initializePools = () => {
     // Gaze data objects
-    state.memoryPool.createPool(
-      'gazeData',
-      () => ({
-        type: 'gazeData',
-        timestamp: 0,
-        x: 0,
-        y: 0,
-        confidence: 0,
-        semantic: null,
-        metadata: {}
-      }),
-      (obj, timestamp, x, y, confidence) => {
-        obj.timestamp = timestamp || Date.now();
-        obj.x = x || 0;
-        obj.y = y || 0;
-        obj.confidence = confidence || 0;
-        obj.semantic = null;
-        obj.metadata = {};
-      }
-    );
+    state.memoryPool.registerFactory('gazeData', () => ({
+      type: 'gazeData',
+      timestamp: 0,
+      x: 0,
+      y: 0,
+      confidence: 0,
+      semantic: null,
+      metadata: {}
+    }));
 
     // Video frame objects
-    state.memoryPool.createPool(
-      'videoFrame',
-      () => ({
-        type: 'videoFrame',
-        timestamp: 0,
-        width: 0,
-        height: 0,
-        data: null,
-        format: 'rgba'
-      }),
-      (obj, timestamp, width, height, data) => {
-        obj.timestamp = timestamp || Date.now();
-        obj.width = width || 0;
-        obj.height = height || 0;
-        obj.data = data || null;
-        obj.format = 'rgba';
-      }
-    );
+    state.memoryPool.registerFactory('videoFrame', () => ({
+      type: 'videoFrame',
+      timestamp: 0,
+      width: 0,
+      height: 0,
+      data: null,
+      format: 'rgba'
+    }));
 
     // Stream buffer entries
-    state.memoryPool.createPool(
-      'bufferEntry',
-      () => ({
-        type: 'bufferEntry',
-        data: null,
-        timestamp: 0,
-        streamId: null,
-        processed: false
-      }),
-      (obj, data, streamId) => {
-        obj.data = data;
-        obj.timestamp = Date.now();
-        obj.streamId = streamId || null;
-        obj.processed = false;
-      }
-    );
+    state.memoryPool.registerFactory('bufferEntry', () => ({
+      type: 'bufferEntry',
+      data: null,
+      timestamp: 0,
+      streamId: null,
+      processed: false
+    }));
   };
 
   // Create optimized circular buffer
@@ -450,21 +417,39 @@ export const createMemoryOptimizer = (config = {}) => {
 
   // Optimized object creation helpers
   const createGazeData = (timestamp, x, y, confidence) => {
-    return state.memoryPool.acquire('gazeData', timestamp, x, y, confidence);
+    const obj = state.memoryPool.acquire('gazeData');
+    obj.timestamp = timestamp || Date.now();
+    obj.x = x || 0;
+    obj.y = y || 0;
+    obj.confidence = confidence || 0;
+    obj.semantic = null;
+    obj.metadata = {};
+    return obj;
   };
 
   const createVideoFrame = (timestamp, width, height, data) => {
-    return state.memoryPool.acquire('videoFrame', timestamp, width, height, data);
+    const obj = state.memoryPool.acquire('videoFrame');
+    obj.timestamp = timestamp || Date.now();
+    obj.width = width || 0;
+    obj.height = height || 0;
+    obj.data = data || null;
+    obj.format = 'rgba';
+    return obj;
   };
 
   const createBufferEntry = (data, streamId) => {
-    return state.memoryPool.acquire('bufferEntry', data, streamId);
+    const obj = state.memoryPool.acquire('bufferEntry');
+    obj.data = data;
+    obj.timestamp = Date.now();
+    obj.streamId = streamId || null;
+    obj.processed = false;
+    return obj;
   };
 
   // Release objects back to pool
   const releaseObject = (obj) => {
     if (obj && obj.type) {
-      return state.memoryPool.release(obj.type, obj);
+      return state.memoryPool.release(obj);
     }
     return false;
   };

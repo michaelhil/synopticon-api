@@ -5,6 +5,9 @@
  */
 
 import { createPipeline } from '../core/pipeline.js';
+import { createPipelineConfig } from '../core/pipeline-config.js';
+import { createImageProcessor } from '../core/image-processor.js';
+import { getGlobalResourcePool } from '../core/resource-pool.js';
 import { 
   Capability,
   createPerformanceProfile,
@@ -12,22 +15,7 @@ import {
   createGenderResult,
   createAnalysisResult
 } from '../core/types.js';
-
-// Age estimation configuration factory
-const createAgeEstimationConfig = (config = {}) => ({
-  modelUrl: config.modelUrl || null,
-  inputSize: config.inputSize || [64, 64],
-  enableGenderDetection: config.enableGenderDetection !== false,
-  confidenceThreshold: config.confidenceThreshold || 0.6,
-  smoothingFactor: config.smoothingFactor || 0.4,
-  ageRangeMapping: config.ageRangeMapping || {
-    child: [0, 12],
-    teen: [13, 19], 
-    adult: [20, 64],
-    senior: [65, 100]
-  },
-  ...config
-});
+import { handleError, ErrorCategory, ErrorSeverity } from '../utils/error-handler.js';
 
 // Age estimation using facial feature analysis
 const createAgeEstimator = () => {
@@ -56,25 +44,24 @@ const createAgeEstimator = () => {
     }
   };
 
-  // Extract face region from full image
+  // Use shared image processor for face extraction
+  const imageProcessor = createImageProcessor();
+  const resourcePool = getGlobalResourcePool();
+  
   const extractFaceRegion = (imageData, bbox) => {
-    const [x, y, width, height] = bbox;
-    const canvas = document.createElement('canvas');
-    canvas.width = width;
-    canvas.height = height;
-    const ctx = canvas.getContext('2d');
-    
-    // Create image from imageData
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = imageData.width;
-    tempCanvas.height = imageData.height;
-    const tempCtx = tempCanvas.getContext('2d');
-    tempCtx.putImageData(imageData, 0, 0);
-    
-    // Extract face region
-    ctx.drawImage(tempCanvas, x, y, width, height, 0, 0, width, height);
-    
-    return ctx.getImageData(0, 0, width, height);
+    try {
+      return imageProcessor.extractFaceRegion(imageData, bbox, {
+        targetSize: [64, 64],
+        padding: 0.1
+      });
+    } catch (error) {
+      handleError(
+        `Face region extraction failed: ${error.message}`,
+        ErrorCategory.PROCESSING,
+        ErrorSeverity.WARNING
+      );
+      return null;
+    }
   };
 
   // Extract age-relevant facial features
@@ -563,18 +550,52 @@ const createAgeGenderFilter = (config = {}) => {
   return { update, reset };
 };
 
-// Create Age Estimation Pipeline
-export const createAgeEstimationPipeline = (config = {}) => {
-  const ageConfig = createAgeEstimationConfig(config);
+/**
+ * Create Age Estimation Pipeline
+ * 
+ * Factory function that creates a comprehensive age estimation pipeline using
+ * facial feature analysis. Includes gender detection as complementary feature.
+ * 
+ * @param {Object} config - Pipeline configuration
+ * @param {string} [config.modelUrl=null] - Custom model URL (if applicable)
+ * @param {number[]} [config.inputSize=[64, 64]] - Input image dimensions
+ * @param {boolean} [config.enableGenderDetection=true] - Enable gender detection
+ * @param {number} [config.confidenceThreshold=0.6] - Minimum confidence threshold
+ * @param {number} [config.smoothingFactor=0.4] - Temporal smoothing factor
+ * @param {Object} [config.ageRangeMapping] - Custom age range categories
+ * @returns {Object} Pipeline instance with process, initialize, and cleanup methods
+ * 
+ * @example
+ * const pipeline = createAgeEstimationPipeline({
+ *   enableGenderDetection: true,
+ *   confidenceThreshold: 0.7,
+ *   smoothingFactor: 0.3
+ * });
+ * 
+ * await pipeline.initialize();
+ * const result = await pipeline.process(videoFrame);
+ * await pipeline.cleanup();
+ */
+/**
+ * Creates standardized age estimation pipeline
+ * @param {Object} userConfig - User configuration overrides
+ * @returns {Object} - Age estimation pipeline instance
+ */
+export const createAgeEstimationPipeline = (userConfig = {}) => {
+  // Use unified configuration system
+  const config = createPipelineConfig('age-estimation', userConfig);
+  
   let ageEstimator = null;
   let genderDetector = null;
   let smoothingFilter = null;
+  let imageProcessor = null;
+  let resourcePool = null;
 
   return createPipeline({
     name: 'age-estimation',
     capabilities: [
       Capability.AGE_ESTIMATION,
-      ...(ageConfig.enableGenderDetection ? [Capability.GENDER_DETECTION] : [])
+      ...(config.enableGenderDetection ? [Capability.GENDER_DETECTION] : [])
     ],
     performance: createPerformanceProfile({
       fps: 25,
@@ -584,69 +605,81 @@ export const createAgeEstimationPipeline = (config = {}) => {
       memoryUsage: 'low',
       batteryImpact: 'low'
     }),
-
-    // Initialize age estimation system
-    initialize: async (pipelineConfig) => {
+    
+    // Standardized initialization
+    initialize: async (initConfig = {}) => {
       try {
-        // Initialize age estimator
+        resourcePool = getGlobalResourcePool();
+        imageProcessor = createImageProcessor({ resourcePool });
+        
         ageEstimator = createAgeEstimator();
         
-        // Initialize gender detector if enabled
-        if (ageConfig.enableGenderDetection) {
+        if (config.enableGenderDetection) {
           genderDetector = createGenderDetector();
         }
-
-        // Initialize smoothing filter
-        smoothingFilter = createAgeGenderFilter({
-          smoothingFactor: ageConfig.smoothingFactor
-        });
-
-        console.log('✅ Age Estimation pipeline initialized');
+        
+        smoothingFilter = createAgeGenderFilter(config);
+        
+        handleError(
+          'Age estimation pipeline initialized successfully',
+          ErrorCategory.INITIALIZATION,
+          ErrorSeverity.INFO,
+          { config: { ...config, type: undefined } }
+        );
+        
         return true;
       } catch (error) {
-        throw new Error(`Age Estimation initialization failed: ${error.message}`);
+        handleError(
+          `Age estimation pipeline initialization failed: ${error.message}`,
+          ErrorCategory.INITIALIZATION,
+          ErrorSeverity.ERROR,
+          { config }
+        );
+        throw error;
       }
     },
 
-    // Process video frame for age and gender analysis
+    // Standardized processing method
     process: async (frame) => {
-      if (!ageEstimator) {
-        throw new Error('Age Estimation not initialized');
+      if (!ageEstimator || !imageProcessor) {
+        throw new Error('Age estimation pipeline not initialized');
       }
 
+      const startTime = performance.now();
+
       try {
-        // Convert frame to ImageData if needed
-        let imageData;
-        let canvas = null;
-
-        if (frame instanceof HTMLVideoElement || frame instanceof HTMLCanvasElement) {
-          canvas = document.createElement('canvas');
-          canvas.width = frame.videoWidth || frame.width || 320;
-          canvas.height = frame.videoHeight || frame.height || 240;
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
-          imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        } else if (frame.data && frame.width && frame.height) {
-          imageData = frame;
-        } else {
-          throw new Error('Unsupported frame format for age estimation');
-        }
-
+        // Use shared image processor for standardized image handling
+        const imageData = imageProcessor.extractImageData(frame);
+        
         // For demonstration, assume face covers central region
         // In real implementation, this would be coordinated with face detection
-        const faceRegion = [
-          imageData.width * 0.25,
-          imageData.height * 0.25,
-          imageData.width * 0.5,
-          imageData.height * 0.5
-        ];
+        const faceRegion = {
+          x: 0.25,
+          y: 0.25,
+          width: 0.5,
+          height: 0.5
+        };
+
+        // Extract and preprocess face region
+        const faceData = imageProcessor.extractFaceRegion(imageData, faceRegion, {
+          targetSize: config.inputSize,
+          padding: 0.1
+        });
+
+        if (!faceData) {
+          return createAnalysisResult({
+            faces: [],
+            processingTime: performance.now() - startTime,
+            timestamp: Date.now()
+          });
+        }
 
         // Perform age estimation
-        const ageAnalysis = ageEstimator.analyzeAgeFeatures(imageData, faceRegion);
+        const ageAnalysis = ageEstimator.analyzeAgeFeatures(faceData, [0, 0, faceData.width, faceData.height]);
         
         // Determine age category
         let ageCategory = 'adult';
-        for (const [category, range] of Object.entries(ageConfig.ageRangeMapping)) {
+        for (const [category, range] of Object.entries(config.ageRangeMapping)) {
           if (ageAnalysis.estimatedAge >= range[0] && ageAnalysis.estimatedAge <= range[1]) {
             ageCategory = category;
             break;
@@ -666,8 +699,8 @@ export const createAgeEstimationPipeline = (config = {}) => {
 
         // Perform gender detection if enabled
         let genderResult = null;
-        if (ageConfig.enableGenderDetection && genderDetector) {
-          const genderAnalysis = genderDetector.analyzeGenderFeatures(imageData, faceRegion);
+        if (config.enableGenderDetection && genderDetector) {
+          const genderAnalysis = genderDetector.analyzeGenderFeatures(faceData, [0, 0, faceData.width, faceData.height]);
           genderResult = createGenderResult(genderAnalysis);
         }
 
@@ -680,54 +713,96 @@ export const createAgeEstimationPipeline = (config = {}) => {
 
         return createAnalysisResult({
           faces: [{
-            bbox: faceRegion,
+            bbox: [
+              imageData.width * faceRegion.x,
+              imageData.height * faceRegion.y,
+              imageData.width * faceRegion.width,
+              imageData.height * faceRegion.height
+            ],
             age: ageResult,
             gender: genderResult,
             confidence: ageResult.confidence
           }],
           confidence: ageResult.confidence,
+          processingTime: performance.now() - startTime,
+          timestamp: Date.now(),
           source: 'age-estimation',
           metadata: {
             ageProcessingEnabled: true,
-            genderProcessingEnabled: ageConfig.enableGenderDetection,
+            genderProcessingEnabled: config.enableGenderDetection,
             smoothingApplied: true,
-            ageCategory: ageResult.ageCategory
+            ageCategory
           }
         });
 
       } catch (error) {
-        throw new Error(`Age Estimation processing failed: ${error.message}`);
+        handleError(
+          `Age estimation processing failed: ${error.message}`,
+          ErrorCategory.PROCESSING,
+          ErrorSeverity.ERROR,
+          { frameType: frame?.constructor?.name }
+        );
+        throw error;
       }
     },
 
-    // Cleanup resources
+    // Standardized cleanup with resource pool integration
     cleanup: async () => {
       try {
         if (smoothingFilter) {
           smoothingFilter.reset();
         }
+        
+        // Clean up image processor cache
+        if (imageProcessor) {
+          imageProcessor.cleanup();
+        }
+        
         ageEstimator = null;
         genderDetector = null;
         smoothingFilter = null;
-        console.log('✅ Age Estimation pipeline cleaned up');
+        imageProcessor = null;
+        
+        handleError(
+          'Age estimation pipeline cleaned up successfully',
+          ErrorCategory.INITIALIZATION,
+          ErrorSeverity.INFO
+        );
+        
         return true;
       } catch (error) {
-        console.warn('⚠️ Age Estimation cleanup error:', error);
+        handleError(
+          `Age estimation cleanup failed: ${error.message}`,
+          ErrorCategory.INITIALIZATION,
+          ErrorSeverity.WARNING
+        );
         return false;
       }
     },
 
-    // Pipeline health status
+    // Standardized health status
     getHealthStatus: () => ({
-      healthy: !!ageEstimator && !!genderDetector,
-      runtime: 'browser', // Age estimation works in browser only for now
+      healthy: !!ageEstimator && !!imageProcessor,
+      runtime: 'browser',
       backend: 'feature-analysis',
-      modelLoaded: !!ageEstimator && !!genderDetector,
-      smoothingEnabled: !!smoothingFilter
+      modelLoaded: !!ageEstimator,
+      smoothingEnabled: !!smoothingFilter,
+      genderDetectionEnabled: config.enableGenderDetection,
+      resourcePoolAvailable: !!resourcePool
     }),
 
+    // Standardized configuration access
+    getConfig: () => ({ ...config }),
+    
+    // Configuration update method
+    updateConfig: (updates) => {
+      const newConfig = createPipelineConfig('age-estimation', { ...config, ...updates });
+      Object.assign(config, newConfig);
+      return config;
+    },
+
     // Check if pipeline is initialized
-    isInitialized: () => !!ageEstimator
+    isInitialized: () => !!ageEstimator && !!imageProcessor
   });
 };
 

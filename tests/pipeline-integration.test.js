@@ -5,11 +5,11 @@
  */
 
 import { createOrchestrator } from '../src/core/orchestrator.js';
-import { createBlazeFacePipeline } from '../src/pipelines/blazeface-pipeline-hybrid.js';
+import { createMediaPipeFacePipeline } from '../src/pipelines/mediapipe-face-pipeline.js';
 import { createEyeTrackingPipeline } from '../src/pipelines/eye-tracking-pipeline.js';
-import { createMediaPipeFaceMeshPipeline } from '../src/pipelines/mediapipe-pipeline-hybrid.js';
+import { createMediaPipeFaceMeshPipeline } from '../src/pipelines/mediapipe-pipeline.js';
 import { createIrisTrackingPipeline } from '../src/pipelines/iris-tracking-pipeline.js';
-import { createEmotionAnalysisPipeline } from '../src/pipelines/emotion-analysis-pipeline-hybrid.js';
+import { createEmotionAnalysisPipeline } from '../src/pipelines/emotion-analysis-pipeline.js';
 import { createAgeEstimationPipeline } from '../src/pipelines/age-estimation-pipeline.js';
 import { Capability } from '../src/core/types.js';
 import { isDependencyAvailable, checkSystemCapabilities } from '../src/utils/dependency-loader.js';
@@ -48,7 +48,7 @@ describe('Pipeline Integration Tests', () => {
   describe('Pipeline Registration and Discovery', () => {
     test('should register all pipelines successfully', async () => {
       const pipelines = [
-        createBlazeFacePipeline(),
+        createMediaPipeFacePipeline(),
         createEyeTrackingPipeline({ useMockDevices: true }),
         createEmotionAnalysisPipeline(),
         createAgeEstimationPipeline(),
@@ -70,15 +70,15 @@ describe('Pipeline Integration Tests', () => {
       const availablePipelines = orchestrator.getAvailablePipelines();
       expect(availablePipelines.length).toBeGreaterThan(0);
       
-      // At minimum, BlazeFace and Eye Tracking should be available
+      // At minimum, MediaPipe Face and Eye Tracking should be available
       const pipelineNames = availablePipelines.map(p => p.name);
-      expect(pipelineNames).toContain('blazeface');
+      expect(pipelineNames).toContain('mediapipe-face');
       expect(pipelineNames).toContain('eye-tracking');
     });
 
     test('should handle pipeline initialization failures gracefully', async () => {
       // Create a pipeline that will fail to initialize
-      const failingPipeline = createBlazeFacePipeline();
+      const failingPipeline = createMediaPipeFacePipeline();
       
       // Mock the initialize method to fail
       const originalInitialize = failingPipeline.initialize;
@@ -99,7 +99,7 @@ describe('Pipeline Integration Tests', () => {
   describe('Capability-Based Pipeline Selection', () => {
     beforeEach(async () => {
       // Register available pipelines
-      await orchestrator.registerPipeline(createBlazeFacePipeline());
+      await orchestrator.registerPipeline(createMediaPipeFacePipeline());
       await orchestrator.registerPipeline(createEyeTrackingPipeline({ useMockDevices: true }));
     });
 
@@ -112,8 +112,8 @@ describe('Pipeline Integration Tests', () => {
       const selectedPipelines = await orchestrator.selectOptimalPipelines(requirements);
       expect(selectedPipelines.length).toBeGreaterThan(0);
       
-      // Should include BlazeFace for face detection
-      expect(selectedPipelines.some(p => p.includes('blazeface'))).toBe(true);
+      // Should include MediaPipe Face for face detection
+      expect(selectedPipelines.some(p => p.includes('mediapipe-face'))).toBe(true);
     });
 
     test('should handle multiple capability requirements', async () => {
@@ -142,7 +142,7 @@ describe('Pipeline Integration Tests', () => {
   describe('Multi-Pipeline Processing', () => {
     beforeEach(async () => {
       // Register pipelines that work without external dependencies
-      await orchestrator.registerPipeline(createBlazeFacePipeline());
+      await orchestrator.registerPipeline(createMediaPipeFacePipeline());
       await orchestrator.registerPipeline(createEyeTrackingPipeline({ 
         useMockDevices: true,
         autoConnect: false 
@@ -186,7 +186,7 @@ describe('Pipeline Integration Tests', () => {
         strategy: 'performance_first'
       };
 
-      // Should still work with BlazeFace pipeline
+      // Should still work with MediaPipe Face pipeline
       const results = await orchestrator.process(mockFrame, requirements);
       expect(results).toBeDefined();
     });
@@ -195,17 +195,17 @@ describe('Pipeline Integration Tests', () => {
   describe('Fallback Strategies', () => {
     test('should fall back to working pipelines when preferred pipeline fails', async () => {
       // Register multiple pipelines with same capability
-      const blazeFace1 = createBlazeFacePipeline();
-      blazeFace1.name = 'blazeface-primary';
+      const mediaPipeFace1 = createMediaPipeFacePipeline();
+      mediaPipeFace1.name = 'blazeface-primary';
       
-      const blazeFace2 = createBlazeFacePipeline();
-      blazeFace2.name = 'blazeface-fallback';
+      const mediaPipeFace2 = createMediaPipeFacePipeline();
+      mediaPipeFace2.name = 'blazeface-fallback';
 
-      await orchestrator.registerPipeline(blazeFace1);
-      await orchestrator.registerPipeline(blazeFace2);
+      await orchestrator.registerPipeline(mediaPipeFace1);
+      await orchestrator.registerPipeline(mediaPipeFace2);
 
       // Break the primary pipeline
-      blazeFace1.process = async () => {
+      mediaPipeFace1.process = async () => {
         throw new Error('Primary pipeline failed');
       };
 
@@ -220,7 +220,7 @@ describe('Pipeline Integration Tests', () => {
     });
 
     test('should report error when all pipelines fail', async () => {
-      const pipeline = createBlazeFacePipeline();
+      const pipeline = createMediaPipeFacePipeline();
       
       // Mock failure
       pipeline.process = async () => {
@@ -245,7 +245,7 @@ describe('Pipeline Integration Tests', () => {
 
   describe('Circuit Breaker Functionality', () => {
     test('should open circuit breaker after repeated failures', async () => {
-      const pipeline = createBlazeFacePipeline();
+      const pipeline = createMediaPipeFacePipeline();
       pipeline.process = async () => {
         throw new Error('Consistent failure');
       };
@@ -268,11 +268,11 @@ describe('Pipeline Integration Tests', () => {
 
       // Circuit should be open now
       const breakerState = orchestrator.getCircuitBreakerState();
-      expect(breakerState.failures.get('blazeface')).toBeGreaterThan(0);
+      expect(breakerState.failures.get('mediapipe-face')).toBeGreaterThan(0);
     });
 
     test('should reset circuit breaker after successful execution', async () => {
-      const pipeline = createBlazeFacePipeline();
+      const pipeline = createMediaPipeFacePipeline();
       let failureCount = 0;
       
       pipeline.process = async () => {
@@ -281,7 +281,7 @@ describe('Pipeline Integration Tests', () => {
           throw new Error('Temporary failure');
         }
         // Success after 3 failures
-        return { faces: [], timestamp: Date.now(), source: 'blazeface' };
+        return { faces: [], timestamp: Date.now(), source: 'mediapipe-face' };
       };
 
       await orchestrator.registerPipeline(pipeline);
@@ -302,13 +302,13 @@ describe('Pipeline Integration Tests', () => {
 
       // Circuit should be reset
       const breakerState = orchestrator.getCircuitBreakerState();
-      expect(breakerState.failures.get('blazeface')).toBe(0);
+      expect(breakerState.failures.get('mediapipe-face')).toBe(0);
     });
   });
 
   describe('Performance Monitoring', () => {
     test('should collect performance metrics', async () => {
-      await orchestrator.registerPipeline(createBlazeFacePipeline());
+      await orchestrator.registerPipeline(createMediaPipeFacePipeline());
       
       const requirements = {
         capabilities: [Capability.FACE_DETECTION],
@@ -325,7 +325,7 @@ describe('Pipeline Integration Tests', () => {
     });
 
     test('should track health status', async () => {
-      await orchestrator.registerPipeline(createBlazeFacePipeline());
+      await orchestrator.registerPipeline(createMediaPipeFacePipeline());
       
       const healthStatus = orchestrator.getHealthStatus();
       expect(healthStatus.status).toBeDefined();
@@ -350,7 +350,7 @@ describe('Pipeline Integration Tests', () => {
     test('should skip unavailable dependencies gracefully', async () => {
       // This test ensures the system works even without MediaPipe
       const pipelines = [
-        createBlazeFacePipeline(),
+        createMediaPipeFacePipeline(),
         createEyeTrackingPipeline({ useMockDevices: true })
       ];
 
@@ -371,13 +371,13 @@ describe('Pipeline Integration Tests', () => {
 
   describe('Combined Pipeline Workflows', () => {
     test('should coordinate face detection with eye tracking', async () => {
-      const blazeFace = createBlazeFacePipeline();
+      const mediaPipeFace = createMediaPipeFacePipeline();
       const eyeTracking = createEyeTrackingPipeline({ 
         useMockDevices: true,
         autoConnect: false
       });
 
-      await orchestrator.registerPipeline(blazeFace);
+      await orchestrator.registerPipeline(mediaPipeFace);
       await orchestrator.registerPipeline(eyeTracking);
 
       const requirements = {
@@ -399,7 +399,7 @@ describe('Pipeline Integration Tests', () => {
     });
 
     test('should handle different processing strategies', async () => {
-      await orchestrator.registerPipeline(createBlazeFacePipeline());
+      await orchestrator.registerPipeline(createMediaPipeFacePipeline());
       await orchestrator.registerPipeline(createEyeTrackingPipeline({ 
         useMockDevices: true 
       }));
@@ -432,11 +432,11 @@ export const runPipelineIntegrationTests = async () => {
     const orchestrator = createOrchestrator();
     
     // Test basic pipeline registration
-    const blazeFace = createBlazeFacePipeline();
+    const mediaPipeFace = createMediaPipeFacePipeline();
     const eyeTracking = createEyeTrackingPipeline({ useMockDevices: true });
     
     console.log('📋 Registering pipelines...');
-    await orchestrator.registerPipeline(blazeFace);
+    await orchestrator.registerPipeline(mediaPipeFace);
     await orchestrator.registerPipeline(eyeTracking);
     
     const availablePipelines = orchestrator.getAvailablePipelines();

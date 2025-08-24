@@ -781,7 +781,7 @@ export const createContextManager = (config = {}) => {
     // Advanced features
     exportContext: (contextId) => {
       const context = state.activeContexts.get(contextId || state.defaultContextId);
-      return context ? JSON.parse(JSON.stringify(context)) : null;
+      return context ? structuredClone(context) : null;
     },
     
     importContext: (contextData) => {

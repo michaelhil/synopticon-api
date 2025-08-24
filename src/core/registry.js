@@ -377,17 +377,17 @@ export const createPipelineRegistry = () => {
 // Built-in pipeline auto-registration
 export const autoRegisterBuiltins = async (registry) => {
   try {
-    // Register BlazeFace pipeline
-    const { createBlazeFacePipeline } = await import('../pipelines/blazeface-pipeline.js');
+    // Register MediaPipe Face pipeline
+    const { createMediaPipeFacePipeline } = await import('../pipelines/mediapipe-face-pipeline.js');
     
-    registry.register('blazeface', createBlazeFacePipeline, {
+    registry.register('mediapipe-face', createMediaPipeFacePipeline, {
       category: 'detection',
-      description: 'Fast face detection with basic 3DOF pose estimation',
-      version: '1.0.0',
+      description: 'Fast face detection with MediaPipe',
+      version: '2.0.0',
       capabilities: ['face_detection', 'pose_estimation_3dof', 'landmark_detection'],
-      tags: ['fast', 'mobile', 'real-time', 'basic'],
-      author: 'Google/TensorFlow',
-      dependencies: ['@tensorflow/tfjs', '@tensorflow-models/blazeface']
+      tags: ['fast', 'mobile', 'real-time', 'efficient'],
+      author: 'Google/MediaPipe',
+      dependencies: ['@mediapipe/face_detection']
     });
     
     console.log('✅ Built-in pipelines registered');

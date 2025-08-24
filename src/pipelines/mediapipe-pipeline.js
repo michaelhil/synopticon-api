@@ -4,6 +4,18 @@
  */
 
 import { createPipeline } from '../core/pipeline.js';
+import { createPipelineConfig } from '../core/pipeline-config.js';
+import { createImageProcessor } from '../core/image-processor.js';
+import { getGlobalResourcePool } from '../core/resource-pool.js';
+import { 
+  createMediaPipeBase,
+  createMediaPipeLoader,
+  checkMediaPipeAvailability,
+  MEDIAPIPE_LANDMARKS,
+  IRIS_LANDMARKS,
+  extractKeyPoints,
+  calculateFaceBoundingBox
+} from '../core/mediapipe-commons.js';
 import { 
   Capability,
   createPerformanceProfile,
@@ -12,18 +24,9 @@ import {
   createEyeResult,
   createAnalysisResult
 } from '../core/types.js';
+import { handleError, ErrorCategory, ErrorSeverity } from '../utils/error-handler.js';
 
-// MediaPipe-specific configuration
-const createMediaPipeConfig = (config = {}) => ({
-  maxNumFaces: config.maxNumFaces || 1,
-  refineLandmarks: config.refineLandmarks !== false, // Default true
-  minDetectionConfidence: config.minDetectionConfidence || 0.5,
-  minTrackingConfidence: config.minTrackingConfidence || 0.5,
-  selfieMode: config.selfieMode || false,
-  enableIris: config.enableIris || false,
-  staticImageMode: config.staticImageMode || false,
-  ...config
-});
+// Use MediaPipe commons for shared configuration
 
 // 3D canonical face model points for PnP pose estimation
 const CANONICAL_3D_FACE_MODEL = {
@@ -355,12 +358,49 @@ const processMediaPipeResults = (results, enableIris = false) => {
   });
 };
 
-// Create MediaPipe Face Mesh pipeline
-export const createMediaPipeFaceMeshPipeline = (config = {}) => {
-  const mediaPipeConfig = createMediaPipeConfig(config);
+/**
+ * Create MediaPipe Face Mesh Pipeline
+ * 
+ * Factory function that creates a comprehensive facial analysis pipeline using
+ * MediaPipe Face Mesh. Provides 468 facial landmarks with 6DOF pose estimation,
+ * eye tracking, and detailed facial geometry analysis.
+ * 
+ * @param {Object} config - Pipeline configuration
+ * @param {number} [config.maxNumFaces=1] - Maximum number of faces to detect
+ * @param {boolean} [config.refineLandmarks=true] - Enable refined landmark detection
+ * @param {number} [config.minDetectionConfidence=0.5] - Minimum detection confidence
+ * @param {number} [config.minTrackingConfidence=0.5] - Minimum tracking confidence
+ * @param {boolean} [config.selfieMode=false] - Enable selfie mode (flip horizontally)
+ * @param {boolean} [config.enableIris=false] - Enable iris tracking integration
+ * @param {boolean} [config.staticImageMode=false] - Process static images vs video
+ * @returns {Object} Pipeline instance with process, initialize, and cleanup methods
+ * 
+ * @example
+ * const pipeline = createMediaPipeFaceMeshPipeline({
+ *   maxNumFaces: 1,
+ *   refineLandmarks: true,
+ *   enableIris: true
+ * });
+ * 
+ * await pipeline.initialize();
+ * const result = await pipeline.process(videoFrame);
+ * console.log(`Detected ${result.faces.length} faces with ${result.faces[0]?.landmarks.length} landmarks`);
+ * await pipeline.cleanup();
+ */
+/**
+ * Creates standardized MediaPipe Face Mesh pipeline
+ * @param {Object} userConfig - User configuration overrides
+ * @returns {Object} - MediaPipe Face Mesh pipeline instance
+ */
+export const createMediaPipeFaceMeshPipeline = (userConfig = {}) => {
+  // Use unified configuration system
+  const config = createPipelineConfig('mediapipe-face-mesh', userConfig);
+  
   let faceMesh = null;
   let iris = null;
   let mediaPipeLoader = null;
+  let imageProcessor = null;
+  let resourcePool = null;
 
   return createPipeline({
     name: 'mediapipe-face-mesh',
@@ -379,40 +419,69 @@ export const createMediaPipeFaceMeshPipeline = (config = {}) => {
       batteryImpact: 'medium'
     }),
 
-    // Initialize MediaPipe models
-    initialize: async (pipelineConfig) => {
+    // Standardized initialization
+    initialize: async (initConfig = {}) => {
       try {
-        // Import dependency loader
-        const { createMediaPipeLoader } = await import('../utils/dependency-loader.js');
+        resourcePool = getGlobalResourcePool();
+        imageProcessor = createImageProcessor({ resourcePool });
+        
+        // Check MediaPipe availability
+        const availability = checkMediaPipeAvailability();
+        if (!availability.FaceMesh) {
+          throw new Error('MediaPipe Face Mesh not available');
+        }
+        
+        // Use MediaPipe commons loader
         mediaPipeLoader = createMediaPipeLoader();
 
-        // Load Face Mesh with configuration
-        faceMesh = await mediaPipeLoader.loadFaceMesh({
-          maxNumFaces: mediaPipeConfig.maxNumFaces,
-          refineLandmarks: mediaPipeConfig.refineLandmarks,
-          minDetectionConfidence: mediaPipeConfig.minDetectionConfidence,
-          minTrackingConfidence: mediaPipeConfig.minTrackingConfidence
-        });
+        // Load Face Mesh with standardized configuration
+        faceMesh = await mediaPipeLoader.loadModel('FaceMesh', createMediaPipeBase({
+          maxNumFaces: config.maxNumFaces,
+          refineLandmarks: config.refineLandmarks,
+          minDetectionConfidence: config.minDetectionConfidence,
+          minTrackingConfidence: config.minTrackingConfidence
+        }));
 
         // Load Iris if enabled
-        if (mediaPipeConfig.enableIris) {
+        if (config.enableIris) {
           try {
-            iris = await mediaPipeLoader.loadIris({
-              maxNumFaces: mediaPipeConfig.maxNumFaces,
-              minDetectionConfidence: mediaPipeConfig.minDetectionConfidence,
-              minTrackingConfidence: mediaPipeConfig.minTrackingConfidence
-            });
-            console.log('✅ MediaPipe Iris enabled');
+            iris = await mediaPipeLoader.loadModel('Iris', createMediaPipeBase({
+              maxNumFaces: config.maxNumFaces,
+              minDetectionConfidence: config.minDetectionConfidence,
+              minTrackingConfidence: config.minTrackingConfidence
+            }));
+            
+            handleError(
+              'MediaPipe Iris tracking enabled',
+              ErrorCategory.INITIALIZATION,
+              ErrorSeverity.INFO
+            );
           } catch (irisError) {
-            console.warn('⚠️ MediaPipe Iris not available, continuing without iris tracking:', irisError.message);
+            handleError(
+              `MediaPipe Iris not available: ${irisError.message}`,
+              ErrorCategory.INITIALIZATION,
+              ErrorSeverity.WARNING
+            );
             iris = null;
           }
         }
 
-        console.log('✅ MediaPipe Face Mesh pipeline initialized');
+        handleError(
+          'MediaPipe Face Mesh pipeline initialized successfully',
+          ErrorCategory.INITIALIZATION,
+          ErrorSeverity.INFO,
+          { config: { ...config, type: undefined } }
+        );
+        
         return true;
       } catch (error) {
-        throw new Error(`MediaPipe initialization failed: ${error.message}`);
+        handleError(
+          `MediaPipe initialization failed: ${error.message}`,
+          ErrorCategory.INITIALIZATION,
+          ErrorSeverity.ERROR,
+          { config }
+        );
+        throw error;
       }
     },
 
@@ -465,34 +534,64 @@ export const createMediaPipeFaceMeshPipeline = (config = {}) => {
       }
     },
 
-    // Cleanup resources
+    // Standardized cleanup with resource pool integration
     cleanup: async () => {
       try {
         if (mediaPipeLoader) {
           await mediaPipeLoader.cleanup();
           mediaPipeLoader = null;
         }
+        
+        // Clean up image processor cache
+        if (imageProcessor) {
+          imageProcessor.cleanup();
+        }
+        
         faceMesh = null;
         iris = null;
-        console.log('✅ MediaPipe Face Mesh pipeline cleaned up');
+        imageProcessor = null;
+        
+        handleError(
+          'MediaPipe Face Mesh pipeline cleaned up successfully',
+          ErrorCategory.INITIALIZATION,
+          ErrorSeverity.INFO
+        );
+        
         return true;
       } catch (error) {
-        console.warn('⚠️ MediaPipe cleanup error:', error);
+        handleError(
+          `MediaPipe cleanup failed: ${error.message}`,
+          ErrorCategory.INITIALIZATION,
+          ErrorSeverity.WARNING
+        );
         return false;
       }
     },
 
-    // Pipeline health status (standardization)
+    // Standardized health status
     getHealthStatus: () => ({
-      healthy: !!faceMesh,
+      healthy: !!faceMesh && !!imageProcessor,
       runtime: 'browser',
-      backend: 'mediapipe-legacy',
+      backend: 'mediapipe-face-mesh',
       modelLoaded: !!faceMesh,
-      irisEnabled: !!iris
+      irisEnabled: !!iris,
+      refinedLandmarks: config.refineLandmarks,
+      resourcePoolAvailable: !!resourcePool,
+      maxFaces: config.maxNumFaces
     }),
 
-    // Check if pipeline is initialized (standardization)
-    isInitialized: () => !!faceMesh
+    // Standardized configuration access
+    getConfig: () => ({ ...config }),
+    
+    // Configuration update method
+    updateConfig: (updates) => {
+      const newConfig = createPipelineConfig('mediapipe-face-mesh', { ...config, ...updates });
+      Object.assign(config, newConfig);
+      return config;
+    },
+
+    // Check if pipeline is initialized
+    isInitialized: () => !!faceMesh && !!imageProcessor
   });
 };
 

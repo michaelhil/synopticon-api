@@ -502,31 +502,41 @@
             // Setup event listeners
             const setupEvents = () => {
                 const { toggleBtn, clearBtn, reinitBtn } = getElements();
-                console.log('Setting up event listeners...');
+                console.log('Setting up event listeners with cleanup patterns...');
                 console.log('Toggle button:', toggleBtn);
                 console.log('Clear button:', clearBtn);
                 console.log('Reinit button:', reinitBtn);
                 
+                // Create AbortController for proper cleanup
+                const eventController = new AbortController();
+                const signal = eventController.signal;
+                
                 if (toggleBtn) {
-                    toggleBtn.addEventListener('click', toggleListening);
-                    console.log('✅ Toggle button event listener added');
+                    toggleBtn.addEventListener('click', toggleListening, { signal });
+                    console.log('✅ Toggle button event listener added with cleanup');
                 } else {
                     console.error('❌ Toggle button not found!');
                 }
                 
                 if (clearBtn) {
-                    clearBtn.addEventListener('click', clearSession);
-                    console.log('✅ Clear button event listener added');
+                    clearBtn.addEventListener('click', clearSession, { signal });
+                    console.log('✅ Clear button event listener added with cleanup');
                 } else {
                     console.error('❌ Clear button not found!');
                 }
                 
                 if (reinitBtn) {
-                    reinitBtn.addEventListener('click', reinitializePipeline);
-                    console.log('✅ Reinit button event listener added');
+                    reinitBtn.addEventListener('click', reinitializePipeline, { signal });
+                    console.log('✅ Reinit button event listener added with cleanup');
                 } else {
                     console.error('❌ Reinit button not found!');
                 }
+                
+                // Store cleanup function globally for page unload
+                window.speechDemoCleanup = () => {
+                    console.log('🧹 Cleaning up speech demo event listeners');
+                    eventController.abort();
+                };
             };
 
             // Get current configuration from UI
@@ -674,6 +684,13 @@
         document.addEventListener('DOMContentLoaded', async () => {
             const demo = createSpeechDemo();
             await demo.initialize();
+        });
+        
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (window.speechDemoCleanup) {
+                window.speechDemoCleanup();
+            }
         });
     </script>
 </body>

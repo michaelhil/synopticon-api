@@ -910,14 +910,20 @@ export const createSpeechAnalysisAPI = (config = {}) => {
   };
 };
 
-// Export utility functions (not factory functions which are exported from individual modules)
+// Export utility functions and main factory functions
 export {
-  // Utilities only
+  // Utilities
   validatePrompts,
   suggestPrompts,
   analyzeContext,
   CONTEXT_STRATEGIES,
   DEFAULT_STREAM_CONFIG
+};
+
+// Export core factory functions
+export {
+  createSpeechRecognition,
+  createLLMClient
 };
 
 // Export factory functions from types

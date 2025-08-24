@@ -5,15 +5,19 @@
  */
 
 import { createPipeline } from '../core/pipeline.js';
+import { createPipelineConfig } from '../core/pipeline-config.js';
+import { createImageProcessor } from '../core/image-processor.js';
+import { getGlobalResourcePool } from '../core/resource-pool.js';
 import { 
   Capability,
   createPerformanceProfile,
   createEmotionResult,
   createAnalysisResult
 } from '../core/types.js';
+import { handleError, ErrorCategory, ErrorSeverity } from '../utils/error-handler.js';
 
-// Emotion mapping from model output indices to emotion names
-const EMOTION_LABELS = [
+// Use standardized emotion labels from unified config
+export const EMOTION_LABELS = [
   'angry',
   'disgusted', 
   'fearful',
@@ -22,17 +26,6 @@ const EMOTION_LABELS = [
   'surprised',
   'neutral'
 ];
-
-// Emotion configuration factory
-const createEmotionConfig = (config = {}) => ({
-  modelUrl: config.modelUrl || 'https://cdn.jsdelivr.net/gh/oarriaga/face_classification/trained_models/emotion_models/fer2013_mini_XCEPTION.102-0.66.hdf5',
-  inputSize: config.inputSize || [48, 48], // Standard FER input size
-  batchSize: config.batchSize || 1,
-  confidenceThreshold: config.confidenceThreshold || 0.5,
-  smoothingFactor: config.smoothingFactor || 0.3,
-  enableValenceArousal: config.enableValenceArousal !== false,
-  ...config
-});
 
 // Simple CNN implementation using WebGL shaders for emotion recognition
 const createEmotionCNN = () => {
@@ -359,12 +352,48 @@ const calculateValenceArousal = (probabilities) => {
   return { valence, arousal };
 };
 
-// Create Emotion Analysis Pipeline
-export const createEmotionAnalysisPipeline = (config = {}) => {
-  const emotionConfig = createEmotionConfig(config);
+/**
+ * Create Emotion Analysis Pipeline
+ * 
+ * Factory function that creates a real-time emotion detection pipeline using
+ * lightweight CNN model with WebGL acceleration for optimal performance.
+ * Based on FER-2013 dataset with 7 basic emotions.
+ * 
+ * @param {Object} config - Pipeline configuration
+ * @param {string} [config.modelUrl] - Custom CNN model URL
+ * @param {number[]} [config.inputSize=[48, 48]] - Model input dimensions (FER standard)
+ * @param {number} [config.batchSize=1] - Processing batch size
+ * @param {number} [config.confidenceThreshold=0.5] - Minimum confidence threshold
+ * @param {number} [config.smoothingFactor=0.3] - Temporal smoothing factor
+ * @param {boolean} [config.enableValenceArousal=true] - Enable valence/arousal calculation
+ * @returns {Object} Pipeline instance with process, initialize, and cleanup methods
+ * 
+ * @example
+ * const pipeline = createEmotionAnalysisPipeline({
+ *   smoothingFactor: 0.4,
+ *   confidenceThreshold: 0.6,
+ *   enableValenceArousal: true
+ * });
+ * 
+ * await pipeline.initialize();
+ * const result = await pipeline.process(videoFrame);
+ * console.log(`Detected emotion: ${result.expression.emotion} (${result.expression.confidence * 100}%)`);
+ * await pipeline.cleanup();
+ */
+/**
+ * Creates standardized emotion analysis pipeline
+ * @param {Object} userConfig - User configuration overrides
+ * @returns {Object} - Emotion analysis pipeline instance
+ */
+export const createEmotionAnalysisPipeline = (userConfig = {}) => {
+  // Use unified configuration system
+  const config = createPipelineConfig('emotion-analysis', userConfig);
+  
   let cnn = null;
   let emotionFilter = null;
   let canvas = null;
+  let imageProcessor = null;
+  let resourcePool = null;
 
   return createPipeline({
     name: 'emotion-analysis',
@@ -380,142 +409,204 @@ export const createEmotionAnalysisPipeline = (config = {}) => {
       batteryImpact: 'low'
     }),
 
-    // Initialize emotion analysis system
-    initialize: async (pipelineConfig) => {
+    // Standardized initialization
+    initialize: async (initConfig = {}) => {
       try {
-        // Create WebGL context for CNN processing
-        canvas = document.createElement('canvas');
-        canvas.width = 256;
-        canvas.height = 256;
-
+        resourcePool = getGlobalResourcePool();
+        imageProcessor = createImageProcessor({ resourcePool });
+        
+        // Create WebGL context for CNN processing using resource pool
+        const contextInfo = resourcePool.getWebGLContext('webgl2', 256, 256);
+        canvas = contextInfo.canvas;
+        
         // Initialize CNN processor
         cnn = createEmotionCNN();
         await cnn.initialize(canvas);
 
         // Initialize emotion smoothing filter
         emotionFilter = createEmotionFilter({
-          smoothingFactor: emotionConfig.smoothingFactor
+          smoothingFactor: config.smoothingFactor
         });
 
-        console.log('✅ Emotion Analysis pipeline initialized');
+        handleError(
+          'Emotion analysis pipeline initialized successfully',
+          ErrorCategory.INITIALIZATION,
+          ErrorSeverity.INFO,
+          { config: { ...config, type: undefined } }
+        );
+        
         return true;
       } catch (error) {
-        throw new Error(`Emotion Analysis initialization failed: ${error.message}`);
+        handleError(
+          `Emotion analysis pipeline initialization failed: ${error.message}`,
+          ErrorCategory.INITIALIZATION,
+          ErrorSeverity.ERROR,
+          { config }
+        );
+        throw error;
       }
     },
 
-    // Process video frame for emotion analysis
+    // Standardized processing method
     process: async (frame) => {
-      if (!cnn) {
-        throw new Error('Emotion Analysis CNN not initialized');
+      if (!cnn || !imageProcessor) {
+        throw new Error('Emotion analysis pipeline not initialized');
       }
 
+      const startTime = performance.now();
+
       try {
-        // Convert frame to ImageData if needed
-        let imageData;
-        if (frame instanceof HTMLVideoElement || frame instanceof HTMLCanvasElement) {
-          const ctx = canvas.getContext('2d');
-          ctx.drawImage(frame, 0, 0, canvas.width, canvas.height);
-          imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        } else if (frame.data && frame.width && frame.height) {
-          imageData = frame;
-        } else {
-          throw new Error('Unsupported frame format for emotion analysis');
-        }
+        // Use shared image processor for standardized image handling
+        const imageData = imageProcessor.extractImageData(frame);
+        
+        // Preprocess image to target size
+        const processedImage = imageProcessor.preprocessImage(imageData, {
+          targetSize: config.inputSize,
+          format: 'RGB',
+          normalize: true,
+          centerCrop: true
+        });
 
         // For demonstration, assume face covers central region
         // In real implementation, this would be coordinated with face detection
-        const faceRegion = [
-          canvas.width * 0.25,
-          canvas.height * 0.25,
-          canvas.width * 0.5,
-          canvas.height * 0.5
-        ];
+        const faceRegion = {
+          x: 0.25,
+          y: 0.25,
+          width: 0.5,
+          height: 0.5
+        };
 
-        // Process emotion
-        const rawProbabilities = cnn.processEmotion(imageData, faceRegion);
-        
-        // Apply smoothing
-        const smoothedProbabilities = emotionFilter.update(rawProbabilities);
-
-        // Determine primary emotion
-        const maxIndex = smoothedProbabilities.indexOf(Math.max(...smoothedProbabilities));
-        const primaryEmotion = EMOTION_LABELS[maxIndex];
-        const confidence = smoothedProbabilities[maxIndex];
-
-        // Create probability object
-        const probabilities = {};
-        EMOTION_LABELS.forEach((emotion, i) => {
-          probabilities[emotion] = smoothedProbabilities[i];
+        // Extract face region using shared processor
+        const faceData = imageProcessor.extractFaceRegion(processedImage, faceRegion, {
+          targetSize: config.inputSize,
+          padding: 0.1
         });
 
-        // Calculate valence and arousal if enabled
-        let valence = 0;
-        let arousal = 0;
-        if (emotionConfig.enableValenceArousal) {
-          const va = calculateValenceArousal(smoothedProbabilities);
-          valence = va.valence;
-          arousal = va.arousal;
+        if (!faceData) {
+          return createAnalysisResult({
+            faces: [],
+            processingTime: performance.now() - startTime,
+            timestamp: Date.now()
+          });
         }
 
+        // Process with CNN
+        const emotionPrediction = await cnn.predict(faceData);
+        
         // Create emotion result
-        const emotionResult = createEmotionResult({
-          emotion: primaryEmotion,
-          confidence,
-          probabilities,
-          arousal,
-          valence
+        let emotionResult = createEmotionResult({
+          emotion: emotionPrediction.emotion,
+          confidence: emotionPrediction.confidence,
+          probabilities: emotionPrediction.probabilities,
+          valence: emotionPrediction.valence || null,
+          arousal: emotionPrediction.arousal || null
         });
 
+        // Apply smoothing if enabled
+        if (emotionFilter) {
+          emotionResult = emotionFilter.update(emotionResult);
+        }
+
         return createAnalysisResult({
-          faces: [], // Emotion pipeline focuses on analysis
-          expression: emotionResult,
-          confidence,
+          faces: [{
+            bbox: [
+              imageData.width * faceRegion.x,
+              imageData.height * faceRegion.y,
+              imageData.width * faceRegion.width,
+              imageData.height * faceRegion.height
+            ],
+            emotion: emotionResult,
+            confidence: emotionResult.confidence
+          }],
+          confidence: emotionResult.confidence,
+          processingTime: performance.now() - startTime,
+          timestamp: Date.now(),
           source: 'emotion-analysis',
           metadata: {
-            emotionProcessingTime: performance.now(),
-            smoothingApplied: true,
-            valenceArousalEnabled: emotionConfig.enableValenceArousal
+            emotionLabels: EMOTION_LABELS,
+            valenceArousalEnabled: config.enableValenceArousal,
+            smoothingApplied: !!emotionFilter,
+            model: 'fer2013_mini_XCEPTION'
           }
         });
 
       } catch (error) {
-        throw new Error(`Emotion Analysis processing failed: ${error.message}`);
+        handleError(
+          `Emotion analysis processing failed: ${error.message}`,
+          ErrorCategory.PROCESSING,
+          ErrorSeverity.ERROR,
+          { frameType: frame?.constructor?.name }
+        );
+        throw error;
       }
     },
 
-    // Cleanup resources
+    // Standardized cleanup with resource pool integration
     cleanup: async () => {
       try {
         if (cnn) {
           cnn.cleanup();
           cnn = null;
         }
+        
         if (emotionFilter) {
           emotionFilter.reset();
         }
-        if (canvas) {
+        
+        // Clean up image processor cache
+        if (imageProcessor) {
+          imageProcessor.cleanup();
+        }
+        
+        // Return WebGL context to pool
+        if (canvas && resourcePool) {
+          // Context will be cleaned up by resource pool
           canvas = null;
         }
-        console.log('✅ Emotion Analysis pipeline cleaned up');
+        
+        emotionFilter = null;
+        imageProcessor = null;
+        
+        handleError(
+          'Emotion analysis pipeline cleaned up successfully',
+          ErrorCategory.INITIALIZATION,
+          ErrorSeverity.INFO
+        );
+        
         return true;
       } catch (error) {
-        console.warn('⚠️ Emotion Analysis cleanup error:', error);
+        handleError(
+          `Emotion analysis cleanup failed: ${error.message}`,
+          ErrorCategory.INITIALIZATION,
+          ErrorSeverity.WARNING
+        );
         return false;
       }
     },
 
-    // Pipeline health status (standardization)
+    // Standardized health status
     getHealthStatus: () => ({
-      healthy: !!cnn,
+      healthy: !!cnn && !!imageProcessor,
       runtime: 'browser',
-      backend: 'cnn-legacy',
+      backend: config.enableWebGL ? 'webgl-cnn' : 'fallback-cnn',
       modelLoaded: !!cnn,
-      filterEnabled: !!emotionFilter
+      filterEnabled: !!emotionFilter,
+      resourcePoolAvailable: !!resourcePool,
+      valenceArousalEnabled: config.enableValenceArousal
     }),
 
-    // Check if pipeline is initialized (standardization)
-    isInitialized: () => !!cnn
+    // Standardized configuration access
+    getConfig: () => ({ ...config }),
+    
+    // Configuration update method
+    updateConfig: (updates) => {
+      const newConfig = createPipelineConfig('emotion-analysis', { ...config, ...updates });
+      Object.assign(config, newConfig);
+      return config;
+    },
+
+    // Check if pipeline is initialized
+    isInitialized: () => !!cnn && !!imageProcessor
   });
 };
 

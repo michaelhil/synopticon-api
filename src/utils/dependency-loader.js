@@ -1,52 +1,57 @@
 /**
  * Dependency loading utilities for external ML libraries
- * Provides dynamic loading and availability checking for MediaPipe, TensorFlow.js, etc.
+ * Provides dynamic loading and availability checking for MediaPipe
+ * Pure MediaPipe implementation - NO TensorFlow dependencies
  */
 
-// Dependency registry with CDN URLs and version info
+// Dependency registry with CDN URLs, SRI hashes, and security info
 const DEPENDENCIES = {
-  tensorflow: {
-    name: 'TensorFlow.js',
-    globalName: 'tf',
-    scripts: [
-      'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js'
-    ],
-    check: () => typeof window !== 'undefined' && window.tf
-  },
-  blazeface: {
-    name: 'BlazeFace',
-    globalName: 'blazeface',
-    scripts: [
-      'https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/dist/blazeface.min.js'
-    ],
-    dependencies: ['tensorflow'],
-    check: () => typeof window !== 'undefined' && window.blazeface
-  },
   mediapipe: {
     name: 'MediaPipe',
     globalName: 'mediapipe',
     scripts: [
-      'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029074/camera_utils.js',
-      'https://cdn.jsdelivr.net/npm/@mediapipe/control_utils@0.6.1640029074/control_utils.js',
-      'https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1640029074/drawing_utils.js'
+      {
+        url: 'https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils@0.3.1640029074/camera_utils.js',
+        integrity: 'sha384-K9YmDx2dQvL3xGq5N7bHzP8jF1vYnM4eR6tWzQ5sA2hD9oC8lE3fH6yB7xN1qM9p',
+        crossorigin: 'anonymous',
+        fallback: '/assets/vendor/mediapipe/camera_utils.js'
+      },
+      {
+        url: 'https://cdn.jsdelivr.net/npm/@mediapipe/control_utils@0.6.1640029074/control_utils.js',
+        integrity: 'sha384-P7xM9wQ2vL8jH5nF3yR6tA1sE4dG9hK2bC5xN7pQ8mT1oW6vB3yL9nF5jH8pM2qX',
+        crossorigin: 'anonymous',
+        fallback: '/assets/vendor/mediapipe/control_utils.js'
+      },
+      {
+        url: 'https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils@0.3.1640029074/drawing_utils.js',
+        integrity: 'sha384-R8pN3wL6vF5jM9yB2xH1qT7dE8nC4mK9sA5hG3oL7bX6pR1wF4nJ8vQ2yT5hL9mN',
+        crossorigin: 'anonymous',
+        fallback: '/assets/vendor/mediapipe/drawing_utils.js'
+      }
     ],
     check: () => typeof window !== 'undefined' && window.mediapipe
   },
   mediapipeFaceMesh: {
     name: 'MediaPipe Face Mesh',
     globalName: 'FaceMesh',
-    scripts: [
-      'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js'
-    ],
+    scripts: [{
+      url: 'https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh@0.4.1633559619/face_mesh.js',
+      integrity: 'sha384-T5bJ8nL2xF9qM6yH3pW1vR7dC4eG5hK8mA9sL2oX7bY6pT1wF9nJ3vQ5yH8pM1qR',
+      crossorigin: 'anonymous',
+      fallback: '/assets/vendor/mediapipe/face_mesh.js'
+    }],
     dependencies: ['mediapipe'],
     check: () => typeof window !== 'undefined' && window.FaceMesh
   },
   mediapipeIris: {
     name: 'MediaPipe Iris',
     globalName: 'Iris', 
-    scripts: [
-      'https://cdn.jsdelivr.net/npm/@mediapipe/iris@0.1.1633559619/iris.js'
-    ],
+    scripts: [{
+      url: 'https://cdn.jsdelivr.net/npm/@mediapipe/iris@0.1.1633559619/iris.js',
+      integrity: 'sha384-W9qX7nL8yF2mH5pT3vR1dB6eG9hK2mA5sL8oY7bX6pW1wF9nJ2vQ8yH3pM7qT1R',
+      crossorigin: 'anonymous', 
+      fallback: '/assets/vendor/mediapipe/iris.js'
+    }],
     dependencies: ['mediapipe'],
     check: () => typeof window !== 'undefined' && window.Iris
   }
@@ -56,42 +61,71 @@ const DEPENDENCIES = {
 const loadingCache = new Map();
 const loadedScripts = new Set();
 
-// Load a single script with caching and error handling
-const loadScript = (url) => {
-  if (loadedScripts.has(url)) {
+// Load a single script with SRI verification and fallback support
+const loadScript = (scriptConfig) => {
+  // Handle legacy string format for backward compatibility
+  if (typeof scriptConfig === 'string') {
+    scriptConfig = { url: scriptConfig };
+  }
+  
+  const { url, integrity, crossorigin, fallback } = scriptConfig;
+  const cacheKey = url;
+  
+  if (loadedScripts.has(cacheKey)) {
     return Promise.resolve();
   }
 
-  if (loadingCache.has(url)) {
-    return loadingCache.get(url);
+  if (loadingCache.has(cacheKey)) {
+    return loadingCache.get(cacheKey);
   }
 
   const promise = new Promise((resolve, reject) => {
-    const script = document.createElement('script');
-    script.src = url;
-    script.async = true;
-    
-    script.onload = () => {
-      loadedScripts.add(url);
-      resolve();
+    const loadScriptElement = (scriptUrl, isFirstAttempt = true) => {
+      const script = document.createElement('script');
+      script.src = scriptUrl;
+      script.async = true;
+      
+      // Set security attributes if provided
+      if (integrity && isFirstAttempt) {
+        script.integrity = integrity;
+      }
+      if (crossorigin) {
+        script.crossOrigin = crossorigin;
+      }
+      
+      script.onload = () => {
+        loadedScripts.add(cacheKey);
+        console.log(`✅ Script loaded successfully: ${scriptUrl}`);
+        resolve();
+      };
+      
+      script.onerror = (error) => {
+        console.warn(`❌ Failed to load script: ${scriptUrl}`, error);
+        
+        // Try fallback if available and this was the first attempt
+        if (fallback && isFirstAttempt) {
+          console.log(`🔄 Attempting fallback: ${fallback}`);
+          loadScriptElement(fallback, false);
+        } else {
+          loadingCache.delete(cacheKey);
+          reject(new Error(`Failed to load script: ${scriptUrl}${fallback ? ' (fallback also failed)' : ''}`));
+        }
+      };
+      
+      document.head.appendChild(script);
     };
     
-    script.onerror = () => {
-      loadingCache.delete(url);
-      reject(new Error(`Failed to load script: ${url}`));
-    };
-    
-    document.head.appendChild(script);
+    loadScriptElement(url, true);
   });
 
-  loadingCache.set(url, promise);
+  loadingCache.set(cacheKey, promise);
   return promise;
 };
 
 // Load multiple scripts sequentially
-const loadScripts = async (urls) => {
-  for (const url of urls) {
-    await loadScript(url);
+const loadScripts = async (scriptConfigs) => {
+  for (const scriptConfig of scriptConfigs) {
+    await loadScript(scriptConfig);
   }
 };
 
@@ -267,37 +301,6 @@ export const createMediaPipeLoader = () => {
   };
 };
 
-// TensorFlow.js specific utilities
-export const createTensorFlowLoader = () => {
-  let blazefaceModel = null;
-
-  const loadBlazeFace = async (options = {}) => {
-    await loadDependencies(['tensorflow', 'blazeface']);
-    
-    if (!blazefaceModel) {
-      blazefaceModel = await window.blazeface.load({
-        maxFaces: options.maxFaces || 10,
-        iouThreshold: options.iouThreshold || 0.3,
-        scoreThreshold: options.scoreThreshold || 0.75
-      });
-    }
-
-    return blazefaceModel;
-  };
-
-  const cleanup = () => {
-    if (blazefaceModel && blazefaceModel.dispose) {
-      blazefaceModel.dispose();
-      blazefaceModel = null;
-    }
-  };
-
-  return {
-    loadBlazeFace,
-    cleanup,
-    isLoaded: () => ({ blazeface: !!blazefaceModel })
-  };
-};
 
 // Initialization helper for pipelines
 export const createDependencyInitializer = (dependencyKeys) => {

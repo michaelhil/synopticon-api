@@ -5,6 +5,7 @@
 
 import { createAnalysisResult, createErrorResult } from './types.js';
 import { findCompatiblePipelines, scorePipeline } from './pipeline.js';
+import { createParallelInitializer } from './parallel-initializer.js';
 
 // Circuit breaker for pipeline failure handling
 export const createCircuitBreaker = () => {
@@ -74,11 +75,17 @@ export const createOrchestrator = (config = {}) => {
       realtime: true
     },
     circuitBreaker: createCircuitBreaker(),
+    parallelInitializer: createParallelInitializer(config.parallelInit || {}),
     metrics: {
       totalRequests: 0,
       successfulRequests: 0,
       failedRequests: 0,
-      averageLatency: 0
+      averageLatency: 0,
+      initializationStats: {
+        totalPipelines: 0,
+        parallelInitializations: 0,
+        averageParallelEfficiency: 0
+      }
     }
   };
 
@@ -106,6 +113,61 @@ export const createOrchestrator = (config = {}) => {
       return true;
     }
     return false;
+  };
+
+  /**
+   * Register multiple pipelines in parallel with dependency resolution
+   * @param {Array} pipelines - Array of pipeline instances
+   * @param {Object} pipelineConfigs - Configuration object keyed by pipeline name
+   * @returns {Promise<Object>} - Registration results
+   */
+  const registerPipelinesParallel = async (pipelines, pipelineConfigs = {}) => {
+    if (!Array.isArray(pipelines) || pipelines.length === 0) {
+      return { successful: [], failed: [], totalTime: 0, parallelEfficiency: 1.0 };
+    }
+
+    // Validate pipeline names
+    for (const pipeline of pipelines) {
+      if (!pipeline.name) {
+        throw new Error('All pipelines must have a name');
+      }
+    }
+
+    console.log(`🚀 Starting parallel registration of ${pipelines.length} pipelines...`);
+
+    try {
+      // Use parallel initializer for efficient initialization
+      const results = await state.parallelInitializer.initializeParallel(
+        pipelines, 
+        pipelineConfigs
+      );
+
+      // Register successfully initialized pipelines
+      for (const pipelineName of results.successful) {
+        const pipeline = pipelines.find(p => p.name === pipelineName);
+        if (pipeline) {
+          state.pipelines.set(pipelineName, pipeline);
+        }
+      }
+
+      // Update metrics
+      state.metrics.initializationStats.totalPipelines += pipelines.length;
+      state.metrics.initializationStats.parallelInitializations += 1;
+      
+      // Update average parallel efficiency
+      const currentAvg = state.metrics.initializationStats.averageParallelEfficiency;
+      const count = state.metrics.initializationStats.parallelInitializations;
+      state.metrics.initializationStats.averageParallelEfficiency = 
+        ((currentAvg * (count - 1)) + results.parallelEfficiency) / count;
+
+      console.log(`✅ Parallel registration completed: ${results.successful.length}/${pipelines.length} pipelines registered in ${results.totalTime}ms`);
+      console.log(`📊 Parallel efficiency: ${results.parallelEfficiency.toFixed(2)}x (avg: ${state.metrics.initializationStats.averageParallelEfficiency.toFixed(2)}x)`);
+
+      return results;
+    } catch (error) {
+      console.error(`❌ Parallel pipeline registration failed:`, error);
+      throw error;
+    }
   };
 
   const getAvailablePipelines = () => {
@@ -245,6 +307,7 @@ export const createOrchestrator = (config = {}) => {
     // Pipeline management
     registerPipeline,
     unregisterPipeline,
+    registerPipelinesParallel,
     getAvailablePipelines,
     
     // Processing

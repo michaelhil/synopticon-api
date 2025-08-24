@@ -35,11 +35,22 @@ export const createEnhancedMemoryPool = (config = {}) => {
     config: {
       maxPoolSize: config.maxPoolSize || 50,
       maxObjectAge: config.maxObjectAge || 60000, // 1 minute
-      cleanupInterval: config.cleanupInterval || 10000, // 10 seconds
+      baseCleanupInterval: config.cleanupInterval || 10000, // 10 seconds
+      adaptiveCleanup: config.adaptiveCleanup !== false, // Enable adaptive cleanup
       enableTracking: config.enableTracking !== false,
       enableMetrics: config.enableMetrics !== false,
       memoryPressureThreshold: config.memoryPressureThreshold || 100, // MB
+      maxMemoryPressureThreshold: config.maxMemoryPressureThreshold || 150, // MB
       ...config
+    },
+    
+    // Adaptive cleanup state
+    adaptiveState: {
+      averagePoolUsage: 0,
+      lastUsageCheck: Date.now(),
+      usageHistory: [],
+      currentInterval: config.cleanupInterval || 10000,
+      cleanupEfficiency: 1.0 // ratio of objects cleaned vs total pool size
     },
     
     // Cleanup timer
@@ -56,9 +67,9 @@ export const createEnhancedMemoryPool = (config = {}) => {
     // Register default factories
     registerDefaultFactories();
     
-    // Start cleanup timer
-    if (state.config.cleanupInterval > 0) {
-      state.cleanupTimer = setInterval(performCleanup, state.config.cleanupInterval);
+    // Start adaptive cleanup timer
+    if (state.config.baseCleanupInterval > 0) {
+      startAdaptiveCleanup();
     }
     
     // Monitor memory pressure if available
@@ -387,14 +398,78 @@ export const createEnhancedMemoryPool = (config = {}) => {
   };
 
   // Perform cleanup of old objects
+  // Calculate adaptive cleanup interval based on pool usage
+  const calculateAdaptiveInterval = () => {
+    if (!state.config.adaptiveCleanup) {
+      return state.config.baseCleanupInterval;
+    }
+
+    const totalPoolSize = getTotalPoolSize();
+    const maxPossibleSize = state.config.maxPoolSize * Object.keys(state.pools).length * 5; // Estimate
+    const usageRatio = totalPoolSize / Math.max(maxPossibleSize, 1);
+    
+    // Update usage history
+    state.adaptiveState.usageHistory.push(usageRatio);
+    if (state.adaptiveState.usageHistory.length > 10) {
+      state.adaptiveState.usageHistory.shift();
+    }
+    
+    // Calculate average usage
+    state.adaptiveState.averagePoolUsage = 
+      state.adaptiveState.usageHistory.reduce((a, b) => a + b, 0) / 
+      state.adaptiveState.usageHistory.length;
+    
+    // Adaptive interval calculation:
+    // - High usage (>70%) = shorter intervals (more frequent cleanup)
+    // - Low usage (<30%) = longer intervals (less frequent cleanup)
+    // - Medium usage = base interval
+    let intervalMultiplier = 1.0;
+    
+    if (state.adaptiveState.averagePoolUsage > 0.7) {
+      // High usage - cleanup more frequently
+      intervalMultiplier = 0.5 + (0.3 * (1 - state.adaptiveState.averagePoolUsage));
+    } else if (state.adaptiveState.averagePoolUsage < 0.3) {
+      // Low usage - cleanup less frequently 
+      intervalMultiplier = 1.0 + (2.0 * (0.3 - state.adaptiveState.averagePoolUsage));
+    }
+    
+    // Factor in cleanup efficiency
+    intervalMultiplier *= (1 / Math.max(state.adaptiveState.cleanupEfficiency, 0.1));
+    
+    // Clamp between 2 seconds and 60 seconds
+    const newInterval = Math.max(2000, Math.min(60000, 
+      state.config.baseCleanupInterval * intervalMultiplier
+    ));
+    
+    return Math.round(newInterval);
+  };
+
+  // Start adaptive cleanup system
+  const startAdaptiveCleanup = () => {
+    const scheduleNextCleanup = () => {
+      const interval = calculateAdaptiveInterval();
+      state.adaptiveState.currentInterval = interval;
+      
+      state.cleanupTimer = setTimeout(() => {
+        performCleanup();
+        scheduleNextCleanup();
+      }, interval);
+    };
+    
+    scheduleNextCleanup();
+  };
+
+  // Enhanced cleanup with adaptive efficiency tracking
   const performCleanup = () => {
     const now = Date.now();
     const maxAge = state.config.maxObjectAge;
     let cleanedCount = 0;
+    let totalObjects = 0;
     
     // Clean up object pools
     state.pools.objects.forEach((pool, key) => {
       const before = pool.length;
+      totalObjects += before;
       state.pools.objects.set(key, pool.filter(obj => {
         const metadata = state.objectMetadata.get(obj);
         return metadata && (now - metadata.acquiredAt) < maxAge;
@@ -405,6 +480,7 @@ export const createEnhancedMemoryPool = (config = {}) => {
     // Clean up array pools
     state.pools.arrays.forEach((pool, key) => {
       const before = pool.length;
+      totalObjects += before;
       state.pools.arrays.set(key, pool.filter(array => {
         const metadata = state.objectMetadata.get(array);
         return metadata && (now - metadata.acquiredAt) < maxAge;
@@ -412,10 +488,26 @@ export const createEnhancedMemoryPool = (config = {}) => {
       cleanedCount += before - state.pools.arrays.get(key).length;
     });
     
+    // Clean up canvas pools
+    state.pools.canvases.forEach((pool, key) => {
+      const before = pool.length;
+      totalObjects += before;
+      state.pools.canvases.set(key, pool.filter(canvas => {
+        const metadata = state.objectMetadata.get(canvas);
+        return metadata && (now - metadata.acquiredAt) < maxAge;
+      }));
+      cleanedCount += before - state.pools.canvases.get(key).length;
+    });
+    
+    // Update cleanup efficiency
+    state.adaptiveState.cleanupEfficiency = totalObjects > 0 ? 
+      cleanedCount / totalObjects : 1.0;
+    
     state.stats.lastCleanup = now;
     
     if (cleanedCount > 0) {
-      console.log(`🧹 Memory pool cleanup: removed ${cleanedCount} aged objects`);
+      console.log(`🧹 Memory pool cleanup: removed ${cleanedCount}/${totalObjects} objects (${(state.adaptiveState.cleanupEfficiency * 100).toFixed(1)}% efficiency)`);
+      console.log(`📊 Next cleanup in ${state.adaptiveState.currentInterval}ms (usage: ${(state.adaptiveState.averagePoolUsage * 100).toFixed(1)}%)`);
     }
   };
 

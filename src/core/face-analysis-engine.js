@@ -12,7 +12,7 @@ import { createConfigurationManager, createConfig } from './configuration.js';
 import { createOrchestrator } from './orchestrator.js';
 
 // Import detection modules
-import { createBlazeFaceDetector } from '../modules/detection/blazeface/blazeface-detector.js';
+import { createMediaPipeFaceDetector } from '../modules/detection/mediapipe/mediapipe-face-detector.js';
 
 // Import pipeline factories
 import { createEyeTrackingPipelineFactory } from '../pipelines/eye-tracking-pipeline.js';

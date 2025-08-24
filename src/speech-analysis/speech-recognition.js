@@ -667,7 +667,7 @@ const createFallbackBackend = () => {
 
     // Create header
     const header = document.createElement('div');
-    header.innerHTML = '🎤 Speech Input Simulation';
+    header.textContent = '🎤 Speech Input Simulation';
     header.style.cssText = 'font-weight: bold; margin-bottom: 10px; color: #333;';
     inputContainer.appendChild(header);
 
@@ -735,13 +735,19 @@ const createFallbackBackend = () => {
     buttonContainer.appendChild(clearButton);
     inputContainer.appendChild(buttonContainer);
 
-    // Add Enter key support
+    // Add Enter key support with cleanup
+    const abortController = new AbortController();
     textInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter' && !e.shiftKey) {
         e.preventDefault();
         sendText(state, textInput.value, true);
       }
-    });
+    }, { signal: abortController.signal });
+    
+    // Store cleanup function for later use
+    state.cleanupEventListeners = () => {
+      abortController.abort();
+    };
 
     // Append to body
     document.body.appendChild(inputContainer);

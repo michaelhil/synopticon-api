@@ -67,7 +67,7 @@ export const createSimpleAPIServer = (config = {}) => {
   };
 
   // Initialize MediaPipe face detector
-  const initializeBlazeFace = async () => {
+  const initializeFaceDetector = async () => {
     try {
       console.log('🔄 Loading MediaPipe face detection...');
       
@@ -142,7 +142,7 @@ export const createSimpleAPIServer = (config = {}) => {
       if (!faceDetector) {
         return res.status(503).json({
           success: false,
-          error: 'BlazeFace model not loaded',
+          error: 'Face detection model not loaded',
           request_id: requestId
         });
       }
@@ -152,7 +152,7 @@ export const createSimpleAPIServer = (config = {}) => {
       // Process input image
       const imageInfo = await processBase64Image(image);
       
-      // Mock BlazeFace results for now (in real implementation, process with model)
+      // Mock face detection results for now (in real implementation, process with model)
       const mockDetections = [
         {
           id: 'face_0',
@@ -231,7 +231,7 @@ export const createSimpleAPIServer = (config = {}) => {
   // Server control functions
   const start = async () => {
     try {
-      await initializeBlazeFace();
+      await initializeFaceDetector();
       
       const host = process.env.HOST || '0.0.0.0';
       const server = app.listen(serverConfig.port, host, () => {

@@ -4,29 +4,32 @@
  */
 
 import { createPipeline } from '../core/pipeline.js';
+import { createPipelineConfig } from '../core/pipeline-config.js';
+import { createImageProcessor } from '../core/image-processor.js';
+import { getGlobalResourcePool } from '../core/resource-pool.js';
+import { 
+  createMediaPipeBase,
+  createMediaPipeLoader,
+  checkMediaPipeAvailability,
+  IRIS_LANDMARKS as SHARED_IRIS_LANDMARKS,
+  extractIrisLandmarks,
+  calculateEyeAspectRatio
+} from '../core/mediapipe-commons.js';
 import { 
   Capability,
   createPerformanceProfile,
   createEyeResult,
   createAnalysisResult
 } from '../core/types.js';
+import { handleError, ErrorCategory, ErrorSeverity } from '../utils/error-handler.js';
 
-// Iris-specific configuration
-const createIrisConfig = (config = {}) => ({
-  maxNumFaces: config.maxNumFaces || 1, // Iris tracking works best with single face
-  minDetectionConfidence: config.minDetectionConfidence || 0.5,
-  minTrackingConfidence: config.minTrackingConfidence || 0.5,
-  refineLandmarks: config.refineLandmarks !== false,
-  enableGazeEstimation: config.enableGazeEstimation !== false,
-  smoothingFactor: config.smoothingFactor || 0.7,
-  ...config
-});
+// Use shared iris landmarks from MediaPipe commons (maintaining local compatibility)
+const IRIS_LANDMARKS = SHARED_IRIS_LANDMARKS;
 
-// Eye landmark indices for MediaPipe Iris model
-const IRIS_LANDMARKS = {
-  // Iris boundaries (5 points per eye including center)
-  leftIris: [468, 469, 470, 471, 472],      // Left iris: center + 4 boundary points
-  rightIris: [473, 474, 475, 476, 477],     // Right iris: center + 4 boundary points
+// Extended iris landmark definitions (maintaining backward compatibility)
+const EXTENDED_IRIS_LANDMARKS = {
+  // Inherit from shared landmarks
+  ...SHARED_IRIS_LANDMARKS,
   
   // Eye contour landmarks
   leftEyeContour: [
@@ -37,8 +40,6 @@ const IRIS_LANDMARKS = {
   ],
   
   // Key reference points
-  leftEyeCenter: 468,     // Iris center
-  rightEyeCenter: 473,    // Iris center
   leftEyeInner: 133,      // Inner corner
   leftEyeOuter: 33,       // Outer corner
   rightEyeInner: 362,     // Inner corner
@@ -357,12 +358,163 @@ export const createEyeTrackingFilter = (config = {}) => {
   return { update, reset, isInitialized: () => state.initialized };
 };
 
-// Create MediaPipe Iris tracking pipeline
-export const createIrisTrackingPipeline = (config = {}) => {
-  const irisConfig = createIrisConfig(config);
-  let iris = null;
-  let eyeTrackingFilter = null;
-  let mediaPipeLoader = null;
+/**
+ * Create MediaPipe Iris Tracking Pipeline
+ * 
+ * Factory function that creates a high-precision eye tracking and gaze estimation
+ * pipeline using MediaPipe Iris. Provides detailed iris landmarks, gaze vectors,
+ * and screen gaze point estimation.
+ * 
+ * @param {Object} config - Pipeline configuration
+ * @param {number} [config.maxNumFaces=1] - Maximum faces to track (iris works best with 1)
+ * @param {boolean} [config.refineLandmarks=true] - Enable refined landmark detection
+ * @param {number} [config.minDetectionConfidence=0.5] - Minimum detection confidence
+ * @param {number} [config.minTrackingConfidence=0.5] - Minimum tracking confidence
+ * @param {boolean} [config.enableGazeEstimation=true] - Enable 3D gaze vector estimation
+ * @param {number} [config.smoothingFactor=0.7] - Temporal smoothing factor
+ * @returns {Object} Pipeline instance with process, initialize, and cleanup methods
+ * 
+ * @example
+ * const pipeline = createIrisTrackingPipeline({
+ *   maxNumFaces: 1,
+ *   enableGazeEstimation: true,
+ *   smoothingFactor: 0.8
+ * });
+ * 
+ * await pipeline.initialize();
+ * const result = await pipeline.process(videoFrame);
+ * const gazePoint = estimateScreenGazePoint(result.eyes, { width: 1920, height: 1080 });
+ * await pipeline.cleanup();
+ */
+/**
+ * Creates standardized Iris Tracking pipeline
+ * @param {Object} userConfig - User configuration overrides
+ * @returns {Object} - Iris Tracking pipeline instance
+ */
+export const createIrisTrackingPipeline = (userConfig = {}) => {
+  // Use unified configuration system
+  const config = createPipelineConfig('iris-tracking', userConfig);
+  
+  const state = {
+    iris: null,
+    eyeTrackingFilter: null,
+    mediaPipeLoader: null,
+    imageProcessor: null,
+    resourcePool: null,
+    isInitialized: false,
+    config: config
+  };
+
+  const initialize = async (initConfig = {}) => {
+    try {
+      handleError(
+        'Initializing MediaPipe Iris tracking pipeline',
+        ErrorCategory.INITIALIZATION,
+        ErrorSeverity.INFO,
+        { config: state.config }
+      );
+
+      // Initialize shared resources
+      state.resourcePool = getGlobalResourcePool();
+      state.imageProcessor = createImageProcessor({ resourcePool: state.resourcePool });
+      
+      // Import dependency loader
+      const { createMediaPipeLoader } = await import('../utils/dependency-loader.js');
+      state.mediaPipeLoader = createMediaPipeLoader();
+
+      // Load Iris with configuration
+      state.iris = await state.mediaPipeLoader.loadIris({
+        maxNumFaces: state.config.maxNumFaces,
+        minDetectionConfidence: state.config.minDetectionConfidence,
+        minTrackingConfidence: state.config.minTrackingConfidence
+      });
+      
+      // Initialize smoothing filter
+      state.eyeTrackingFilter = createEyeTrackingFilter({
+        smoothingFactor: state.config.smoothingFactor
+      });
+
+      state.isInitialized = true;
+      console.log('✅ MediaPipe Iris tracking pipeline initialized');
+      return true;
+    } catch (error) {
+      handleError(
+        `MediaPipe Iris initialization failed: ${error.message}`,
+        ErrorCategory.INITIALIZATION,
+        ErrorSeverity.ERROR,
+        { error }
+      );
+      throw new Error(`MediaPipe Iris initialization failed: ${error.message}`);
+    }
+  };
+
+  const process = async (frame) => {
+    if (!state.isInitialized) {
+      await initialize();
+    }
+
+    try {
+      const startTime = Date.now();
+      
+      // Send frame to MediaPipe Iris
+      const results = await new Promise((resolve, reject) => {
+        state.iris.onResults(resolve);
+        state.iris.send({ image: frame });
+        
+        // Set timeout to prevent hanging
+        setTimeout(() => reject(new Error('Iris processing timeout')), 3000);
+      });
+      
+      // Extract eye tracking information
+      const eyeResult = extractEyeTracking(results, state.config);
+      
+      // Apply smoothing if enabled
+      const smoothedResult = state.eyeTrackingFilter ? 
+        state.eyeTrackingFilter.update(eyeResult) : eyeResult;
+      
+      const processingTime = Date.now() - startTime;
+      
+      return createAnalysisResult({
+        faces: [], // Iris pipeline focuses on eyes
+        eyes: smoothedResult,
+        confidence: smoothedResult.metadata?.averageOpenness || 0.5,
+        metadata: {
+          processingTime,
+          frameTimestamp: Date.now(),
+          pipelineName: 'mediapipe-iris',
+          irisDetected: (smoothedResult.metadata?.irisLandmarksDetected || 0) > 0,
+          gazeEstimationEnabled: state.config.enableGazeEstimation,
+          smoothingApplied: !!state.eyeTrackingFilter
+        }
+      });
+
+    } catch (error) {
+      handleError(
+        `MediaPipe Iris processing failed: ${error.message}`,
+        ErrorCategory.PROCESSING,
+        ErrorSeverity.ERROR,
+        { error }
+      );
+      throw new Error(`MediaPipe Iris processing failed: ${error.message}`);
+    }
+  };
+
+  const cleanup = () => {
+    try {
+      if (state.mediaPipeLoader) {
+        state.mediaPipeLoader.cleanup();
+        state.mediaPipeLoader = null;
+      }
+      if (state.eyeTrackingFilter) {
+        state.eyeTrackingFilter.reset();
+      }
+      state.iris = null;
+      state.isInitialized = false;
+      console.log('🧹 MediaPipe Iris tracking pipeline cleaned up');
+    } catch (error) {
+      console.warn('⚠️ MediaPipe Iris cleanup error:', error);
+    }
+  };
 
   return createPipeline({
     name: 'mediapipe-iris',
@@ -378,101 +530,20 @@ export const createIrisTrackingPipeline = (config = {}) => {
       batteryImpact: 'medium'
     }),
 
-    // Initialize MediaPipe Iris
-    initialize: async (pipelineConfig) => {
-      try {
-        // Import dependency loader
-        const { createMediaPipeLoader } = await import('../utils/dependency-loader.js');
-        mediaPipeLoader = createMediaPipeLoader();
-
-        // Load Iris with configuration
-        iris = await mediaPipeLoader.loadIris({
-          maxNumFaces: irisConfig.maxNumFaces,
-          minDetectionConfidence: irisConfig.minDetectionConfidence,
-          minTrackingConfidence: irisConfig.minTrackingConfidence
-        });
-        
-        // Initialize smoothing filter
-        eyeTrackingFilter = createEyeTrackingFilter({
-          smoothingFactor: irisConfig.smoothingFactor
-        });
-
-        console.log('✅ MediaPipe Iris tracking pipeline initialized');
-        return true;
-      } catch (error) {
-        throw new Error(`MediaPipe Iris initialization failed: ${error.message}`);
-      }
+    initialize,
+    process,
+    cleanup,
+    getConfig: () => state.config,
+    updateConfig: (updates) => {
+      state.config = { ...state.config, ...updates };
     },
-
-    // Process video frame
-    process: async (frame) => {
-      if (!iris) {
-        throw new Error('MediaPipe Iris not initialized');
-      }
-
-      try {
-        // Send frame to MediaPipe Iris
-        const results = await new Promise((resolve, reject) => {
-          iris.onResults(resolve);
-          iris.send({ image: frame });
-          
-          // Set timeout to prevent hanging
-          setTimeout(() => reject(new Error('Iris processing timeout')), 3000);
-        });
-        
-        // Extract eye tracking information
-        const eyeResult = extractEyeTracking(results, irisConfig);
-        
-        // Apply smoothing if enabled
-        const smoothedResult = eyeTrackingFilter ? 
-          eyeTrackingFilter.update(eyeResult) : eyeResult;
-        
-        return createAnalysisResult({
-          faces: [], // Iris pipeline focuses on eyes
-          eyes: smoothedResult,
-          confidence: smoothedResult.metadata?.averageOpenness || 0.5,
-          source: 'mediapipe-iris',
-          metadata: {
-            irisDetected: (smoothedResult.metadata?.irisLandmarksDetected || 0) > 0,
-            gazeEstimationEnabled: irisConfig.enableGazeEstimation,
-            smoothingApplied: !!eyeTrackingFilter
-          }
-        });
-
-      } catch (error) {
-        throw new Error(`MediaPipe Iris processing failed: ${error.message}`);
-      }
-    },
-
-    // Cleanup resources
-    cleanup: async () => {
-      try {
-        if (mediaPipeLoader) {
-          await mediaPipeLoader.cleanup();
-          mediaPipeLoader = null;
-        }
-        if (eyeTrackingFilter) {
-          eyeTrackingFilter.reset();
-        }
-        iris = null;
-        console.log('✅ MediaPipe Iris tracking pipeline cleaned up');
-        return true;
-      } catch (error) {
-        console.warn('⚠️ MediaPipe Iris cleanup error:', error);
-        return false;
-      }
-    },
-
-    // Pipeline health status
+    isInitialized: () => state.isInitialized,
     getHealthStatus: () => ({
-      healthy: !!iris,
+      healthy: state.isInitialized,
       runtime: 'browser', // MediaPipe Iris browser-only
       backend: 'mediapipe-iris',
-      modelLoaded: !!iris,
-      smoothingEnabled: !!eyeTrackingFilter
-    }),
-
-    // Check if pipeline is initialized
-    isInitialized: () => !!iris
+      modelLoaded: !!state.iris,
+      smoothingEnabled: !!state.eyeTrackingFilter
+    })
   });
 };

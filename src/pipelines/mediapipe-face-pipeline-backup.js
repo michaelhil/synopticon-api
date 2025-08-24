@@ -1,10 +1,21 @@
 /**
- * Hybrid BlazeFace Pipeline Implementation
+ * MediaPipe Face Detection Pipeline Implementation
  * Works in both browser and Node.js environments
  * Automatically selects appropriate backend based on runtime
  */
 
 import { createPipeline } from '../core/pipeline.js';
+import { createPipelineConfig } from '../core/pipeline-config.js';
+import { createImageProcessor } from '../core/image-processor.js';
+import { getGlobalResourcePool } from '../core/resource-pool.js';
+import { 
+  createMediaPipeBase,
+  createMediaPipeLoader,
+  checkMediaPipeAvailability,
+  MEDIAPIPE_LANDMARKS,
+  extractKeyPoints,
+  calculateFaceBoundingBox
+} from '../core/mediapipe-commons.js';
 import { 
   Capability,
   createPerformanceProfile,
@@ -12,6 +23,7 @@ import {
   createPose3DOF,
   createAnalysisResult
 } from '../core/types.js';
+import { handleError, ErrorCategory, ErrorSeverity } from '../utils/error-handler.js';
 import { 
   detectRuntime, 
   checkFeatures, 
@@ -19,15 +31,6 @@ import {
   imageToMediaPipe,
   createUniversalCanvas 
 } from '../utils/runtime-detector.js';
-
-// MediaPipe Face Detection configuration
-const createMediaPipeFaceConfig = (config = {}) => ({
-  modelSelection: config.modelSelection || 0, // 0 for short-range, 1 for full-range
-  minDetectionConfidence: config.minDetectionConfidence || 0.5,
-  maxFaces: config.maxFaces || 10,
-  selfieMode: config.selfieMode || false,
-  ...config
-});
 
 // 3DOF pose estimation from BlazeFace landmarks
 const estimatePose3DOF = (landmarks, bbox) => {
@@ -122,23 +125,65 @@ const blazefaceToFaceResult = (prediction) => {
   });
 };
 
-// Create hybrid BlazeFace pipeline
-export const createHybridBlazeFacePipeline = (config = {}) => {
+/**
+ * Create MediaPipe Face Detection Pipeline
+ * 
+ * Factory function that creates a lightweight face detection pipeline using
+ * MediaPipe Face Detection. Optimized for real-time performance with minimal
+ * memory footprint and fast processing (~10-50ms latency).
+ * 
+ * @param {Object} config - Pipeline configuration
+ * @param {number} [config.modelSelection=0] - Model selection (0=short-range <2m, 1=full-range)
+ * @param {number} [config.minDetectionConfidence=0.7] - Minimum detection confidence
+ * @param {number} [config.maxFaces=10] - Maximum number of faces to detect
+ * @param {boolean} [config.selfieMode=false] - Enable selfie mode (flip horizontally)
+ * @returns {Object} Pipeline instance with process, initialize, and cleanup methods
+ * 
+ * @example
+ * const pipeline = createMediaPipeFacePipeline({
+ *   modelSelection: 0, // Short-range model for webcam
+ *   minDetectionConfidence: 0.8,
+ *   maxFaces: 5
+ * });
+ * 
+ * await pipeline.initialize();
+ * const result = await pipeline.process(videoFrame);
+ * console.log(`Detected ${result.faces.length} faces`);
+ * await pipeline.cleanup();
+ */
+/**
+ * Creates standardized MediaPipe Face Detection pipeline
+ * @param {Object} userConfig - User configuration overrides
+ * @returns {Object} - MediaPipe Face Detection pipeline instance
+ */
+export const createHybridMediaPipeFacePipeline = (userConfig = {}) => {
+  // Use unified configuration system
+  const config = createPipelineConfig('mediapipe-face', userConfig);
+  
   const state = {
     tf: null,
     model: null,
     blazefaceModule: null,
     runtime: detectRuntime(),
     features: checkFeatures(),
-    config: createBlazeFaceConfig(config),
     isInitialized: false,
     canvas: null,
-    ctx: null
+    ctx: null,
+    imageProcessor: null,
+    resourcePool: null
   };
 
-  const initialize = async () => {
+  const initialize = async (initConfig = {}) => {
     try {
-      console.log(`🔄 Initializing BlazeFace pipeline for ${state.runtime} environment...`);
+      state.resourcePool = getGlobalResourcePool();
+      state.imageProcessor = createImageProcessor({ resourcePool: state.resourcePool });
+      
+      handleError(
+        `Initializing MediaPipe Face Detection pipeline for ${state.runtime} environment`,
+        ErrorCategory.INITIALIZATION,
+        ErrorSeverity.INFO,
+        { runtime: state.runtime }
+      );
       
       // Load TensorFlow.js with appropriate backend
       state.tf = await loadTensorFlow();
@@ -317,4 +362,4 @@ export const createHybridBlazeFacePipeline = (config = {}) => {
 };
 
 // Export as main factory
-export const createBlazeFacePipeline = createHybridBlazeFacePipeline;
+export const createMediaPipeFacePipeline = createHybridMediaPipeFacePipeline;

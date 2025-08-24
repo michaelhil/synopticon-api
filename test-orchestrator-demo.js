@@ -4,7 +4,7 @@
  */
 
 import { createOrchestrator } from './src/core/orchestrator.js';
-import { createBlazeFacePipeline } from './src/pipelines/blazeface-pipeline.js';
+import { createMediaPipeFacePipeline } from './src/pipelines/mediapipe-face-pipeline.js';
 import { createEyeTrackingPipeline } from './src/pipelines/eye-tracking-pipeline.js';
 import { createMediaPipeFaceMeshPipeline } from './src/pipelines/mediapipe-pipeline.js';
 import { createIrisTrackingPipeline } from './src/pipelines/iris-tracking-pipeline.js';
@@ -65,7 +65,7 @@ const demonstrateOrchestrator = async () => {
     
     // Always available pipelines
     const guaranteedPipelines = [
-      { name: 'BlazeFace', factory: () => createBlazeFacePipeline() },
+      { name: 'MediaPipe Face', factory: () => createMediaPipeFacePipeline() },
       { name: 'Eye Tracking', factory: () => createEyeTrackingPipeline({ useMockDevices: true, autoConnect: false }) },
       { name: 'Emotion Analysis', factory: () => createEmotionAnalysisPipeline() },
       { name: 'Age Estimation', factory: () => createAgeEstimationPipeline() }
@@ -296,7 +296,7 @@ const demonstrateCircuitBreaker = async () => {
   const orchestrator = createOrchestrator();
   
   // Register a pipeline
-  const pipeline = createBlazeFacePipeline();
+  const pipeline = createMediaPipeFacePipeline();
   await orchestrator.registerPipeline(pipeline);
   
   // Create a pipeline that will fail
@@ -322,7 +322,7 @@ const demonstrateCircuitBreaker = async () => {
   
   // Check circuit breaker state
   const breakerState = orchestrator.getCircuitBreakerState();
-  const failures = breakerState.failures.get('blazeface') || 0;
+  const failures = breakerState.failures.get('mediapipe-face') || 0;
   const isOpen = failures >= 5;
   
   console.log(`Circuit breaker status: ${isOpen ? '🔴 OPEN' : '🟢 CLOSED'} (${failures} failures)`);

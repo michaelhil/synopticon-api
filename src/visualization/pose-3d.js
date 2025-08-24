@@ -397,12 +397,16 @@ export const createPose3DVisualization = (canvas) => {
   // Initialize and return public interface
   initialize();
 
-  // Setup resize observer
+  // Setup resize observer with cleanup
+  let resizeObserver = null;
+  let resizeController = null;
+  
   if (window.ResizeObserver) {
-    const resizeObserver = new ResizeObserver(resize);
+    resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(canvas);
   } else {
-    window.addEventListener('resize', resize);
+    resizeController = new AbortController();
+    window.addEventListener('resize', resize, { signal: resizeController.signal });
   }
 
   return {
@@ -411,7 +415,16 @@ export const createPose3DVisualization = (canvas) => {
     getCurrentPose,
     getSmoothedPose,
     resize,
-    cleanup,
+    cleanup: () => {
+      // Clean up event listeners
+      if (resizeObserver) {
+        resizeObserver.disconnect();
+      }
+      if (resizeController) {
+        resizeController.abort();
+      }
+      cleanup();
+    },
     
     // Advanced methods
     getScene: () => state.scene,
