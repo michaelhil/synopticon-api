@@ -125,7 +125,7 @@ export const createEyeTrackingStreaming = (config = {}) => {
       // Create mock device info for testing
       deviceInfo = {
         id: deviceId,
-        address: 'localhost',
+        address: process.env.NEON_DEVICE_ADDRESS || 'localhost',
         port: 8080,
         name: `Mock Device ${deviceId}`
       };

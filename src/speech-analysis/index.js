@@ -13,6 +13,9 @@ import { createSpeechStreaming, DEFAULT_STREAM_CONFIG } from './streaming.js';
 import { createAudioQualityAnalyzer } from './audio-quality.js';
 import { createConversationAnalytics } from './conversation-analytics.js';
 
+// Import new audio analysis components
+import { createConversationAnalytics as createConversationFlow } from '../audio/conversation-analytics.js';
+
 // Import types
 import {
   createSpeechRecognitionResult,
@@ -29,6 +32,7 @@ export const createSpeechAnalysisAPI = (config = {}) => {
     streamingSystem: null,
     audioQualityAnalyzer: null,
     conversationAnalytics: null,
+    conversationFlow: null,
     isInitialized: false,
     configuration: {
       language: config.language || 'en-US',
@@ -40,7 +44,7 @@ export const createSpeechAnalysisAPI = (config = {}) => {
       // LLM configuration
       llmConfig: {
         preferredBackend: config.preferredBackend || 'webllm',
-        fallbackBackends: config.fallbackBackends || ['transformers_js', 'tfjs_models', 'mock'],
+        fallbackBackends: config.fallbackBackends || ['transformers_js', 'mock'],
         model: config.model || 'Llama-3.2-1B-Instruct-q4f32_1',
         temperature: config.temperature || 0.7,
         maxTokens: config.maxTokens || 100,
@@ -88,6 +92,15 @@ export const createSpeechAnalysisAPI = (config = {}) => {
         trackTopics: config.trackTopics !== false,
         trackSpeakingPatterns: config.trackSpeakingPatterns !== false,
         ...config.analyticsConfig
+      },
+      
+      // Conversation flow configuration
+      flowConfig: {
+        enabled: config.enableConversationFlow !== false,
+        minSilenceDuration: config.minSilenceDuration || 0.5,
+        maxSilenceDuration: config.maxSilenceDuration || 3.0,
+        interruptionThreshold: config.interruptionThreshold || 0.2,
+        ...config.flowConfig
       }
     },
     
@@ -134,6 +147,11 @@ export const createSpeechAnalysisAPI = (config = {}) => {
         state.conversationAnalytics = createConversationAnalytics(mergedConfig.analyticsConfig);
       }
       
+      // Initialize conversation flow analysis if enabled
+      if (mergedConfig.flowConfig.enabled) {
+        state.conversationFlow = createConversationFlow(mergedConfig.flowConfig);
+      }
+      
       // Initialize with merged configuration
       await state.streamingSystem.initialize({
         language: mergedConfig.language,
@@ -159,6 +177,7 @@ export const createSpeechAnalysisAPI = (config = {}) => {
           const components = ['streaming', 'recognition', 'analysis', 'context'];
           if (state.audioQualityAnalyzer) components.push('audio_quality');
           if (state.conversationAnalytics) components.push('analytics');
+          if (state.conversationFlow) components.push('conversation_flow');
           
           callback({
             api: 'speech_analysis',
@@ -198,7 +217,13 @@ export const createSpeechAnalysisAPI = (config = {}) => {
     
     // Start conversation analytics if available
     if (state.conversationAnalytics) {
-      state.conversationAnalytics.startSession(targetSessionId);
+      state.conversationAnalytics.initialize();
+      state.conversationAnalytics.startAnalysis();
+    }
+    
+    // Start conversation flow analysis if available
+    if (state.conversationFlow) {
+      // Flow analysis starts automatically with speaker data
     }
     return targetSessionId;
   };
@@ -216,7 +241,12 @@ export const createSpeechAnalysisAPI = (config = {}) => {
     
     // Stop conversation analytics
     if (state.conversationAnalytics) {
-      state.conversationAnalytics.endSession();
+      state.conversationAnalytics.stopAnalysis();
+    }
+    
+    // Stop conversation flow analysis
+    if (state.conversationFlow) {
+      state.conversationFlow.reset();
     }
 
     await state.streamingSystem.stopStreaming();
@@ -305,7 +335,8 @@ export const createSpeechAnalysisAPI = (config = {}) => {
         analysis: state.streamingSystem.getAnalysisEngine()?.isInitialized() || false,
         context: state.streamingSystem.getContextManager()?.isInitialized() || false,
         audioQuality: state.audioQualityAnalyzer?.isAnalyzing() || false,
-        analytics: state.conversationAnalytics?.isActive() || false
+        analytics: state.conversationAnalytics?.isAnalyzing() || false,
+        conversationFlow: !!state.conversationFlow
       }
     };
   };
@@ -381,6 +412,7 @@ export const createSpeechAnalysisAPI = (config = {}) => {
     const audioQualityStats = state.audioQualityAnalyzer?.getQualityStats();
     const analyticsMetrics = state.conversationAnalytics?.getMetrics();
     const analyticsReport = state.conversationAnalytics?.generateReport();
+    const conversationFlowSummary = state.conversationFlow?.getConversationSummary();
 
     const exportData = {
       exportMetadata: {
@@ -417,7 +449,12 @@ export const createSpeechAnalysisAPI = (config = {}) => {
       analytics: {
         metrics: analyticsMetrics,
         report: analyticsReport
-      }
+      },
+      conversationFlow: conversationFlowSummary ? {
+        summary: conversationFlowSummary,
+        quality: conversationFlowSummary.overallQuality,
+        patterns: conversationFlowSummary.detectedPatterns
+      } : null
     };
 
     switch (format.toLowerCase()) {
@@ -624,6 +661,11 @@ export const createSpeechAnalysisAPI = (config = {}) => {
       state.conversationAnalytics.cleanup();
       state.conversationAnalytics = null;
     }
+    
+    if (state.conversationFlow) {
+      state.conversationFlow.reset();
+      state.conversationFlow = null;
+    }
 
     // Clean up analytics interval
     if (state.analyticsUpdateInterval) {
@@ -724,9 +766,12 @@ export const createSpeechAnalysisAPI = (config = {}) => {
     state.callbacks.onTranscription.push((event) => {
       if (state.conversationAnalytics && event.data?.result) {
         try {
-          state.conversationAnalytics.processTranscription(
-            event.data.result.transcript || event.data.result.text,
-            event.data.result.timestamp
+          state.conversationAnalytics.addChunk(
+            { 
+              text: event.data.result.transcript || event.data.result.text,
+              timestamp: event.data.result.timestamp || Date.now()
+            },
+            event.data.result.participantId || 'default'
           );
         } catch (error) {
           console.warn('Analytics transcription processing error:', error);
@@ -738,7 +783,14 @@ export const createSpeechAnalysisAPI = (config = {}) => {
     state.callbacks.onAnalysis.push((event) => {
       if (state.conversationAnalytics && event.data?.result) {
         try {
-          state.conversationAnalytics.processAnalysis(event.data.result);
+          state.conversationAnalytics.addChunk(
+            { 
+              text: event.data.result.text || '',
+              timestamp: event.data.result.timestamp || Date.now()
+            },
+            'default',
+            [event.data.result]
+          );
         } catch (error) {
           console.warn('Analytics analysis processing error:', error);
         }
@@ -747,7 +799,7 @@ export const createSpeechAnalysisAPI = (config = {}) => {
 
     // Setup analytics update notifications
     const analyticsUpdateInterval = setInterval(() => {
-      if (state.conversationAnalytics && state.conversationAnalytics.isActive()) {
+      if (state.conversationAnalytics && state.conversationAnalytics.isAnalyzing()) {
         try {
           const metrics = state.conversationAnalytics.getMetrics();
           state.callbacks.onAnalyticsUpdate.forEach(callback => {
@@ -831,6 +883,7 @@ export const createSpeechAnalysisAPI = (config = {}) => {
     getContextManager: () => state.streamingSystem?.getContextManager(),
     getAudioQualityAnalyzer: () => state.audioQualityAnalyzer,
     getConversationAnalytics: () => state.conversationAnalytics,
+    getConversationFlow: () => state.conversationFlow,
     
     // Audio quality methods
     getAudioQualityStats: () => state.audioQualityAnalyzer?.getQualityStats() || null,
@@ -840,6 +893,11 @@ export const createSpeechAnalysisAPI = (config = {}) => {
     getAnalyticsMetrics: () => state.conversationAnalytics?.getMetrics() || null,
     getAnalyticsInsights: () => state.conversationAnalytics?.getInsights() || null,
     generateAnalyticsReport: () => state.conversationAnalytics?.generateReport() || null,
+    
+    // Conversation flow methods
+    getConversationFlowSummary: () => state.conversationFlow?.getConversationSummary() || null,
+    processConversationFlow: (speakerData, audioFeatures, timestamp) => 
+      state.conversationFlow?.analyze(speakerData, audioFeatures, timestamp) || null,
 
     // Utilities and validation
     validatePrompts,
@@ -852,17 +910,9 @@ export const createSpeechAnalysisAPI = (config = {}) => {
   };
 };
 
-// Export all components for direct use
+// Export utility functions (not factory functions which are exported from individual modules)
 export {
-  createSpeechRecognition,
-  createLLMClient,
-  createAnalysisEngine,
-  createContextManager,
-  createSpeechStreaming,
-  createAudioQualityAnalyzer,
-  createConversationAnalytics,
-  
-  // Utilities
+  // Utilities only
   validatePrompts,
   suggestPrompts,
   analyzeContext,
@@ -885,5 +935,4 @@ export const createSpeechAnalysis = (config = {}) => {
   return createSpeechAnalysisAPI(config);
 };
 
-// Export default factory
-export { createSpeechAnalysisAPI };
+// Export default factory (already exported above as const)

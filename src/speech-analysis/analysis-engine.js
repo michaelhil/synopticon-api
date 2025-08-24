@@ -489,4 +489,4 @@ export const suggestPrompts = (domain = 'general') => {
 };
 
 // Export default factory
-export { createAnalysisEngine };
+// Export default factory (already exported above as const)

@@ -327,7 +327,7 @@ export const createWebSocketTransport = (config = {}) => {
 // HTTP transport factory using Bun's fetch
 export const createHttpTransport = (config = {}) => {
   const state = {
-    baseUrl: config.baseUrl || 'http://localhost:8080',
+    baseUrl: config.baseUrl || (process.env.TRANSPORT_BASE_URL || 'http://localhost:8080'),
     headers: config.headers || {
       'Content-Type': 'application/json'
     },
@@ -415,7 +415,7 @@ export const createUdpTransport = (config = {}) => {
   const state = {
     socket: null,
     port: config.port || 8080,
-    host: config.host || 'localhost',
+    host: config.host || (process.env.WEBSOCKET_HOST || 'localhost'),
     isServer: config.isServer || false,
     callbacks: {
       onMessage: [],

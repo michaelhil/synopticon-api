@@ -115,7 +115,7 @@ export const createSpeechStreaming = (config = {}) => {
         console.log('🔄 Initializing synchronization engine...');
         state.synchronization = createSynchronizationEngine({
           tolerance: state.config.syncTolerance,
-          strategy: 'timestamp_based',
+          strategy: 'software_timestamp',
           bufferSize: 100
         });
         setupSynchronizationHandlers();
@@ -406,9 +406,9 @@ export const createSpeechStreaming = (config = {}) => {
   const setupSynchronizationHandlers = () => {
     if (!state.synchronization) return;
 
-    state.synchronization.onSynchronizedData((syncedStreams) => {
+    state.synchronization.onSync((syncedStreams) => {
       // Handle synchronized multimodal data
-      console.log(`🔄 Synchronized data: ${syncedStreams.length} streams`);
+      console.log(`🔄 Synchronized data: ${syncedStreams.size} streams`);
     });
   };
 
@@ -589,4 +589,4 @@ export const createSpeechStreaming = (config = {}) => {
 export { DEFAULT_STREAM_CONFIG };
 
 // Export default factory
-export { createSpeechStreaming };
+// Export default factory (already exported above as const)

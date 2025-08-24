@@ -365,9 +365,10 @@ export const createFaceAnalysisServer = (config = {}) => {
   // Server control
   const start = async () => {
     return new Promise((resolve) => {
-      server.listen(port, () => {
-        console.log(`Face Analysis API running on http://localhost:${port}`);
-        console.log(`WebSocket endpoint: ws://localhost:${port}/ws`);
+      const host = process.env.HOST || '0.0.0.0';
+      server.listen(port, host, () => {
+        console.log(`Face Analysis API running on http://${host}:${port}`);
+        console.log(`WebSocket endpoint: ws://${host}:${port}/ws`);
         resolve();
       });
     });

@@ -141,92 +141,103 @@ const createMockContext = (type) => {
   return null;
 };
 
-// Load appropriate TensorFlow.js for environment
-export const loadTensorFlow = async () => {
+// Load appropriate MediaPipe for environment
+export const loadMediaPipe = async () => {
   const features = checkFeatures();
   
   if (features.isBrowser) {
-    // Browser: Use standard TensorFlow.js
+    // Browser: Use MediaPipe from CDN or local
     try {
-      const tf = await import('@tensorflow/tfjs');
-      await tf.ready();
-      return tf;
+      // Check if MediaPipe is already loaded globally
+      if (typeof window !== 'undefined' && window.MediaPipeUtils) {
+        return window.MediaPipeUtils;
+      }
+      
+      // Try to load MediaPipe dynamically
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4.1646425229/face_detection.js';
+      document.head.appendChild(script);
+      
+      return new Promise((resolve, reject) => {
+        script.onload = () => resolve(window.MediaPipeUtils || true);
+        script.onerror = () => reject(new Error('Failed to load MediaPipe'));
+      });
     } catch (error) {
-      console.warn('Failed to load TensorFlow.js for browser:', error);
+      console.warn('Failed to load MediaPipe for browser:', error);
       return null;
     }
-  } else if (features.isNode) {
-    // Node.js: Use TensorFlow.js Node backend
-    try {
-      const tf = await import('@tensorflow/tfjs-node');
-      await tf.ready();
-      return tf;
-    } catch (error) {
-      console.warn('Failed to load TensorFlow.js for Node:', error);
-      // Fallback to CPU backend
-      try {
-        const tf = await import('@tensorflow/tfjs');
-        await tf.setBackend('cpu');
-        await tf.ready();
-        return tf;
-      } catch (fallbackError) {
-        console.warn('Failed to load TensorFlow.js CPU backend:', fallbackError);
-        return null;
-      }
-    }
+  } else {
+    // Server: MediaPipe not needed for server-side analysis
+    console.log('MediaPipe not required in server environment');
+    return { serverMode: true };
   }
-  
-  return null;
 };
 
-// Convert various image formats to tensor
-export const imageToTensor = async (input, tf) => {
-  if (!tf) return null;
-  
+// Convert various image formats to MediaPipe-compatible format
+export const imageToMediaPipe = async (input) => {
   const features = checkFeatures();
   
-  // If input is already a tensor, return it
-  if (input instanceof tf.Tensor) {
-    return input;
-  }
-  
-  // Browser: Handle ImageData, HTMLImageElement, etc.
+  // MediaPipe works directly with HTML elements and ImageData
   if (features.isBrowser) {
-    if (input instanceof ImageData) {
-      return tf.browser.fromPixels(input);
-    }
+    // Return supported formats directly
     if (input instanceof HTMLImageElement || 
         input instanceof HTMLCanvasElement || 
-        input instanceof HTMLVideoElement) {
-      return tf.browser.fromPixels(input);
+        input instanceof HTMLVideoElement ||
+        input instanceof ImageData) {
+      return input;
+    }
+    
+    // Convert other formats to canvas
+    if (input instanceof Blob) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          resolve(canvas);
+        };
+        img.onerror = reject;
+        img.src = URL.createObjectURL(input);
+      });
     }
   }
   
-  // Node.js: Handle Buffer
+  // Server environment: Convert to compatible format
   if (features.isNode) {
+    // For server-side, return image metadata for processing
     if (Buffer.isBuffer(input)) {
-      // Decode image buffer
-      const decoded = tf.node.decodeImage(input);
-      return decoded;
+      return {
+        type: 'buffer',
+        data: input,
+        serverMode: true
+      };
     }
     
-    if (typeof input === 'string') {
-      // If it's a base64 string, decode it
-      if (input.startsWith('data:image')) {
-        const base64 = input.split(',')[1];
-        const buffer = Buffer.from(base64, 'base64');
-        return tf.node.decodeImage(buffer);
-      }
+    if (typeof input === 'string' && input.startsWith('data:image')) {
+      const base64 = input.split(',')[1];
+      const buffer = Buffer.from(base64, 'base64');
+      return {
+        type: 'base64',
+        data: buffer,
+        serverMode: true
+      };
     }
   }
   
   // Handle raw pixel data
   if (input.data && input.width && input.height) {
-    const { data, width, height } = input;
-    return tf.tensor3d(data, [height, width, 4], 'int32');
+    return {
+      type: 'imageData',
+      width: input.width,
+      height: input.height,
+      data: input.data
+    };
   }
   
-  throw new Error('Unsupported image input format');
+  throw new Error('Unsupported image input format for MediaPipe');
 };
 
 // Export runtime information

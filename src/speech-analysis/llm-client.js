@@ -25,16 +25,10 @@ const LLM_BACKENDS = {
     requirements: ['browser', 'node'],
     pythonFree: true
   },
-  tfjs_models: {
-    name: 'TensorFlow.js',
-    description: 'TensorFlow.js based text generation models',
-    requirements: ['browser', 'node'],
-    pythonFree: true
-  },
   mock: {
-    name: 'Mock Analysis',
-    description: 'Simulated analysis for development and testing',
-    requirements: ['browser', 'node'],
+    name: 'Mock LLM',
+    description: 'Mock LLM for testing and development',
+    requirements: ['browser', 'node', 'bun'],
     pythonFree: true
   }
 };
@@ -75,7 +69,6 @@ export const createLLMClient = (config = {}) => {
   const backends = {
     webllm: createWebLLMBackend(),
     transformers_js: createTransformersJSBackend(),
-    tfjs_models: createTensorFlowJSBackend(),
     mock: createMockBackend()
   };
 
@@ -558,38 +551,18 @@ const createTransformersJSBackend = () => {
   };
 };
 
-// TensorFlow.js Backend  
-const createTensorFlowJSBackend = () => {
-  let tf = null;
-  let model = null;
-  let tokenizer = null;
-
+// Mock Backend for Testing and Development
+const createMockBackend = () => {
   const checkAvailability = async () => {
-    try {
-      tf = await import('https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.15.0/dist/tf.min.js');
-      return true;
-    } catch (error) {
-      console.log('⚠️ TensorFlow.js not available:', error.message);
-      return false;
-    }
+    return true; // Mock backend is always available
   };
 
   const initialize = async (config) => {
-    if (!tf) {
-      throw new Error('TensorFlow.js not loaded');
-    }
-
-    console.log('🔄 Initializing TensorFlow.js model...');
-    
-    // For now, we'll create a simple rule-based analyzer
-    // In the future, this could load actual TF.js models
-    console.log('✅ TensorFlow.js backend ready (rule-based)');
+    console.log('✅ Mock LLM backend initialized for development/testing');
   };
 
   const generate = async ({ prompt, text, systemPrompt, temperature, maxTokens }) => {
-    // Simple rule-based analysis as placeholder
-    // This would be replaced with actual TF.js model inference
-    
+    // Simple rule-based analysis for development/testing
     const lowerText = text.toLowerCase();
     const lowerPrompt = prompt.toLowerCase();
 
@@ -624,14 +597,26 @@ const createTensorFlowJSBackend = () => {
       }
     }
 
+    if (lowerPrompt.includes('confidence')) {
+      // Mock confidence analysis
+      const wordCount = text.split(' ').length;
+      const confidence = wordCount > 10 ? Math.min(8, wordCount / 5) : Math.max(3, wordCount);
+      return `Speaker confidence: ${confidence.toFixed(1)}/10 - Based on speech length and vocabulary`;
+    }
+
+    if (lowerPrompt.includes('stress') || lowerPrompt.includes('indicator')) {
+      // Mock stress detection
+      const stressWords = ['uh', 'um', 'like', 'you know', 'basically'];
+      const hasStress = stressWords.some(word => lowerText.includes(word));
+      return hasStress ? 'Mild stress indicators detected' : 'No obvious stress indicators';
+    }
+
     // Generic analysis
-    return `Analysis of "${text.substring(0, 30)}...": Text contains ${text.split(' ').length} words.`;
+    return `Mock analysis: "${text.substring(0, 30)}..." contains ${text.split(' ').length} words`;
   };
 
   const cleanup = async () => {
-    model = null;
-    tokenizer = null;
-    tf = null;
+    // Mock cleanup - nothing to clean
   };
 
   return {
@@ -642,61 +627,5 @@ const createTensorFlowJSBackend = () => {
   };
 };
 
-// Mock Backend for development and testing
-const createMockBackend = () => {
-  const checkAvailability = async () => {
-    return true; // Always available
-  };
 
-  const initialize = async (config) => {
-    console.log('🔄 Initializing mock LLM backend...');
-    // Simulate initialization delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    console.log('✅ Mock LLM backend ready');
-  };
-
-  const generate = async ({ prompt, text, systemPrompt }) => {
-    // Simulate processing delay
-    await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
-
-    const lowerPrompt = prompt.toLowerCase();
-    const textLength = text.split(' ').length;
-
-    // Generate contextual mock responses based on prompt type
-    if (lowerPrompt.includes('sentiment')) {
-      const sentiments = ['positive, upbeat, optimistic', 'negative, critical, pessimistic', 'neutral, balanced, measured'];
-      return sentiments[Math.floor(Math.random() * sentiments.length)];
-    }
-
-    if (lowerPrompt.includes('controversial')) {
-      const responses = [
-        'No controversial content detected.',
-        'Statement may be debatable. Consider alternative viewpoints.',
-        'Topic touches on sensitive areas. Approach with nuance.'
-      ];
-      return responses[Math.floor(Math.random() * responses.length)];
-    }
-
-    if (lowerPrompt.includes('emotion')) {
-      const emotions = ['calm, focused', 'excited, energetic', 'thoughtful, contemplative', 'confident, assertive'];
-      return emotions[Math.floor(Math.random() * emotions.length)];
-    }
-
-    // Generic mock response
-    return `Mock analysis: Text has ${textLength} words. ${prompt.substring(0, 20)}...`;
-  };
-
-  const cleanup = async () => {
-    // No cleanup needed for mock
-  };
-
-  return {
-    checkAvailability,
-    initialize,
-    generate,
-    cleanup
-  };
-};
-
-// Export default factory
-export { createLLMClient };
+// Export default factory (already exported above as const)

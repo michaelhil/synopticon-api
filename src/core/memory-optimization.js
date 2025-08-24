@@ -4,8 +4,16 @@
  * Following functional programming patterns with factory functions
  */
 
-// Memory pool factory for efficient object reuse
+import { createEnhancedMemoryPool } from '../utils/enhanced-memory-pool.js';
+
+// Legacy memory pool factory - now delegates to enhanced version
 export const createMemoryPool = (config = {}) => {
+  console.warn('⚠️ createMemoryPool is deprecated, use createEnhancedMemoryPool instead');
+  return createEnhancedMemoryPool(config);
+};
+
+// Enhanced memory pool factory for efficient object reuse
+export const createOptimizedMemoryPool = (config = {}) => {
   const state = {
     pools: new Map(),
     stats: {

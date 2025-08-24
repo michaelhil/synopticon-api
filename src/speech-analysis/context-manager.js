@@ -1005,4 +1005,4 @@ export const analyzeContext = (context) => {
 export { CONTEXT_STRATEGIES };
 
 // Export default factory
-export { createContextManager };
+// Export default factory (already exported above as const)

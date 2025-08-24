@@ -813,4 +813,4 @@ export const createConversationAnalytics = (config = {}) => {
 };
 
 // Export metrics factory for external use
-export { createConversationMetrics };
+// Export conversation metrics factory (already exported above as const)

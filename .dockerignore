@@ -1,0 +1,104 @@
+# Synopticon API - Docker ignore file
+# Optimize container build by excluding unnecessary files
+
+# Development and testing
+node_modules/
+tests/
+demos/
+examples/
+docs/
+*.test.js
+*.spec.js
+test-*.js
+
+# Git and CI/CD
+.git/
+.github/
+.gitignore
+
+# Documentation
+*.md
+!README.md
+*.txt
+*.rst
+
+# Environment and config files
+.env*
+!.env.example
+.vscode/
+.idea/
+
+# Build artifacts and caches
+dist/
+build/
+.cache/
+.bun/
+.npm/
+coverage/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+*.swp
+*.swo
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Package files
+*.tgz
+*.tar.gz
+
+# Model files and large assets (if any)
+models/
+*.bin
+*.pb
+*.json.gz
+
+# Development outputs
+examples/outputs/
+test-images/
+benchmark-results/
+performance-logs/
+
+# Docker files (avoid recursive copying)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# IDE and editor files
+*.sublime-*
+.vscode/
+.idea/
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Optional npm cache directory
+.npm/
+
+# ESLint cache
+.eslintcache
+
+# Parcel cache
+.cache/
+.parcel-cache/
+
+# Storybook build outputs
+.out/
+.storybook-out/

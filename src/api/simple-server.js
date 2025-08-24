@@ -18,7 +18,7 @@ export const createSimpleAPIServer = (config = {}) => {
   const app = express();
   const serverConfig = {
     port: process.env.PORT || 3001,
-    corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000'],
+    corsOrigins: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000', 'http://127.0.0.1:3000'],
     rateLimit: {
       windowMs: 15 * 60 * 1000, // 15 minutes
       max: 100, // limit each IP to 100 requests per windowMs
@@ -66,24 +66,24 @@ export const createSimpleAPIServer = (config = {}) => {
     next();
   };
 
-  // Initialize BlazeFace model
+  // Initialize MediaPipe face detector
   const initializeBlazeFace = async () => {
     try {
-      console.log('🔄 Loading BlazeFace model...');
+      console.log('🔄 Loading MediaPipe face detection...');
       
-      blazeFaceModel = await blazeface.load({
-        inputWidth: 256,
-        inputHeight: 256,
-        maxFaces: 10,
-        iouThreshold: 0.3,
-        scoreThreshold: 0.75
+      faceDetector = await createMediaPipeFaceDetector({
+        modelSelection: 0, // short-range
+        minDetectionConfidence: 0.5
       });
       
-      console.log('✅ BlazeFace model loaded successfully');
+      console.log('✅ MediaPipe face detection loaded successfully');
       return true;
     } catch (error) {
-      console.error('❌ Failed to load BlazeFace model:', error);
-      throw error;
+      console.error('❌ Failed to load face detection:', error);
+      // Continue without face detection for Docker deployment
+      console.warn('⚠️ Continuing without face detection (mock mode)');
+      faceDetector = null;
+      return true;
     }
   };
 
@@ -105,9 +105,9 @@ export const createSimpleAPIServer = (config = {}) => {
     const health = {
       status: 'ok',
       timestamp: new Date().toISOString(),
-      blazeface: {
-        loaded: !!blazeFaceModel,
-        backend: 'cpu' // TensorFlow.js Node.js backend
+      faceDetection: {
+        loaded: !!faceDetector,
+        backend: 'mediapipe' // MediaPipe face detection
       }
     };
 
@@ -117,8 +117,8 @@ export const createSimpleAPIServer = (config = {}) => {
   // Get configuration
   app.get('/api/config', (req, res) => {
     const config = {
-      algorithm: 'blazeface',
-      backend: 'cpu',
+      algorithm: 'mediapipe',
+      backend: 'wasm',
       maxFaces: 10,
       supportedFormats: ['base64'],
       limits: {
@@ -139,7 +139,7 @@ export const createSimpleAPIServer = (config = {}) => {
     const startTime = performance.now();
 
     try {
-      if (!blazeFaceModel) {
+      if (!faceDetector) {
         return res.status(503).json({
           success: false,
           error: 'BlazeFace model not loaded',
@@ -233,10 +233,11 @@ export const createSimpleAPIServer = (config = {}) => {
     try {
       await initializeBlazeFace();
       
-      const server = app.listen(serverConfig.port, () => {
-        console.log(`🚀 Simple Face Analysis API Server listening on port ${serverConfig.port}`);
-        console.log(`📋 Health check: http://localhost:${serverConfig.port}/api/health`);
-        console.log(`⚙️  Configuration: http://localhost:${serverConfig.port}/api/config`);
+      const host = process.env.HOST || '0.0.0.0';
+      const server = app.listen(serverConfig.port, host, () => {
+        console.log(`🚀 Simple Face Analysis API Server listening on ${host}:${serverConfig.port}`);
+        console.log(`📋 Health check: http://${host}:${serverConfig.port}/api/health`);
+        console.log(`⚙️  Configuration: http://${host}:${serverConfig.port}/api/config`);
       });
 
       return server;
@@ -247,9 +248,9 @@ export const createSimpleAPIServer = (config = {}) => {
   };
 
   const stop = () => {
-    if (blazeFaceModel) {
-      // BlazeFace models are cleaned up automatically by TensorFlow.js
-      blazeFaceModel = null;
+    if (faceDetector) {
+      // MediaPipe models are cleaned up automatically
+      faceDetector = null;
     }
     console.log('🛑 Simple Face Analysis API Server stopped');
   };
@@ -258,7 +259,7 @@ export const createSimpleAPIServer = (config = {}) => {
     app,
     start,
     stop,
-    getModel: () => blazeFaceModel
+    getModel: () => faceDetector
   };
 };
 

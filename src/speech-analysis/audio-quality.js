@@ -454,5 +454,4 @@ export const createAudioQualityAnalyzer = (config = {}) => {
   };
 };
 
-// Export quality metrics factory for external use
-export { createAudioQualityMetrics };
+// Export quality metrics factory for external use (already exported above as const)

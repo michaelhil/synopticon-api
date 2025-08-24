@@ -1,0 +1,33 @@
+# Synopticon API - Development Docker Compose
+# Lightweight development setup with mock LLM
+
+services:
+  # Synopticon API - Development Mode
+  synopticon-api-dev:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - HOST=0.0.0.0
+      - PORT=3000
+      - LLM_BACKEND=mock  # Use mock LLM for development
+      - CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000,http://localhost:8080
+    volumes:
+      # Mount source code for development
+      - ./src:/app/src:ro
+      - ./package.json:/app/package.json:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    # Override default command for development
+    command: ["bun", "--watch", "src/api/simple-server.js"]
+
+# Network configuration  
+networks:
+  default:
+    driver: bridge

@@ -15,18 +15,17 @@ import {
 import { 
   detectRuntime, 
   checkFeatures, 
-  loadTensorFlow, 
-  imageToTensor,
+  loadMediaPipe, 
+  imageToMediaPipe,
   createUniversalCanvas 
 } from '../utils/runtime-detector.js';
 
-// BlazeFace-specific configuration
-const createBlazeFaceConfig = (config = {}) => ({
-  modelUrl: config.modelUrl || 'https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface@0.0.7/model.json',
+// MediaPipe Face Detection configuration
+const createMediaPipeFaceConfig = (config = {}) => ({
+  modelSelection: config.modelSelection || 0, // 0 for short-range, 1 for full-range
+  minDetectionConfidence: config.minDetectionConfidence || 0.5,
   maxFaces: config.maxFaces || 10,
-  iouThreshold: config.iouThreshold || 0.3,
-  scoreThreshold: config.scoreThreshold || 0.75,
-  returnTensors: config.returnTensors || false,
+  selfieMode: config.selfieMode || false,
   ...config
 });
 

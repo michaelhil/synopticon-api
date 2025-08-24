@@ -17,7 +17,7 @@ import {
 export const createEyeTrackerDevice = (config = {}) => {
   const state = {
     deviceId: config.deviceId || 'unknown',
-    address: config.address || 'localhost',
+    address: config.address || (process.env.NEON_DEVICE_ADDRESS || 'localhost'),
     port: config.port || 8080,
     connectionState: 'disconnected',
     wsTransport: null,

@@ -24,19 +24,13 @@ const SPEECH_BACKENDS = {
     description: 'Text input fallback for development',
     requirements: ['browser', 'node'],
     availability: 'universal'
-  },
-  mock_recognition: {
-    name: 'Mock Speech Recognition',
-    description: 'Simulated speech for testing',
-    requirements: ['browser', 'node'],
-    availability: 'universal'
   }
 };
 
 // Create speech recognition factory
 export const createSpeechRecognition = (config = {}) => {
   const state = {
-    runtime: detectRuntime(),
+    runtime: checkFeatures(),
     features: checkFeatures(),
     activeBackend: null,
     isListening: false,
@@ -75,7 +69,7 @@ export const createSpeechRecognition = (config = {}) => {
   // Initialize the best available speech recognition backend
   const initialize = async () => {
     
-    const backendPriority = ['web_speech_api', 'speech_recognition_fallback', 'mock_recognition'];
+    const backendPriority = ['web_speech_api', 'speech_recognition_fallback'];
 
     for (const backendName of backendPriority) {
       try {
@@ -226,8 +220,7 @@ export const createSpeechRecognition = (config = {}) => {
   // Backend implementations
   const backends = {
     web_speech_api: createWebSpeechAPIBackend(),
-    speech_recognition_fallback: createFallbackBackend(),
-    mock_recognition: createMockRecognitionBackend()
+    speech_recognition_fallback: createFallbackBackend()
   };
 
   return {
@@ -275,7 +268,11 @@ const createWebSpeechAPIBackend = () => {
   let processor = null;
   let audioStream = null;
   const checkAvailability = async (state) => {
+    console.log('🔍 Checking Web Speech API availability...');
+    console.log('Runtime check:', state.runtime);
+    
     if (!state.runtime.isBrowser) {
+      console.log('⚠️ Not in browser environment');
       return false;
     }
 
@@ -292,6 +289,7 @@ const createWebSpeechAPIBackend = () => {
       return false;
     }
 
+    console.log('✅ Web Speech API is available');
     return true;
   };
 
@@ -305,8 +303,7 @@ const createWebSpeechAPIBackend = () => {
     state.recognition.lang = state.language;
     state.recognition.maxAlternatives = state.maxAlternatives;
 
-    // Initialize Web Audio API for enhanced audio processing
-    await initializeWebAudioAPI(state);
+    // Web Audio API will be initialized when speech recognition starts
 
     // Setup event handlers
     state.recognition.onstart = () => {
@@ -451,6 +448,12 @@ const createWebSpeechAPIBackend = () => {
     if (!state.recognition) {
       throw new Error('Web Speech API not initialized');
     }
+    
+    // Initialize Web Audio API when starting (requires user gesture)
+    if (!audioStream) {
+      await initializeWebAudioAPI(state);
+    }
+    
     state.recognition.start();
   };
 
@@ -625,7 +628,11 @@ const createFallbackBackend = () => {
   let isActive = false;
 
   const checkAvailability = async (state) => {
-    return state.runtime.isBrowser; // Only works in browser
+    console.log('🔍 Checking fallback backend availability...');
+    console.log('Runtime check:', state.runtime);
+    const available = state.runtime.isBrowser; 
+    console.log('✅ Fallback backend available:', available);
+    return available; 
   };
 
   const initialize = async (state) => {
@@ -820,127 +827,6 @@ const createFallbackBackend = () => {
   };
 };
 
-// Mock Recognition Backend
-const createMockRecognitionBackend = () => {
-  let mockInterval = null;
-  let sampleTexts = [
-    'Hello, this is a test of speech recognition.',
-    'The weather is looking great today.',
-    'I need to finish my work before the deadline.',
-    'This is an example of continuous speech recognition.',
-    'Testing the interim and final results functionality.'
-  ];
-  let textIndex = 0;
+// Mock backend removed - no dummy text generation
 
-  const checkAvailability = async (state) => {
-    return true; // Always available
-  };
-
-  const initialize = async (state) => {
-    console.log('🔄 Initializing mock speech recognition...');
-    console.log('✅ Mock speech recognition ready');
-  };
-
-  const start = async (state) => {
-    console.log('🎤 Mock speech recognition started');
-    
-    // Simulate speech recognition with periodic results
-    let wordIndex = 0;
-    const currentText = sampleTexts[textIndex % sampleTexts.length];
-    const words = currentText.split(' ');
-
-    mockInterval = setInterval(() => {
-      if (wordIndex < words.length) {
-        // Send interim result
-        const interimText = words.slice(0, wordIndex + 1).join(' ');
-        const interimResult = createSpeechRecognitionResult({
-          transcript: interimText,
-          confidence: 0.8,
-          isFinal: false,
-          isInterim: true,
-          words: [],
-          language: state.language,
-          processingTime: Math.random() * 50
-        });
-
-        state.currentTranscript = interimText;
-        state.callbacks.onInterimResult.forEach(callback => {
-          try {
-            callback(interimResult);
-          } catch (error) {
-            console.warn('Mock interim result callback error:', error);
-          }
-        });
-
-        wordIndex++;
-      } else {
-        // Send final result
-        const finalWords = words.map((word, index) => 
-          createSpeechWord({
-            word,
-            confidence: 0.85 + Math.random() * 0.15,
-            startTime: index * 200,
-            endTime: (index + 1) * 200
-          })
-        );
-
-        const finalResult = createSpeechRecognitionResult({
-          transcript: currentText,
-          confidence: 0.85,
-          isFinal: true,
-          isInterim: false,
-          words: finalWords,
-          language: state.language,
-          processingTime: Math.random() * 100
-        });
-
-        state.finalTranscript += currentText + ' ';
-        state.metrics.totalWords += words.length;
-
-        state.callbacks.onResult.forEach(callback => {
-          try {
-            callback(finalResult);
-          } catch (error) {
-            console.warn('Mock result callback error:', error);
-          }
-        });
-
-        // Move to next sample text
-        textIndex++;
-        wordIndex = 0;
-        
-        // Stop after a few iterations unless continuous
-        if (!state.continuous && textIndex >= 3) {
-          clearInterval(mockInterval);
-          mockInterval = null;
-        }
-      }
-    }, 500 + Math.random() * 500); // Variable timing
-  };
-
-  const stop = async (state) => {
-    if (mockInterval) {
-      clearInterval(mockInterval);
-      mockInterval = null;
-    }
-    console.log('🔇 Mock speech recognition stopped');
-  };
-
-  const cleanup = async (state) => {
-    if (mockInterval) {
-      clearInterval(mockInterval);
-      mockInterval = null;
-    }
-  };
-
-  return {
-    checkAvailability,
-    initialize,
-    start,
-    stop,
-    cleanup
-  };
-};
-
-// Export default factory
-export { createSpeechRecognition };
+// Export default factory (already exported above as const)

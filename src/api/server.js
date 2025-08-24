@@ -607,10 +607,11 @@ export const createSynopticonAPIServer = (config = {}) => {
     try {
       await initializeEngine();
       
-      const server = app.listen(serverConfig.port, () => {
-        console.log(`🚀 Synopticon API Server listening on port ${serverConfig.port}`);
-        console.log(`📋 Health check: http://localhost:${serverConfig.port}/api/health`);
-        console.log(`⚙️  Configuration: http://localhost:${serverConfig.port}/api/config`);
+      const host = process.env.HOST || '0.0.0.0';
+      const server = app.listen(serverConfig.port, host, () => {
+        console.log(`🚀 Synopticon API Server listening on ${host}:${serverConfig.port}`);
+        console.log(`📋 Health check: http://${host}:${serverConfig.port}/api/health`);
+        console.log(`⚙️  Configuration: http://${host}:${serverConfig.port}/api/config`);
       });
 
       return server;

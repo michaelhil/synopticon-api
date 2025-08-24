@@ -10,9 +10,9 @@ const server = Bun.serve({
     const url = new URL(request.url);
     let filePath = url.pathname;
     
-    // Default to demo-mediapipe.html
+    // Default to mediapipe demo in examples
     if (filePath === '/') {
-      filePath = '/demo-mediapipe.html';
+      filePath = '/examples/mediapipe-demo.html';
     }
     
     try {
