@@ -5,11 +5,11 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { createFaceAnalysisEngine } from '../../src/face-analysis-engine.js';
-import { createEyeTrackingSystem } from '../../src/eye-tracking/streaming.js';
+import { createFaceAnalysisEngine } from '../../src/core/face-analysis-engine.js';
+import { createEyeTrackingSystem } from '../../src/features/eye-tracking/streaming.js';
 import { createSynchronizationEngine } from '../../src/core/synchronization.js';
 import { streamFactory } from '../../src/core/streams.js';
-import { createEyeTracker } from '../../src/eye-tracking/index.js';
+import { createEyeTracker } from '../../src/features/eye-tracking/index.js';
 
 // Mock canvas for testing
 const createMockCanvas = () => ({

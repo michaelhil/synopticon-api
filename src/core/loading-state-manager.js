@@ -43,7 +43,7 @@
  * ```
  */
 
-import { handleError, ErrorCategory, ErrorSeverity } from '../utils/error-handler.js';
+import { handleError, ErrorCategory, ErrorSeverity } from '../shared/utils/error-handler.js';
 
 // Loading state types
 export const LoadingStates = {

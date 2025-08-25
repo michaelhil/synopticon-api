@@ -5,22 +5,22 @@
  */
 
 import { createWebGLEngine } from './webgl-engine.js';
-import { createCameraManager } from '../utils/camera.js';
-import { createErrorHandler, ErrorCategory, ErrorSeverity } from '../utils/error-handler.js';
+import { createCameraManager } from '../shared/utils/camera.js';
+import { createErrorHandler, ErrorCategory, ErrorSeverity } from '../shared/utils/error-handler.js';
 import { createAnalysisPipeline, createPipelineConfigurations } from './analysis-pipeline.js';
 import { createConfigurationManager, createConfig } from './configuration.js';
 import { createOrchestrator } from './orchestrator.js';
 
 // Import detection modules
-import { createMediaPipeFaceDetector } from '../modules/detection/mediapipe/mediapipe-face-detector.js';
+import { createMediaPipeFaceDetector } from '../shared/utils/modules/detection/mediapipe/mediapipe-face-detector.js';
 
 // Import pipeline factories
-import { createEyeTrackingPipelineFactory } from '../pipelines/eye-tracking-pipeline.js';
+import { createEyeTrackingPipelineFactory } from '../features/eye-tracking/eye-tracking-pipeline.js';
 
 export const createFaceAnalysisEngine = (canvas, userConfig = {}) => {
   // Initialize unified configuration system
   const configManager = createConfigurationManager(userConfig);
-  const config = configManager.initialize();
+  const config = configManager.getConfig();
   
   const state = {
     canvas,

@@ -3,7 +3,7 @@
  * Comprehensive performance monitoring and metrics collection
  */
 
-import { createEnhancedMemoryPool } from '../utils/enhanced-memory-pool.js';
+import { createEnhancedMemoryPool } from '../shared/utils/enhanced-memory-pool.js';
 
 /**
  * Create Performance Metrics Collector

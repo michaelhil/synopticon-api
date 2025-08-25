@@ -258,7 +258,7 @@ export const createPipelineConfigurations = () => ({
   // Fast processing pipeline - speed optimized
   fast: {
     modules: [
-      { category: 'detection', algorithm: 'blazeface', config: { maxFaces: 1 } }
+      { category: 'detection', algorithm: 'mediapipe-face', config: { maxFaces: 1 } }
     ],
     config: {
       enablePerformanceMonitoring: true,
@@ -281,7 +281,7 @@ export const createPipelineConfigurations = () => ({
   // Full analysis pipeline - all features
   full: {
     modules: [
-      { category: 'detection', algorithm: 'blazeface', config: { maxFaces: 5 } },
+      { category: 'detection', algorithm: 'mediapipe-face', config: { maxFaces: 5 } },
       { category: 'landmarks', algorithm: 'mediapipe', optional: true },
       { category: 'emotion', algorithm: 'ferplus', optional: true },
       { category: 'age', algorithm: 'agenet', optional: true }
@@ -295,7 +295,7 @@ export const createPipelineConfigurations = () => ({
   // API optimized pipeline - balanced performance
   api: {
     modules: [
-      { category: 'detection', algorithm: 'blazeface', config: { maxFaces: 3 } },
+      { category: 'detection', algorithm: 'mediapipe-face', config: { maxFaces: 3 } },
       { category: 'landmarks', algorithm: 'mediapipe', optional: true }
     ],
     config: {

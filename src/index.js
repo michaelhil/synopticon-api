@@ -18,11 +18,9 @@ export { createLoadingStateManager, LoadingStates, ProgressStages } from './core
 export { createPipelinePreloader, PreloadingStrategies, UsageContexts } from './core/pipeline-preloader.js';
 
 // Export UI components for loading states
-export * from './ui/loading-components.js';
+export * from './shared/utils/ui/loading-components.js';
 
-// Legacy direct exports (deprecated - use lazy loading instead)
-// These will be removed in a future version
-export { createMediaPipeFacePipeline } from './pipelines/mediapipe-face-pipeline.js';
+// Modern lazy loading approach only
 
 // Lazy pipeline factory - creates pipelines on demand
 export const createPipelineFactory = async (type, config = {}) => {
@@ -156,13 +154,6 @@ export { createFaceAnalysisServer } from './api/minimal-server.js';
 // Export speech analysis components
 export { createSpeechAnalysisAPI, createSpeechRecognition, createLLMClient } from './speech-analysis/index.js';
 
-// Legacy engine for backward compatibility
-import { createFaceAnalysisEngine } from './core/face-analysis-engine.js';
-export { createFaceAnalysisEngine };
-
 // Version information
-export const VERSION = '0.3.0-beta.3'; // Security hardening, performance monitoring, hybrid migration complete
-export const BUILD = 'hybrid-universal';
-
-// Default export for backward compatibility
-export default createFaceAnalysisEngine;
+export const VERSION = '0.6.0-beta.1'; // TypeScript migration, breaking changes
+export const BUILD = 'typescript-native';

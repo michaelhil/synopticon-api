@@ -46,8 +46,8 @@
 
 import { createLazyPipelineRegistry } from './lazy-pipeline-registry.js';
 import { createLoadingStateManager } from './loading-state-manager.js';
-import { handleError, ErrorCategory, ErrorSeverity } from '../utils/error-handler.js';
-import { showLoadingToast } from '../ui/loading-components.js';
+import { handleError, ErrorCategory, ErrorSeverity } from '../shared/utils/error-handler.js';
+import { showLoadingToast } from '../shared/utils/ui/loading-components.js';
 
 // Preloading strategies
 export const PreloadingStrategies = {

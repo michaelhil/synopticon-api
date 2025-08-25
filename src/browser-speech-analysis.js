@@ -4,7 +4,7 @@
  */
 
 // Export only browser-compatible speech analysis components
-export { createSpeechAnalysisPipeline } from './pipelines/speech-analysis-pipeline-hybrid.js';
+export { createSpeechAnalysisPipeline } from './shared/utils/speech-analysis-pipeline-hybrid.js';
 
 // Export speech analysis components directly from their modules
 export { createSpeechRecognition } from './speech-analysis/speech-recognition.js';

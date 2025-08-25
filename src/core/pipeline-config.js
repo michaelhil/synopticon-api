@@ -4,8 +4,8 @@
  * Following functional programming patterns with immutable configurations
  */
 
-import { createPipelineValidator } from './config-validator.js';
-import { handleError, ErrorCategory, ErrorSeverity } from '../utils/error-handler.js';
+import { createConfigValidator } from './config-validator.js';
+import { handleError, ErrorCategory, ErrorSeverity } from '../shared/utils/error-handler.js';
 
 // Base configuration common to all pipelines
 const BASE_CONFIG = {
@@ -170,7 +170,7 @@ const validateConfig = (type, config) => {
  * @param {Object} userConfig - User-provided configuration overrides
  * @returns {Object} - Complete configuration object
  */
-export const createPipelineConfig = (type, userConfig = {}) => {
+export const createPipelineConfig = (type, userConfig = {}, options = {}) => {
   // Validate pipeline type
   if (!type || typeof type !== 'string') {
     throw new Error('Pipeline type is required and must be a string');
@@ -184,38 +184,44 @@ export const createPipelineConfig = (type, userConfig = {}) => {
   }
 
   // Create validator for this pipeline type
-  const validator = createPipelineValidator();
-  
-  // Validate user configuration first to catch security issues early
-  try {
-    const userValidation = validator.validate(userConfig);
-    
-    if (userValidation.securityViolations.length > 0) {
+  // Face processing pipelines don't need the general PIPELINE schema (which requires 'name')
+  // Disable strict mode to allow type-specific properties without warnings
+  const validator = createConfigValidator({ _strictMode: false });
+
+  // Only validate user-provided configurations for security issues
+  // Skip validation for internal/system configurations to avoid false positives
+  if (!options.skipSecurityValidation && Object.keys(userConfig).length > 0) {
+    // Validate user configuration first to catch security issues early
+    try {
+      const userValidation = validator.validate(userConfig);
+      
+      if (userValidation.securityViolations.length > 0) {
+        handleError(
+          `Security violations in pipeline configuration: ${userValidation.securityViolations.join(', ')}`,
+          ErrorCategory.VALIDATION,
+          ErrorSeverity.ERROR,
+          { type, violations: userValidation.securityViolations }
+        );
+        throw new Error(`Configuration contains security violations: ${userValidation.securityViolations.join('; ')}`);
+      }
+
+      if (userValidation.warnings.length > 0) {
+        handleError(
+          `Configuration warnings for pipeline ${type}: ${userValidation.warnings.join(', ')}`,
+          ErrorCategory.VALIDATION,
+          ErrorSeverity.WARNING,
+          { type, warnings: userValidation.warnings }
+        );
+      }
+    } catch (validationError) {
       handleError(
-        `Security violations in pipeline configuration: ${userValidation.securityViolations.join(', ')}`,
+        `Pipeline configuration validation failed: ${validationError.message}`,
         ErrorCategory.VALIDATION,
         ErrorSeverity.ERROR,
-        { type, violations: userValidation.securityViolations }
+        { type, userConfig }
       );
-      throw new Error(`Configuration contains security violations: ${userValidation.securityViolations.join('; ')}`);
+      throw validationError;
     }
-
-    if (userValidation.warnings.length > 0) {
-      handleError(
-        `Configuration warnings for pipeline ${type}: ${userValidation.warnings.join(', ')}`,
-        ErrorCategory.VALIDATION,
-        ErrorSeverity.WARNING,
-        { type, warnings: userValidation.warnings }
-      );
-    }
-  } catch (validationError) {
-    handleError(
-      `Pipeline configuration validation failed: ${validationError.message}`,
-      ErrorCategory.VALIDATION,
-      ErrorSeverity.ERROR,
-      { type, userConfig }
-    );
-    throw validationError;
   }
 
   // Merge configurations in order of precedence
@@ -226,10 +232,12 @@ export const createPipelineConfig = (type, userConfig = {}) => {
     type // Always preserve the type
   };
   
-  // Final validation of merged configuration
-  const finalValidation = validator.validate(mergedConfig);
-  if (!finalValidation.valid) {
-    throw new Error(`Final configuration validation failed: ${finalValidation.errors.join('; ')}`);
+  // Final validation of merged configuration (only check structural validity, not security for internal configs)
+  if (!options.skipSecurityValidation) {
+    const finalValidation = validator.validate(mergedConfig);
+    if (!finalValidation.valid) {
+      throw new Error(`Final configuration validation failed: ${finalValidation.errors.join('; ')}`);
+    }
   }
 
   // Sanitize configuration to remove any dangerous properties
@@ -309,6 +317,17 @@ export const getConfigSchema = (type) => {
     validation: validationRules,
     supportedTypes: Object.keys(TYPE_SPECIFIC_CONFIGS)
   };
+};
+
+/**
+ * Creates internal pipeline configuration with bypassed security validation
+ * This should only be used by the system itself, not for user-provided configs
+ * @param {string} type - Pipeline type
+ * @param {Object} internalConfig - Internal configuration overrides
+ * @returns {Object} - Complete configuration object
+ */
+export const createInternalPipelineConfig = (type, internalConfig = {}) => {
+  return createPipelineConfig(type, internalConfig, { skipSecurityValidation: true });
 };
 
 // Export supported pipeline types for reference

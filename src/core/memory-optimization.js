@@ -4,7 +4,7 @@
  * Following functional programming patterns with factory functions
  */
 
-import { createEnhancedMemoryPool } from '../utils/enhanced-memory-pool.js';
+import { createEnhancedMemoryPool } from '../shared/utils/enhanced-memory-pool.js';
 
 // Legacy memory pool factory - REMOVED (deprecated function eliminated)
 // Use createEnhancedMemoryPool directly instead
@@ -449,8 +449,9 @@ export const createMemoryOptimizer = (config = {}) => {
   // Release objects back to pool
   const releaseObject = (obj) => {
     if (obj && obj.type) {
-      return state.memoryPool.release(obj);
+      return state.memoryPool.release(obj.type, obj);
     }
+    console.warn('Attempting to release untracked object');
     return false;
   };
 
@@ -501,9 +502,13 @@ export const createMemoryOptimizer = (config = {}) => {
     // Cleanup
     cleanup: () => {
       stopMonitoring();
-      state.memoryPool.clear();
+      if (state.memoryPool && typeof state.memoryPool.clear === 'function') {
+        state.memoryPool.clear();
+      }
       for (const buffer of state.buffers.values()) {
-        buffer.clear();
+        if (buffer && typeof buffer.clear === 'function') {
+          buffer.clear();
+        }
       }
       state.buffers.clear();
     }

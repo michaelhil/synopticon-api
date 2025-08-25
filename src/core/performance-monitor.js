@@ -23,7 +23,7 @@ export const createPerformanceMonitor = (config = {}) => {
     metrics: new Map(),
     history: [],
     alerts: [],
-    startTime: Date.now(),
+    startTime: Bun.nanoseconds(),
     isMonitoring: false,
     intervalId: null
   };
@@ -57,7 +57,7 @@ export const createPerformanceMonitor = (config = {}) => {
     const now = Date.now();
     let systemMetrics = {};
     
-    // Node.js specific metrics
+    // Bun-specific metrics (also works with Node.js)
     if (typeof process !== 'undefined' && process.memoryUsage) {
       const memUsage = process.memoryUsage();
       systemMetrics = {
@@ -68,7 +68,9 @@ export const createPerformanceMonitor = (config = {}) => {
           external: memUsage.external
         },
         uptime: process.uptime(),
-        cpuUsage: process.cpuUsage ? process.cpuUsage() : null
+        cpuUsage: process.cpuUsage ? process.cpuUsage() : null,
+        // Bun-specific timing
+        highResTime: typeof Bun !== 'undefined' ? Bun.nanoseconds() : Date.now() * 1e6
       };
     }
     

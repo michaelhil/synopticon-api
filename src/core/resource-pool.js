@@ -4,7 +4,7 @@
  * Reduces garbage collection pressure and improves performance across all pipelines
  */
 
-import { handleError, ErrorCategory, ErrorSeverity } from '../utils/error-handler.js';
+import { handleError, ErrorCategory, ErrorSeverity } from '../shared/utils/error-handler.js';
 
 // Global resource pool instance
 let globalResourcePool = null;

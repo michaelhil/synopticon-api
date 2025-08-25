@@ -3,7 +3,7 @@
  * Provides comprehensive validation for all configuration objects
  */
 
-import { handleError, ErrorCategory, ErrorSeverity } from '../utils/error-handler.js';
+import { handleError, ErrorCategory, ErrorSeverity } from '../shared/utils/error-handler.js';
 
 // Validation rule types
 const ValidationTypes = {
@@ -258,8 +258,9 @@ export const createConfigValidator = (schema = {}) => {
     }
 
     // Check for prototype pollution attempt
+    // Only flag directly assigned properties, not inherited ones
     for (const key of PROTECTED_KEYS) {
-      if (key in config) {
+      if (config.hasOwnProperty(key)) {
         state.securityViolations.push(`Blocked attempt to set protected property: ${key}`);
         handleError(
           `Security violation: Attempted to set ${key}`,

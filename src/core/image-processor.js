@@ -5,7 +5,7 @@
  */
 
 import { getGlobalResourcePool } from './resource-pool.js';
-import { handleError, ErrorCategory, ErrorSeverity } from '../utils/error-handler.js';
+import { handleError, ErrorCategory, ErrorSeverity } from '../shared/utils/error-handler.js';
 
 // Image processing constants
 const IMAGE_FORMATS = {

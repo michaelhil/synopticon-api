@@ -456,6 +456,29 @@ export const createSynchronizationEngine = (config = {}) => {
   const getStreamCount = () => state.streams.size;
   const isRunning = () => state.isRunning;
 
+  // Backward compatibility alias for onSynchronizedData
+  const onSynchronizedData = (callback) => {
+    // Transform the onSync callback signature to match expected syncedStreams format
+    return onSync((alignmentResults, syncMetrics) => {
+      const syncedStreams = [];
+      
+      for (const [streamId, alignmentData] of alignmentResults.entries()) {
+        const streamType = streamId.includes('-') ? streamId.split('-')[0] : streamId;
+        
+        syncedStreams.push({
+          streamId,
+          streamType,
+          timestamp: alignmentData.data?.timestamp || alignmentData.alignedTimestamp || Date.now(),
+          data: alignmentData.data,
+          confidence: alignmentData.confidence || 1.0,
+          syncMetrics
+        });
+      }
+      
+      callback(syncedStreams);
+    });
+  };
+
   return {
     // Stream management
     addStream,
@@ -471,6 +494,7 @@ export const createSynchronizationEngine = (config = {}) => {
     
     // Event handlers
     onSync,
+    onSynchronizedData, // Backward compatibility alias
     onQualityChange, 
     onError,
     
@@ -478,7 +502,16 @@ export const createSynchronizationEngine = (config = {}) => {
     getStrategy,
     getMetrics,
     getStreamCount,
-    isRunning
+    isRunning,
+    
+    // Statistics for debugging
+    getStats: () => ({
+      streamCount: state.streams.size,
+      strategy: state.strategy,
+      tolerance: state.tolerance,
+      isRunning: state.isRunning,
+      metrics: { ...state.syncMetrics }
+    })
   };
 };
 

@@ -4,7 +4,7 @@
  * Integrates with all pipelines to provide unified monitoring dashboard
  */
 
-import { handleError, ErrorCategory, ErrorSeverity } from '../utils/error-handler.js';
+import { handleError, ErrorCategory, ErrorSeverity } from '../shared/utils/error-handler.js';
 
 // Performance metric types
 export const MetricTypes = {

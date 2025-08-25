@@ -43,16 +43,16 @@
  * ```
  */
 
-import { handleError, ErrorCategory, ErrorSeverity } from '../utils/error-handler.js';
+import { handleError, ErrorCategory, ErrorSeverity } from '../shared/utils/error-handler.js';
 
 // Pipeline module mapping with lazy loading functions
 const PIPELINE_LOADERS = {
-  'mediapipe-face': () => import('../pipelines/mediapipe-face-pipeline.js'),
-  'mediapipe-face-mesh': () => import('../pipelines/mediapipe-pipeline.js'),
-  'emotion-analysis': () => import('../pipelines/emotion-analysis-pipeline.js'),
-  'age-estimation': () => import('../pipelines/age-estimation-pipeline.js'),
-  'iris-tracking': () => import('../pipelines/iris-tracking-pipeline.js'),
-  'eye-tracking': () => import('../pipelines/eye-tracking-pipeline.js')
+  'mediapipe-face': () => import('../features/face-detection/mediapipe-face-pipeline.js'),
+  'mediapipe-face-mesh': () => import('../features/face-detection/mediapipe-pipeline.js'),
+  'emotion-analysis': () => import('../features/emotion-analysis/emotion-analysis-pipeline.js'),
+  'age-estimation': () => import('../features/face-detection/age-estimation-pipeline.js'),
+  'iris-tracking': () => import('../features/eye-tracking/iris-tracking-pipeline.js'),
+  'eye-tracking': () => import('../features/eye-tracking/eye-tracking-pipeline.js')
 };
 
 // Factory function extractors - maps pipeline type to export name

@@ -6,7 +6,7 @@
 
 import { createPipelineMonitor } from './pipeline-monitor.js';
 import { createAnalysisResult, mergeResults, createErrorResult, ResultStatus } from './pipeline-results.js';
-import { handleError, ErrorCategory, ErrorSeverity } from '../utils/error-handler.js';
+import { handleError, ErrorCategory, ErrorSeverity } from '../shared/utils/error-handler.js';
 
 // Composition patterns
 export const CompositionPattern = {
@@ -741,7 +741,56 @@ export const createPipelineComposer = (config = {}) => {
       dependencyMap.set(pipelineId, pipeline.dependencies || []);
     }
 
-    // TODO: Implement proper cycle detection algorithm
+    // Implement cycle detection using depth-first search (DFS)
+    const detectCycles = (dependencyMap) => {
+      const visited = new Set();
+      const recursionStack = new Set();
+      const cycles = [];
+      
+      const hasCycleDFS = (node, path = []) => {
+        if (recursionStack.has(node)) {
+          // Found a cycle - extract the cycle path
+          const cycleStart = path.indexOf(node);
+          const cycle = path.slice(cycleStart).concat([node]);
+          cycles.push(cycle);
+          return true;
+        }
+        
+        if (visited.has(node)) {
+          return false;
+        }
+        
+        visited.add(node);
+        recursionStack.add(node);
+        path.push(node);
+        
+        const dependencies = dependencyMap.get(node) || [];
+        for (const dependency of dependencies) {
+          if (hasCycleDFS(dependency, [...path])) {
+            return true;
+          }
+        }
+        
+        recursionStack.delete(node);
+        path.pop();
+        return false;
+      };
+      
+      // Check all nodes for cycles
+      for (const [nodeId] of dependencyMap) {
+        if (!visited.has(nodeId)) {
+          hasCycleDFS(nodeId);
+        }
+      }
+      
+      if (cycles.length > 0) {
+        throw new Error(`Pipeline dependency cycles detected: ${cycles.map(cycle => cycle.join(' -> ')).join(', ')}`);
+      }
+      
+      return false;
+    };
+    
+    detectCycles(dependencyMap);
   };
 
   /**
