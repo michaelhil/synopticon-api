@@ -149,7 +149,7 @@ export {
 } from './core/performance-monitor.js';
 
 // Export API server
-export { createFaceAnalysisServer } from './api/minimal-server.js';
+export { createFaceAnalysisServer } from './api/server.js';
 
 // Export speech analysis components
 export { createSpeechAnalysisAPI, createSpeechRecognition, createLLMClient } from './speech-analysis/index.js';

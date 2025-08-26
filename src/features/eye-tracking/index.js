@@ -4,10 +4,10 @@
  * Following functional programming patterns with factory functions
  */
 
-import { createDeviceDiscovery, discoveryFactory } from './discovery.js';
-import { createEyeTrackerDevice } from './device.js';
-import { createGazeProcessor } from './gaze-processing.js';
-import { createEyeTrackingStreaming, createEyeTrackingSystem } from './streaming.js';
+import { createDeviceDiscovery, discoveryFactory } from './devices/neon/discovery.js';
+import { createEyeTrackerDevice } from './devices/neon/device.js';
+import { createGazeProcessor } from './common/gaze-processing.js';
+import { createEyeTrackingStreaming, createEyeTrackingSystem } from './devices/neon/streaming.js';
 import { 
   createEyeTrackingResult, 
   createGazeData, 

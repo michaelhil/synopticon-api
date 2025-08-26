@@ -1,0 +1,998 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👁️ Eye Tracking Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .demo-container {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .video-section {
+            flex: 1;
+            position: relative;
+        }
+
+        .canvas-container {
+            position: relative;
+            border-radius: 10px;
+            overflow: hidden;
+            background: #000;
+            margin-bottom: 15px;
+        }
+
+        #inputVideo {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        #outputCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .info-section {
+            flex: 1;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .controls {
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: transform 0.2s ease;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+        }
+
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .metric-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+        }
+
+        .metric-label {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .gaze-info {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #dee2e6;
+            margin-bottom: 15px;
+        }
+
+        .gaze-coordinates {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .coordinate {
+            text-align: center;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .success {
+            background: #efe;
+            color: #363;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .eye-status {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 15px;
+        }
+
+        .eye-indicator {
+            padding: 8px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .eye-open {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .eye-closed {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .calibration-section {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+
+        .calibration-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .calibration-point {
+            aspect-ratio: 1;
+            background: #2196f3;
+            border-radius: 50%;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+        }
+
+        .calibration-point:hover {
+            background: #1976d2;
+            transform: scale(1.1);
+        }
+
+        .calibration-point.active {
+            background: #ff5722;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+
+        @media (max-width: 768px) {
+            .demo-container {
+                flex-direction: column;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .metric-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- MediaPipe Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+
+    <div class="container">
+        <div class="header">
+            <h1>👁️ Eye Tracking Demo</h1>
+            <p>Real-time gaze estimation and eye movement tracking using MediaPipe Face Mesh</p>
+        </div>
+
+        <div id="loading" class="loading">
+            <h3>Initializing Eye Tracking...</h3>
+            <p>Please allow camera access when prompted</p>
+            <p>Camera and tracking will start automatically!</p>
+        </div>
+
+        <div id="demo" class="demo-container" style="display: none;">
+            <div class="video-section">
+                <div class="canvas-container">
+                    <video id="inputVideo" playsinline></video>
+                    <canvas id="outputCanvas"></canvas>
+                </div>
+
+                <div class="controls">
+                    <button id="toggleBtn">Start Tracking</button>
+                    <button id="calibrateBtn">Calibrate</button>
+                </div>
+            </div>
+
+            <div class="info-section">
+                <div class="eye-status">
+                    <div id="leftEyeStatus" class="eye-indicator eye-open">Left Eye: Open</div>
+                    <div id="rightEyeStatus" class="eye-indicator eye-open">Right Eye: Open</div>
+                </div>
+
+                <div class="gaze-info">
+                    <div class="metric-label">Gaze Direction</div>
+                    <div class="gaze-coordinates">
+                        <div class="coordinate">
+                            <div>X: <span id="gazeX">0.00</span></div>
+                        </div>
+                        <div class="coordinate">
+                            <div>Y: <span id="gazeY">0.00</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="gaze-info">
+                    <div class="metric-label">Looking Direction</div>
+                    <div class="metric-value" id="lookingDirection" style="font-size: 20px; color: #667eea; margin: 10px 0;">Center</div>
+                </div>
+
+                <div class="metric-grid">
+                    <div class="metric-card">
+                        <div class="metric-label">Blink Rate</div>
+                        <div class="metric-value"><span id="blinkRate">0</span> /min</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Processing Time</div>
+                        <div class="metric-value"><span id="processingTime">0</span>ms</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Eye Distance</div>
+                        <div class="metric-value"><span id="eyeDistance">0</span>px</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-label">Head Pose</div>
+                        <div class="metric-value"><span id="headPose">Center</span></div>
+                    </div>
+                </div>
+
+                <div id="messageContainer"></div>
+
+                <div class="calibration-section" id="calibrationSection" style="display: none;">
+                    <div class="metric-label">Calibration - Look at each point</div>
+                    <div class="calibration-grid">
+                        <div class="calibration-point" data-point="0">1</div>
+                        <div class="calibration-point" data-point="1">2</div>
+                        <div class="calibration-point" data-point="2">3</div>
+                        <div class="calibration-point" data-point="3">4</div>
+                        <div class="calibration-point" data-point="4">5</div>
+                        <div class="calibration-point" data-point="5">6</div>
+                        <div class="calibration-point" data-point="6">7</div>
+                        <div class="calibration-point" data-point="7">8</div>
+                        <div class="calibration-point" data-point="8">9</div>
+                    </div>
+                    <button id="finishCalibration">Finish Calibration</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let faceMesh = null;
+        let camera = null;
+        let isRunning = false;
+        let isCalibrating = false;
+        let calibrationData = [];
+        let currentCalibrationPoint = -1;
+        let blinkCount = 0;
+        let lastBlinkTime = 0;
+        let eyeOpenThreshold = 0.25;
+
+        // Eye landmark indices for MediaPipe Face Mesh (swapped to match camera view)
+        const LEFT_EYE_INDICES = [362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384, 398];
+        const RIGHT_EYE_INDICES = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246];
+        
+        // Specific landmarks for eye openness calculation (swapped to match camera view)
+        const LEFT_EYE_TOP = 386;
+        const LEFT_EYE_BOTTOM = 374;
+        const LEFT_EYE_LEFT = 362;
+        const LEFT_EYE_RIGHT = 263;
+        
+        const RIGHT_EYE_TOP = 159;
+        const RIGHT_EYE_BOTTOM = 145;
+        const RIGHT_EYE_LEFT = 133;
+        const RIGHT_EYE_RIGHT = 33;
+        const LEFT_IRIS_INDICES = [473, 474, 475, 476, 477];
+        const RIGHT_IRIS_INDICES = [468, 469, 470, 471, 472];
+
+        // Error handling
+        function showError(message) {
+            document.getElementById('loading').innerHTML = `
+                <div class="error">
+                    <strong>Error:</strong> ${message}
+                    <br><br>
+                    <button onclick="location.reload()">Retry</button>
+                </div>
+            `;
+        }
+
+        function showSuccess(message) {
+            const container = document.getElementById('messageContainer');
+            if (!container) return;
+            
+            const existing = container.querySelector('.success');
+            if (existing) existing.remove();
+            
+            const success = document.createElement('div');
+            success.className = 'success';
+            success.textContent = message;
+            container.appendChild(success);
+            
+            setTimeout(() => success.remove(), 3000);
+        }
+
+        // Initialize MediaPipe Face Mesh and auto-start tracking
+        async function initializeFaceMesh() {
+            try {
+                console.log('🚀 Initializing MediaPipe Face Mesh...');
+
+                faceMesh = new FaceMesh({
+                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+                });
+
+                faceMesh.setOptions({
+                    maxNumFaces: 1,
+                    refineLandmarks: true,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+
+                faceMesh.onResults(onFaceMeshResults);
+
+                showSuccess('Face mesh initialized successfully!');
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('demo').style.display = 'flex';
+                
+                // Auto-start camera and tracking
+                console.log('🎥 Auto-starting camera and tracking...');
+                try {
+                    await startCamera();
+                    showSuccess('Camera started! Eye tracking is now active.');
+                } catch (cameraError) {
+                    console.warn('Camera auto-start failed:', cameraError.message);
+                    showError('Camera access required. Please click "Start Tracking" to begin.');
+                }
+                
+            } catch (error) {
+                showError('Failed to initialize face mesh: ' + error.message);
+            }
+        }
+
+        // Handle face mesh results
+        function onFaceMeshResults(results) {
+            const videoElement = document.getElementById('inputVideo');
+            const canvasElement = document.getElementById('outputCanvas');
+            const canvasCtx = canvasElement.getContext('2d');
+
+            const startTime = performance.now();
+
+            // Set canvas size to match video
+            canvasElement.width = videoElement.videoWidth;
+            canvasElement.height = videoElement.videoHeight;
+
+            // Clear canvas
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+            if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+                const landmarks = results.multiFaceLandmarks[0];
+                
+                // Draw face mesh (simplified)
+                drawFaceMesh(canvasCtx, landmarks, canvasElement.width, canvasElement.height);
+                
+                // Extract eye information
+                const eyeData = extractEyeData(landmarks, canvasElement.width, canvasElement.height);
+                updateEyeTracking(eyeData);
+                
+                // Calculate gaze direction
+                const gazeData = calculateGaze(landmarks, canvasElement.width, canvasElement.height);
+                updateGazeDisplay(gazeData);
+                
+                // Draw gaze arrows for each eye
+                drawGazeArrows(canvasCtx, landmarks, canvasElement.width, canvasElement.height);
+                
+                // Calculate head pose
+                const headPose = calculateHeadPose(landmarks);
+                updateHeadPose(headPose);
+            }
+
+            // Update processing time
+            const processingTime = performance.now() - startTime;
+            document.getElementById('processingTime').textContent = Math.round(processingTime);
+        }
+
+        // Draw simplified face mesh
+        function drawFaceMesh(ctx, landmarks, width, height) {
+            // Draw eye contours
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 2;
+
+            // Left eye
+            ctx.beginPath();
+            for (let i = 0; i < LEFT_EYE_INDICES.length; i++) {
+                const point = landmarks[LEFT_EYE_INDICES[i]];
+                const x = point.x * width;
+                const y = point.y * height;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+
+            // Right eye
+            ctx.beginPath();
+            for (let i = 0; i < RIGHT_EYE_INDICES.length; i++) {
+                const point = landmarks[RIGHT_EYE_INDICES[i]];
+                const x = point.x * width;
+                const y = point.y * height;
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.closePath();
+            ctx.stroke();
+
+            // Draw iris points
+            ctx.fillStyle = '#ff0000';
+            
+            // Left iris
+            for (const index of LEFT_IRIS_INDICES) {
+                const point = landmarks[index];
+                const x = point.x * width;
+                const y = point.y * height;
+                ctx.beginPath();
+                ctx.arc(x, y, 2, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+
+            // Right iris
+            for (const index of RIGHT_IRIS_INDICES) {
+                const point = landmarks[index];
+                const x = point.x * width;
+                const y = point.y * height;
+                ctx.beginPath();
+                ctx.arc(x, y, 2, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        }
+
+        // Draw gaze direction arrows for each eye
+        function drawGazeArrows(ctx, landmarks, width, height) {
+            if (landmarks.length < 478) return;
+
+            // Get eye centers and iris positions
+            const leftEyeCenter = getEyeCenter(landmarks, LEFT_EYE_INDICES);
+            const rightEyeCenter = getEyeCenter(landmarks, RIGHT_EYE_INDICES);
+            const leftIris = getIrisCenter(landmarks, LEFT_IRIS_INDICES);
+            const rightIris = getIrisCenter(landmarks, RIGHT_IRIS_INDICES);
+
+            // Calculate gaze vectors for each eye
+            const leftGazeVector = {
+                x: (leftIris.x - leftEyeCenter.x) * width,
+                y: (leftIris.y - leftEyeCenter.y) * height
+            };
+            const rightGazeVector = {
+                x: (rightIris.x - rightEyeCenter.x) * width,
+                y: (rightIris.y - rightEyeCenter.y) * height
+            };
+
+            // Arrow drawing settings
+            const arrowLength = 40; // Base arrow length
+            const arrowHeadSize = 8;
+            const arrowColor = '#ffff00'; // Yellow arrows
+            const arrowLineWidth = 3;
+
+            // Scale and normalize gaze vectors
+            const leftMagnitude = Math.sqrt(leftGazeVector.x ** 2 + leftGazeVector.y ** 2);
+            const rightMagnitude = Math.sqrt(rightGazeVector.x ** 2 + rightGazeVector.y ** 2);
+
+            // Draw left eye gaze arrow
+            if (leftMagnitude > 0.001) { // Avoid division by zero
+                const leftScale = arrowLength / Math.max(leftMagnitude, 0.01);
+                const leftArrowEnd = {
+                    x: leftEyeCenter.x * width + leftGazeVector.x * leftScale,
+                    y: leftEyeCenter.y * height + leftGazeVector.y * leftScale
+                };
+
+                drawArrow(ctx, 
+                    leftEyeCenter.x * width, leftEyeCenter.y * height,
+                    leftArrowEnd.x, leftArrowEnd.y,
+                    arrowColor, arrowLineWidth, arrowHeadSize
+                );
+            }
+
+            // Draw right eye gaze arrow
+            if (rightMagnitude > 0.001) { // Avoid division by zero
+                const rightScale = arrowLength / Math.max(rightMagnitude, 0.01);
+                const rightArrowEnd = {
+                    x: rightEyeCenter.x * width + rightGazeVector.x * rightScale,
+                    y: rightEyeCenter.y * height + rightGazeVector.y * rightScale
+                };
+
+                drawArrow(ctx, 
+                    rightEyeCenter.x * width, rightEyeCenter.y * height,
+                    rightArrowEnd.x, rightArrowEnd.y,
+                    arrowColor, arrowLineWidth, arrowHeadSize
+                );
+            }
+        }
+
+        // Helper function to draw an arrow
+        function drawArrow(ctx, fromX, fromY, toX, toY, color, lineWidth, headSize) {
+            const angle = Math.atan2(toY - fromY, toX - fromX);
+            
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = lineWidth;
+            ctx.lineCap = 'round';
+
+            // Draw arrow line
+            ctx.beginPath();
+            ctx.moveTo(fromX, fromY);
+            ctx.lineTo(toX, toY);
+            ctx.stroke();
+
+            // Draw arrow head
+            ctx.beginPath();
+            ctx.moveTo(toX, toY);
+            ctx.lineTo(
+                toX - headSize * Math.cos(angle - Math.PI / 6),
+                toY - headSize * Math.sin(angle - Math.PI / 6)
+            );
+            ctx.lineTo(
+                toX - headSize * Math.cos(angle + Math.PI / 6),
+                toY - headSize * Math.sin(angle + Math.PI / 6)
+            );
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        // Extract eye data for analysis
+        function extractEyeData(landmarks, width, height) {
+            // Calculate eye openness using aspect ratio
+            const leftEyeOpenness = calculateEyeOpenness(landmarks, 'left');
+            const rightEyeOpenness = calculateEyeOpenness(landmarks, 'right');
+
+            // Calculate eye distance
+            const leftEyeCenter = getEyeCenter(landmarks, LEFT_EYE_INDICES);
+            const rightEyeCenter = getEyeCenter(landmarks, RIGHT_EYE_INDICES);
+            const eyeDistance = Math.sqrt(
+                Math.pow((rightEyeCenter.x - leftEyeCenter.x) * width, 2) +
+                Math.pow((rightEyeCenter.y - leftEyeCenter.y) * height, 2)
+            );
+
+            // Debug logging
+            console.log('Eye openness:', { 
+                left: leftEyeOpenness.toFixed(3), 
+                right: rightEyeOpenness.toFixed(3),
+                threshold: eyeOpenThreshold
+            });
+
+            return {
+                leftEyeOpen: leftEyeOpenness > eyeOpenThreshold,
+                rightEyeOpen: rightEyeOpenness > eyeOpenThreshold,
+                leftEyeOpenness,
+                rightEyeOpenness,
+                eyeDistance: Math.round(eyeDistance)
+            };
+        }
+
+        // Calculate eye openness using aspect ratio
+        function calculateEyeOpenness(landmarks, eye) {
+            let top, bottom, left, right;
+            
+            if (eye === 'left') {
+                top = landmarks[LEFT_EYE_TOP];
+                bottom = landmarks[LEFT_EYE_BOTTOM];
+                left = landmarks[LEFT_EYE_LEFT];
+                right = landmarks[LEFT_EYE_RIGHT];
+            } else {
+                top = landmarks[RIGHT_EYE_TOP];
+                bottom = landmarks[RIGHT_EYE_BOTTOM];
+                left = landmarks[RIGHT_EYE_LEFT];
+                right = landmarks[RIGHT_EYE_RIGHT];
+            }
+
+            // Calculate vertical eye distance (height)
+            const eyeHeight = Math.abs(top.y - bottom.y);
+            
+            // Calculate horizontal eye distance (width)
+            const eyeWidth = Math.abs(right.x - left.x);
+            
+            // Return aspect ratio (height/width) - smaller values indicate closed eyes
+            const aspectRatio = eyeWidth > 0 ? eyeHeight / eyeWidth : 0;
+            
+            return aspectRatio;
+        }
+
+        // Get center point of eye
+        function getEyeCenter(landmarks, eyeIndices) {
+            let sumX = 0, sumY = 0;
+            for (const index of eyeIndices) {
+                sumX += landmarks[index].x;
+                sumY += landmarks[index].y;
+            }
+            return {
+                x: sumX / eyeIndices.length,
+                y: sumY / eyeIndices.length
+            };
+        }
+
+        // Update eye tracking display
+        function updateEyeTracking(eyeData) {
+            // Update eye status indicators
+            const leftEyeStatus = document.getElementById('leftEyeStatus');
+            const rightEyeStatus = document.getElementById('rightEyeStatus');
+
+            leftEyeStatus.textContent = eyeData.leftEyeOpen ? 'Left Eye: Open' : 'Left Eye: Closed';
+            leftEyeStatus.className = eyeData.leftEyeOpen ? 'eye-indicator eye-open' : 'eye-indicator eye-closed';
+
+            rightEyeStatus.textContent = eyeData.rightEyeOpen ? 'Right Eye: Open' : 'Right Eye: Closed';
+            rightEyeStatus.className = eyeData.rightEyeOpen ? 'eye-indicator eye-open' : 'eye-indicator eye-closed';
+
+            // Update eye distance
+            document.getElementById('eyeDistance').textContent = eyeData.eyeDistance;
+
+            // Track blinks (both eyes must be closed)
+            if (!eyeData.leftEyeOpen && !eyeData.rightEyeOpen) {
+                const currentTime = Date.now();
+                if (currentTime - lastBlinkTime > 300) { // Debounce blinks (300ms)
+                    blinkCount++;
+                    lastBlinkTime = currentTime;
+                    updateBlinkRate();
+                    console.log('Blink detected!', blinkCount);
+                }
+            }
+        }
+
+        // Update blink rate (per minute)
+        function updateBlinkRate() {
+            const currentTime = Date.now();
+            const timeElapsed = (currentTime - (lastBlinkTime - 60000)) / 60000; // Convert to minutes
+            const rate = Math.round(blinkCount / Math.max(timeElapsed, 1));
+            document.getElementById('blinkRate').textContent = Math.min(rate, 30); // Cap at reasonable rate
+        }
+
+        // Calculate gaze direction
+        function calculateGaze(landmarks, width, height) {
+            if (landmarks.length < 478) return { x: 0, y: 0 };
+
+            // Get iris centers
+            const leftIris = getIrisCenter(landmarks, LEFT_IRIS_INDICES);
+            const rightIris = getIrisCenter(landmarks, RIGHT_IRIS_INDICES);
+
+            // Get eye centers
+            const leftEyeCenter = getEyeCenter(landmarks, LEFT_EYE_INDICES);
+            const rightEyeCenter = getEyeCenter(landmarks, RIGHT_EYE_INDICES);
+
+            // Calculate gaze direction for each eye
+            const leftGazeX = leftIris.x - leftEyeCenter.x;
+            const leftGazeY = leftIris.y - leftEyeCenter.y;
+            const rightGazeX = rightIris.x - rightEyeCenter.x;
+            const rightGazeY = rightIris.y - rightEyeCenter.y;
+
+            // Average both eyes
+            const gazeX = (leftGazeX + rightGazeX) / 2;
+            const gazeY = (leftGazeY + rightGazeY) / 2;
+
+            return {
+                x: gazeX * 100, // Scale for display
+                y: gazeY * 100
+            };
+        }
+
+        // Get iris center point
+        function getIrisCenter(landmarks, irisIndices) {
+            let sumX = 0, sumY = 0;
+            for (const index of irisIndices) {
+                sumX += landmarks[index].x;
+                sumY += landmarks[index].y;
+            }
+            return {
+                x: sumX / irisIndices.length,
+                y: sumY / irisIndices.length
+            };
+        }
+
+        // Update gaze display
+        function updateGazeDisplay(gazeData) {
+            document.getElementById('gazeX').textContent = gazeData.x.toFixed(2);
+            document.getElementById('gazeY').textContent = gazeData.y.toFixed(2);
+            
+            // Classify looking direction
+            const lookingDirection = classifyLookingDirection(gazeData.x, gazeData.y);
+            document.getElementById('lookingDirection').textContent = lookingDirection;
+            
+            // Debug logging
+            console.log('Gaze data:', { x: gazeData.x, y: gazeData.y, direction: lookingDirection });
+        }
+
+        // Classify where the person is looking based on gaze coordinates
+        function classifyLookingDirection(gazeX, gazeY) {
+            const threshold = 0.5; // Lower threshold for more sensitivity
+            
+            let direction = '';
+            
+            console.log('Classifying gaze:', { gazeX, gazeY, threshold, absX: Math.abs(gazeX), absY: Math.abs(gazeY) });
+            
+            // Determine horizontal direction (swap for camera mirroring)
+            if (Math.abs(gazeX) > threshold) {
+                direction += gazeX > 0 ? 'Left ' : 'Right ';
+            }
+            
+            // Determine vertical direction  
+            if (Math.abs(gazeY) > threshold) {
+                direction += gazeY > 0 ? 'Down' : 'Up';
+            }
+            
+            // Default to center if no significant gaze movement
+            if (direction === '') {
+                direction = 'Center';
+            }
+            
+            return direction.trim();
+        }
+
+        // Calculate head pose using facial landmarks
+        function calculateHeadPose(landmarks) {
+            // Key facial landmarks for head pose estimation
+            const noseTip = landmarks[1];           // Nose tip
+            const chin = landmarks[175];            // Chin
+            const leftCheek = landmarks[234];       // Left cheek
+            const rightCheek = landmarks[454];      // Right cheek
+            const forehead = landmarks[9];          // Forehead center
+            
+            // Calculate head rotation (yaw) - left/right turn
+            const faceWidth = Math.abs(rightCheek.x - leftCheek.x);
+            const noseToCenterX = noseTip.x - ((leftCheek.x + rightCheek.x) / 2);
+            const yawRatio = noseToCenterX / faceWidth;
+            
+            // Calculate head tilt (pitch) - up/down
+            const faceHeight = Math.abs(forehead.y - chin.y);
+            const noseToCenterY = noseTip.y - ((forehead.y + chin.y) / 2);
+            const pitchRatio = noseToCenterY / faceHeight;
+            
+            // Calculate head roll (side tilt)
+            const eyeLevel = Math.abs(landmarks[33].y - landmarks[263].y); // Eye height difference
+            const faceCenter = (landmarks[33].y + landmarks[263].y) / 2;
+            const rollRatio = eyeLevel / faceHeight;
+            
+            return {
+                yaw: yawRatio * 100,    // Left/Right rotation
+                pitch: pitchRatio * 100, // Up/Down rotation  
+                roll: rollRatio * 100    // Side tilt
+            };
+        }
+
+        // Update head pose display
+        function updateHeadPose(headPose) {
+            let poseDescription = '';
+            
+            // Determine primary head orientation
+            const threshold = 15;
+            
+            // Yaw (left/right turn) - swapped to match user perspective
+            if (Math.abs(headPose.yaw) > threshold) {
+                poseDescription += headPose.yaw > 0 ? 'Left ' : 'Right ';
+            }
+            
+            // Pitch (up/down)
+            if (Math.abs(headPose.pitch) > threshold) {
+                poseDescription += headPose.pitch > 0 ? 'Down ' : 'Up ';
+            }
+            
+            // Roll (tilt)
+            if (Math.abs(headPose.roll) > threshold) {
+                poseDescription += 'Tilted ';
+            }
+            
+            // Default to center if no significant movement
+            if (poseDescription === '') {
+                poseDescription = 'Center';
+            }
+            
+            document.getElementById('headPose').textContent = poseDescription.trim();
+        }
+
+        // Start camera and eye tracking
+        async function startCamera() {
+            try {
+                const videoElement = document.getElementById('inputVideo');
+                
+                camera = new Camera(videoElement, {
+                    onFrame: async () => {
+                        if (faceMesh && isRunning) {
+                            await faceMesh.send({ image: videoElement });
+                        }
+                    },
+                    width: 640,
+                    height: 480
+                });
+
+                await camera.start();
+                isRunning = true;
+
+                document.getElementById('toggleBtn').textContent = 'Stop Tracking';
+                
+                showSuccess('Eye tracking started successfully!');
+
+            } catch (error) {
+                showError('Failed to start camera: ' + error.message);
+            }
+        }
+
+        // Toggle eye tracking
+        function toggleTracking() {
+            if (isRunning) {
+                // Stop tracking
+                if (camera) {
+                    camera.stop();
+                    isRunning = false;
+                }
+                document.getElementById('toggleBtn').textContent = 'Start Tracking';
+            } else {
+                // Start tracking
+                startCamera();
+            }
+        }
+
+        // Start calibration
+        function startCalibration() {
+            isCalibrating = true;
+            currentCalibrationPoint = 0;
+            calibrationData = [];
+            
+            document.getElementById('calibrationSection').style.display = 'block';
+            activateCalibrationPoint(0);
+        }
+
+        // Activate calibration point
+        function activateCalibrationPoint(pointIndex) {
+            // Remove active class from all points
+            document.querySelectorAll('.calibration-point').forEach(point => {
+                point.classList.remove('active');
+            });
+
+            // Activate current point
+            const point = document.querySelector(`[data-point="${pointIndex}"]`);
+            if (point) {
+                point.classList.add('active');
+            }
+        }
+
+        // Event listeners
+        document.getElementById('toggleBtn').addEventListener('click', toggleTracking);
+        document.getElementById('calibrateBtn').addEventListener('click', startCalibration);
+
+        // Calibration point clicks
+        document.querySelectorAll('.calibration-point').forEach(point => {
+            point.addEventListener('click', () => {
+                const pointIndex = parseInt(point.dataset.point);
+                if (pointIndex === currentCalibrationPoint) {
+                    // Record calibration data (simplified)
+                    calibrationData.push({
+                        point: pointIndex,
+                        timestamp: Date.now()
+                    });
+
+                    currentCalibrationPoint++;
+                    if (currentCalibrationPoint < 9) {
+                        activateCalibrationPoint(currentCalibrationPoint);
+                    } else {
+                        // Calibration complete
+                        showSuccess('Calibration completed!');
+                        document.getElementById('calibrationSection').style.display = 'none';
+                        isCalibrating = false;
+                    }
+                }
+            });
+        });
+
+        document.getElementById('finishCalibration').addEventListener('click', () => {
+            document.getElementById('calibrationSection').style.display = 'none';
+            isCalibrating = false;
+            showSuccess('Calibration finished!');
+        });
+
+        // Initialize on page load
+        window.addEventListener('load', initializeFaceMesh);
+    </script>
+</body>
+</html>

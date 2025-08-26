@@ -3,11 +3,11 @@
  * Tests the TypeScript-converted core functionality
  */
 
-import { createOrchestrator } from './src/core/orchestrator.ts';
-import { createStrategyRegistry } from './src/core/strategies.ts';
-import { createConfiguration } from './src/core/configuration.ts';
-import { createPipeline } from './src/core/pipeline.ts';
-import type { AnalysisRequirements, CapabilityType, AnalysisResult } from './src/core/types.ts';
+import { createOrchestrator } from '../../../src/core/orchestration/orchestrator';
+import { createStrategyRegistry } from '../../../src/core/orchestration/strategies';
+import { createConfiguration } from '../../../src/core/configuration/configuration';
+import { createPipeline } from '../../../src/core/pipeline/pipeline';
+import type { AnalysisRequirements, CapabilityType, AnalysisResult } from '../../../src/core/configuration/types';
 
 // Test pipeline implementation
 const createTestPipeline = (name: string, capabilities: ReadonlyArray<CapabilityType>) => {

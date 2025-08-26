@@ -3,11 +3,11 @@
  * Helper functions for integrating MediaPipe pipelines with existing demo
  */
 
-import { createOrchestrator } from '../core/orchestrator.js';
-import { createStrategyRegistry } from '../core/strategies.js';
-import { createPipelineRegistry, autoRegisterBuiltins } from '../core/registry.js';
+import { createOrchestrator } from '../../core/orchestration/orchestrator.js';
+import { createStrategyRegistry } from '../../core/orchestration/strategies.js';
+import { createPipelineRegistry, autoRegisterBuiltins } from '../../core/orchestration/registry.js';
 import { createMediaPipePipeline } from '../features/face-detection/mediapipe-pipeline.js';
-import { createIrisTrackingPipeline } from '../features/eye-tracking/iris-tracking-pipeline.js';
+import { createIrisTrackingPipeline } from '../../features/eye-tracking/devices/webcam/pipeline.js';
 import { createPoseCalibrator } from './pose-calibration.js';
 
 // Create enhanced orchestrator with MediaPipe support

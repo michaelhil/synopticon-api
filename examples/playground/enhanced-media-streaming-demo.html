@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Enhanced Media Streaming Demo - Phase 2</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+        
+        .header {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .header h1 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+            font-size: 2.5rem;
+        }
+        
+        .phase-badge {
+            display: inline-block;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            color: white;
+            padding: 0.5rem 1.5rem;
+            border-radius: 25px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+            margin-bottom: 2rem;
+        }
+        
+        .panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+        }
+        
+        .panel h2 {
+            color: #2d3748;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .status-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+        
+        .status-card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+        }
+        
+        .status-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #4299e1;
+            margin-bottom: 0.5rem;
+        }
+        
+        .status-label {
+            color: #718096;
+            font-size: 0.9rem;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #48bb78 0%, #38a169 100%);
+            color: white;
+        }
+        
+        .btn-warning {
+            background: linear-gradient(135deg, #ed8936 0%, #dd6b20 100%);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: linear-gradient(135deg, #f56565 0%, #e53e3e 100%);
+            color: white;
+        }
+        
+        .device-list {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        .device-card {
+            background: #f7fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            transition: all 0.3s ease;
+        }
+        
+        .device-card:hover {
+            border-color: #4299e1;
+            transform: translateY(-2px);
+        }
+        
+        .device-card.active {
+            border-color: #48bb78;
+            background: #f0fff4;
+        }
+        
+        .device-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .device-name {
+            font-weight: 600;
+            color: #2d3748;
+        }
+        
+        .device-type {
+            font-size: 0.8rem;
+            color: #718096;
+            background: #edf2f7;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+        }
+        
+        .device-status {
+            font-size: 0.8rem;
+            padding: 0.25rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+        
+        .device-status.active {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .device-status.inactive {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        
+        .quality-selector {
+            margin: 1rem 0;
+        }
+        
+        .quality-selector select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            background: white;
+            font-size: 0.9rem;
+        }
+        
+        .log-panel {
+            grid-column: 1 / -1;
+            max-height: 300px;
+            overflow-y: auto;
+            background: #1a202c;
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 1rem;
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.8rem;
+            line-height: 1.4;
+        }
+        
+        .log-entry {
+            margin-bottom: 0.5rem;
+            padding: 0.25rem 0;
+            border-left: 3px solid transparent;
+            padding-left: 0.75rem;
+        }
+        
+        .log-info { border-left-color: #4299e1; }
+        .log-success { border-left-color: #48bb78; }
+        .log-warning { border-left-color: #ed8936; }
+        .log-error { border-left-color: #f56565; }
+        
+        .log-time {
+            color: #718096;
+            font-size: 0.7rem;
+        }
+        
+        .network-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+        
+        .stat-box {
+            background: #f7fafc;
+            padding: 1rem;
+            border-radius: 8px;
+            text-align: center;
+            border: 1px solid #e2e8f0;
+        }
+        
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #4299e1;
+        }
+        
+        .stat-label {
+            font-size: 0.8rem;
+            color: #718096;
+            margin-top: 0.25rem;
+        }
+        
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .status-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="phase-badge">Phase 2: Multi-Device Coordination</div>
+            <h1>🎥 Enhanced Media Streaming Demo</h1>
+            <p>Advanced multi-device coordination with adaptive quality control, load balancing, and network monitoring</p>
+        </div>
+
+        <div class="status-grid">
+            <div class="status-card">
+                <div class="status-value" id="deviceCount">0</div>
+                <div class="status-label">Registered Devices</div>
+            </div>
+            <div class="status-card">
+                <div class="status-value" id="activeStreams">0</div>
+                <div class="status-label">Active Streams</div>
+            </div>
+            <div class="status-card">
+                <div class="status-value" id="networkStatus">🟡</div>
+                <div class="status-label">Network Status</div>
+            </div>
+        </div>
+
+        <div class="grid">
+            <div class="panel">
+                <h2>🎛️ Multi-Device Coordinator</h2>
+                <div class="controls">
+                    <button class="btn btn-primary" onclick="refreshDevices()">🔄 Refresh Devices</button>
+                    <button class="btn btn-success" onclick="startAllStreams()">▶️ Start All</button>
+                    <button class="btn btn-warning" onclick="stopAllStreams()">⏹️ Stop All</button>
+                    <button class="btn btn-danger" onclick="rebalanceStreams()">⚖️ Rebalance</button>
+                </div>
+                
+                <div class="quality-selector">
+                    <label>Global Quality:</label>
+                    <select id="globalQuality" onchange="setGlobalQuality()">
+                        <option value="mobile">Mobile (360p)</option>
+                        <option value="low">Low (480p)</option>
+                        <option value="medium" selected>Medium (720p)</option>
+                        <option value="high">High (1080p)</option>
+                        <option value="ultra">Ultra (4K)</option>
+                    </select>
+                </div>
+
+                <div id="deviceList" class="device-list">
+                    <div style="text-align: center; color: #718096; padding: 2rem;">
+                        Click "Refresh Devices" to load devices
+                    </div>
+                </div>
+            </div>
+
+            <div class="panel">
+                <h2>📊 System Monitor</h2>
+                <div class="network-stats">
+                    <div class="stat-box">
+                        <div class="stat-value" id="totalBandwidth">0</div>
+                        <div class="stat-label">Total Bandwidth</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="averageLatency">0ms</div>
+                        <div class="stat-label">Avg Latency</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="packetLoss">0%</div>
+                        <div class="stat-label">Packet Loss</div>
+                    </div>
+                    <div class="stat-box">
+                        <div class="stat-value" id="uptime">0s</div>
+                        <div class="stat-label">Uptime</div>
+                    </div>
+                </div>
+                
+                <div class="controls">
+                    <button class="btn btn-primary" onclick="getCoordinatorStatus()">📊 Status</button>
+                    <button class="btn btn-primary" onclick="getHealthCheck()">💚 Health</button>
+                    <button class="btn btn-warning" onclick="clearLogs()">🧹 Clear Logs</button>
+                </div>
+            </div>
+
+            <div class="panel log-panel" id="logPanel">
+                <div class="log-entry log-info">
+                    <span class="log-time">[00:00:00]</span> Enhanced Media Streaming Demo loaded
+                </div>
+                <div class="log-entry log-info">
+                    <span class="log-time">[00:00:00]</span> Ready to test Phase 2 multi-device coordination features
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const API_BASE = window.location.origin;
+        let devices = [];
+        let coordinatorStatus = {};
+        
+        // Utility functions
+        function log(message, type = 'info') {
+            const logPanel = document.getElementById('logPanel');
+            const time = new Date().toLocaleTimeString();
+            const entry = document.createElement('div');
+            entry.className = `log-entry log-${type}`;
+            entry.innerHTML = `<span class="log-time">[${time}]</span> ${message}`;
+            logPanel.appendChild(entry);
+            logPanel.scrollTop = logPanel.scrollHeight;
+        }
+
+        function clearLogs() {
+            const logPanel = document.getElementById('logPanel');
+            logPanel.innerHTML = '';
+            log('Logs cleared');
+        }
+
+        function setLoading(element, loading) {
+            if (loading) {
+                element.classList.add('loading');
+            } else {
+                element.classList.remove('loading');
+            }
+        }
+
+        function formatBytes(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+
+        function formatDuration(ms) {
+            const seconds = Math.floor(ms / 1000);
+            const minutes = Math.floor(seconds / 60);
+            const hours = Math.floor(minutes / 60);
+            
+            if (hours > 0) return `${hours}h ${minutes % 60}m`;
+            if (minutes > 0) return `${minutes}m ${seconds % 60}s`;
+            return `${seconds}s`;
+        }
+
+        // API functions
+        async function apiCall(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, {
+                    headers: {
+                        'Content-Type': 'application/json',
+                        ...options.headers
+                    },
+                    ...options
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                log(`API Error: ${error.message}`, 'error');
+                throw error;
+            }
+        }
+
+        // Device management
+        async function refreshDevices() {
+            log('Refreshing devices with coordinator registration...', 'info');
+            
+            try {
+                const result = await apiCall('/api/media/devices?register=true&refresh=true');
+                
+                if (result.success) {
+                    devices = result.devices || [];
+                    log(`Discovered ${devices.length} devices`, 'success');
+                    
+                    if (result.coordinator) {
+                        log(`Registered ${result.coordinator.devicesRegistered} devices with coordinator`, 'success');
+                    }
+                    
+                    renderDevices();
+                    updateStatusCards();
+                } else {
+                    log(`Device discovery failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                log(`Failed to refresh devices: ${error.message}`, 'error');
+            }
+        }
+
+        function renderDevices() {
+            const deviceList = document.getElementById('deviceList');
+            
+            if (devices.length === 0) {
+                deviceList.innerHTML = `
+                    <div style="text-align: center; color: #718096; padding: 2rem;">
+                        No devices found. Try refreshing or check device permissions.
+                    </div>
+                `;
+                return;
+            }
+
+            deviceList.innerHTML = devices.map(device => `
+                <div class="device-card" id="device-${device.id}">
+                    <div class="device-header">
+                        <div>
+                            <div class="device-name">${device.label}</div>
+                            <div class="device-type">${device.type}</div>
+                        </div>
+                        <div class="device-status inactive" id="status-${device.id}">inactive</div>
+                    </div>
+                    <div class="controls" style="margin-top: 0.5rem;">
+                        <button class="btn btn-success" style="font-size: 0.8rem; padding: 0.5rem;" 
+                                onclick="startStream('${device.id}')">▶️ Start</button>
+                        <button class="btn btn-warning" style="font-size: 0.8rem; padding: 0.5rem;"
+                                onclick="stopStream('${device.id}')">⏹️ Stop</button>
+                        <button class="btn btn-primary" style="font-size: 0.8rem; padding: 0.5rem;"
+                                onclick="getDeviceInfo('${device.id}')">ℹ️ Info</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Stream control
+        async function startStream(deviceId) {
+            log(`Starting stream for device: ${deviceId}`, 'info');
+            
+            try {
+                const result = await apiCall('/api/media/streams', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        deviceId: deviceId,
+                        quality: document.getElementById('globalQuality').value,
+                        autoStart: true
+                    })
+                });
+                
+                if (result.success) {
+                    log(`Stream started: ${result.device}`, 'success');
+                    updateDeviceStatus(deviceId, result.isStreaming);
+                } else {
+                    log(`Failed to start stream: ${result.error}`, 'error');
+                }
+                
+                updateStatusCards();
+            } catch (error) {
+                log(`Stream start error: ${error.message}`, 'error');
+            }
+        }
+
+        async function stopStream(deviceId) {
+            log(`Stopping stream for device: ${deviceId}`, 'info');
+            
+            try {
+                const result = await apiCall(`/api/media/streams/${deviceId}`, {
+                    method: 'PUT',
+                    body: JSON.stringify({ action: 'stop' })
+                });
+                
+                if (result.success) {
+                    log(`Stream stopped: ${deviceId}`, 'success');
+                    updateDeviceStatus(deviceId, false);
+                } else {
+                    log(`Failed to stop stream: ${result.error}`, 'error');
+                }
+                
+                updateStatusCards();
+            } catch (error) {
+                log(`Stream stop error: ${error.message}`, 'error');
+            }
+        }
+
+        async function startAllStreams() {
+            if (devices.length === 0) {
+                log('No devices available. Refresh devices first.', 'warning');
+                return;
+            }
+
+            const deviceIds = devices.map(d => d.id);
+            log(`Starting batch streams for ${deviceIds.length} devices...`, 'info');
+            
+            try {
+                const result = await apiCall('/api/media/streams/batch', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        deviceIds: deviceIds,
+                        action: 'start',
+                        quality: document.getElementById('globalQuality').value
+                    })
+                });
+                
+                if (result.success) {
+                    log(`Batch start completed: ${result.successful}/${result.totalRequested} successful`, 'success');
+                    
+                    // Update device statuses based on results
+                    Object.entries(result.results || {}).forEach(([deviceId, streamResult]) => {
+                        updateDeviceStatus(deviceId, streamResult.success);
+                    });
+                } else {
+                    log(`Batch start failed: ${result.error}`, 'error');
+                }
+                
+                updateStatusCards();
+            } catch (error) {
+                log(`Batch start error: ${error.message}`, 'error');
+            }
+        }
+
+        async function stopAllStreams() {
+            if (devices.length === 0) {
+                log('No devices available.', 'warning');
+                return;
+            }
+
+            const deviceIds = devices.map(d => d.id);
+            log(`Stopping batch streams for ${deviceIds.length} devices...`, 'info');
+            
+            try {
+                const result = await apiCall('/api/media/streams/batch', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        deviceIds: deviceIds,
+                        action: 'stop'
+                    })
+                });
+                
+                if (result.success) {
+                    log(`Batch stop completed: ${result.successful}/${result.totalRequested} successful`, 'success');
+                    
+                    // Update all device statuses to inactive
+                    devices.forEach(device => {
+                        updateDeviceStatus(device.id, false);
+                    });
+                } else {
+                    log(`Batch stop failed: ${result.error}`, 'error');
+                }
+                
+                updateStatusCards();
+            } catch (error) {
+                log(`Batch stop error: ${error.message}`, 'error');
+            }
+        }
+
+        // Quality control
+        async function setGlobalQuality() {
+            const quality = document.getElementById('globalQuality').value;
+            log(`Setting global quality to: ${quality}`, 'info');
+            
+            try {
+                const result = await apiCall('/api/media/coordinator/quality', {
+                    method: 'PUT',
+                    body: JSON.stringify({
+                        quality: quality,
+                        applyToAll: true
+                    })
+                });
+                
+                if (result.success) {
+                    log(`Global quality set to ${quality}`, 'success');
+                } else {
+                    log(`Failed to set global quality: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                log(`Quality control error: ${error.message}`, 'error');
+            }
+        }
+
+        async function rebalanceStreams() {
+            log('Triggering stream rebalancing...', 'info');
+            
+            try {
+                const result = await apiCall('/api/media/coordinator/rebalance', {
+                    method: 'POST'
+                });
+                
+                if (result.success) {
+                    log(`Stream rebalancing: ${result.rebalancing.message}`, 'success');
+                    updateStatusCards();
+                } else {
+                    log(`Rebalancing failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                log(`Rebalancing error: ${error.message}`, 'error');
+            }
+        }
+
+        // Status and monitoring
+        async function getCoordinatorStatus() {
+            log('Fetching coordinator status...', 'info');
+            
+            try {
+                const result = await apiCall('/api/media/coordinator/status');
+                
+                if (result.success) {
+                    coordinatorStatus = result.coordinator || {};
+                    log(`Coordinator status: ${coordinatorStatus.totalDevices} devices, ${coordinatorStatus.activeStreams} active streams`, 'success');
+                    updateStatusCards();
+                    updateNetworkStats(result.networkStats || {});
+                } else {
+                    log(`Failed to get coordinator status: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                log(`Coordinator status error: ${error.message}`, 'error');
+            }
+        }
+
+        async function getHealthCheck() {
+            log('Performing health check...', 'info');
+            
+            try {
+                const result = await apiCall('/api/media/health');
+                
+                if (result.success && result.health) {
+                    const health = result.health;
+                    log(`System Health: ${health.overall} | Media: ${health.mediaStreaming} | Uptime: ${formatDuration(health.uptime)}`, 'success');
+                    updateNetworkStatus(health.overall === 'healthy');
+                } else {
+                    log(`Health check failed: ${result.error}`, 'error');
+                    updateNetworkStatus(false);
+                }
+            } catch (error) {
+                log(`Health check error: ${error.message}`, 'error');
+                updateNetworkStatus(false);
+            }
+        }
+
+        async function getDeviceInfo(deviceId) {
+            log(`Getting device info for: ${deviceId}`, 'info');
+            
+            try {
+                const result = await apiCall(`/api/media/devices/${deviceId}`);
+                
+                if (result.success && result.device) {
+                    const device = result.device;
+                    log(`Device: ${device.label} | Type: ${device.type} | Platform: ${device.platform}`, 'info');
+                    
+                    if (device.pipeline) {
+                        log(`Pipeline Status: Streaming=${device.pipeline.isStreaming}, Quality=${device.pipeline.currentQuality}`, 'info');
+                    }
+                } else {
+                    log(`Device info failed: ${result.error}`, 'error');
+                }
+            } catch (error) {
+                log(`Device info error: ${error.message}`, 'error');
+            }
+        }
+
+        // UI updates
+        function updateStatusCards() {
+            document.getElementById('deviceCount').textContent = devices.length;
+            document.getElementById('activeStreams').textContent = coordinatorStatus.activeStreams || 0;
+        }
+
+        function updateNetworkStatus(healthy) {
+            const networkStatus = document.getElementById('networkStatus');
+            networkStatus.textContent = healthy ? '🟢' : '🔴';
+        }
+
+        function updateNetworkStats(networkStats) {
+            document.getElementById('totalBandwidth').textContent = formatBytes(networkStats.totalBandwidth || 0);
+            document.getElementById('averageLatency').textContent = `${networkStats.averageLatency || 0}ms`;
+            document.getElementById('packetLoss').textContent = `${((networkStats.packetLoss || 0) * 100).toFixed(1)}%`;
+        }
+
+        function updateDeviceStatus(deviceId, isActive) {
+            const statusElement = document.getElementById(`status-${deviceId}`);
+            const deviceElement = document.getElementById(`device-${deviceId}`);
+            
+            if (statusElement && deviceElement) {
+                statusElement.textContent = isActive ? 'active' : 'inactive';
+                statusElement.className = `device-status ${isActive ? 'active' : 'inactive'}`;
+                deviceElement.className = `device-card ${isActive ? 'active' : ''}`;
+            }
+        }
+
+        // Auto-refresh status
+        function startAutoRefresh() {
+            setInterval(() => {
+                getCoordinatorStatus();
+            }, 5000);
+
+            setInterval(() => {
+                getHealthCheck();
+            }, 10000);
+        }
+
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            log('Enhanced Media Streaming Demo - Phase 2 loaded', 'success');
+            log('Features: Multi-device coordination, adaptive quality, load balancing', 'info');
+            
+            // Initial health check
+            getHealthCheck();
+            
+            // Start auto-refresh
+            startAutoRefresh();
+        });
+    </script>
+</body>
+</html>

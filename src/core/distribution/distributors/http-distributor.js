@@ -28,11 +28,12 @@ export const createHttpDistributor = (config = {}) => {
       endpoints: {
         webhook: '/webhook',
         events: '/events',
-        health: '/health',
+        health: '/api/health',
         ...config.endpoints
       },
       retryCount: config.retryCount || 3,
       retryDelay: config.retryDelay || 1000,
+      skipHealthCheck: config.skipHealthCheck || false,
       ...config
     },
     capabilities: [
@@ -146,25 +147,55 @@ export const createHttpDistributor = (config = {}) => {
   };
 
   /**
-   * Connect to HTTP service (health check)
+   * Connect to HTTP service (health check with fallbacks)
    */
   const connect = async () => {
-    try {
-      const response = await makeRequest('GET', state.config.endpoints.health);
+    // Define health check endpoints in order of preference
+    const healthEndpoints = [
+      state.config.endpoints.health,
+      '/api/health',
+      '/health',
+      '/status',
+      '/' // Last resort - just check if server responds
+    ];
+
+    let lastError = null;
+
+    for (const endpoint of healthEndpoints) {
+      try {
+        const response = await makeRequest('GET', endpoint);
+        baseDistributor._updateHealth('healthy', { 
+          connected: true,
+          lastHealthCheck: Date.now(),
+          healthEndpoint: endpoint
+        });
+        console.log(`🔗 HTTP distributor connected to ${state.config.baseUrl}${endpoint}`);
+        return true;
+      } catch (error) {
+        lastError = error;
+        console.log(`⏭️ Health check failed for ${endpoint}, trying next...`);
+        continue;
+      }
+    }
+
+    // If all health checks failed, try one final connection test with disabled health check
+    if (state.config.skipHealthCheck) {
+      console.log(`⚠️ Skipping health check as configured, marking as connected`);
       baseDistributor._updateHealth('healthy', { 
         connected: true,
-        lastHealthCheck: Date.now()
+        lastHealthCheck: Date.now(),
+        healthCheckSkipped: true
       });
-      console.log(`🔗 HTTP distributor connected to ${state.config.baseUrl}`);
       return true;
-    } catch (error) {
-      baseDistributor._updateHealth('error', { 
-        connected: false,
-        lastError: error.message 
-      });
-      console.warn(`⚠️ HTTP distributor health check failed: ${error.message}`);
-      return false;
     }
+
+    // All health checks failed
+    baseDistributor._updateHealth('error', { 
+      connected: false,
+      lastError: lastError?.message || 'All health check endpoints failed'
+    });
+    console.warn(`⚠️ HTTP distributor health check failed: ${lastError?.message}`);
+    return false;
   };
 
   /**

@@ -15,7 +15,7 @@ export type {
   CapabilityType,
   ModelSize,
   UsageLevel,
-} from './types';
+} from './configuration/types';
 
 export {
   createAnalysisResult,
@@ -23,20 +23,20 @@ export {
   createHealthStatus,
   createPerformanceMetrics,
   createPerformanceProfile
-} from './types';
+} from './configuration/types';
 
 // Pipeline system
 export type {
   Pipeline,
   PipelineConfig
-} from './pipeline';
+} from './pipeline/pipeline';
 
 export {
   createPipeline,
   validatePipelineConfig,
   findCompatiblePipelines,
   scorePipeline
-} from './pipeline';
+} from './pipeline/pipeline';
 
 // Strategy system
 export type {
@@ -44,7 +44,7 @@ export type {
   StrategyConfig,
   PerformanceRecord,
   StrategyName
-} from './strategies';
+} from './orchestration/strategies';
 
 export {
   createStrategy,
@@ -55,19 +55,19 @@ export {
   createAdaptiveStrategy,
   createStrategyRegistry,
   STRATEGIES
-} from './strategies';
+} from './orchestration/strategies';
 
 // Orchestrator system
 export type {
   Orchestrator,
   OrchestratorConfig,
   CircuitBreaker
-} from './orchestrator';
+} from './orchestration/orchestrator';
 
 export {
   createOrchestrator,
   createCircuitBreaker
-} from './orchestrator';
+} from './orchestration/orchestrator';
 
 // Configuration system
 export type {
@@ -77,7 +77,7 @@ export type {
   DetectionPipelineConfig,
   PerformanceConfig,
   ValidationResult
-} from './configuration';
+} from './configuration/configuration';
 
 export {
   DEFAULT_CONFIG,
@@ -86,15 +86,15 @@ export {
   createPipelineConfiguration,
   CONFIG_PROFILES,
   createConfigurationFromPreset
-} from './configuration';
+} from './configuration/configuration';
 
 // Parallel initialization
 export type {
   ParallelInitializerConfig,
   InitializationResult,
   FailedInitialization
-} from './parallel-initializer';
+} from './performance/parallel-initializer';
 
 export {
   createParallelInitializer
-} from './parallel-initializer';
+} from './performance/parallel-initializer';

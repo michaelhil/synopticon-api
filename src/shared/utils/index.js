@@ -10,8 +10,8 @@ export { createMediaPipeFacePipeline, createHybridMediaPipeFacePipeline } from '
 export { createMediaPipeFaceMeshPipeline, createMediaPipePipeline, createMediaPipeIrisPipeline } from './mediapipe-pipeline.js';
 
 // Eye tracking pipelines
-export { createIrisTrackingPipeline, createEyeTrackingFilter, estimateScreenGazePoint } from './iris-tracking-pipeline.js';
-export { createEyeTrackingPipeline } from './eye-tracking-pipeline.js';
+export { createIrisTrackingPipeline, createEyeTrackingFilter, estimateScreenGazePoint } from '../../features/eye-tracking/devices/webcam/pipeline.js';
+export { createEyeTrackingPipeline } from '../../features/eye-tracking/devices/neon/pipeline.js';
 
 // Speech analysis pipelines
 export { createSpeechAnalysisPipeline } from './speech-analysis-pipeline-hybrid.js';

@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Face Tracking Demo - MediaPipe</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .demo-container {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+        }
+
+        .video-section {
+            flex: 2;
+        }
+
+        .video-container {
+            position: relative;
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+
+        .input_video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+
+        .output_canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .info-panel {
+            flex: 1;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .status {
+            margin-bottom: 20px;
+        }
+
+        .status h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .status-item:last-child {
+            border-bottom: none;
+        }
+
+        .status-label {
+            color: #666;
+        }
+
+        .status-value {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .metrics {
+            margin-top: 20px;
+        }
+
+        .metric-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .error {
+            background: #fee;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        .success {
+            background: #efe;
+            color: #363;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        @media (max-width: 768px) {
+            .demo-container {
+                flex-direction: column;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎯 Face Tracking Demo</h1>
+            <p>Real-time face mesh detection using MediaPipe</p>
+        </div>
+
+        <div id="loading" class="loading">
+            <h3>Initializing MediaPipe Face Mesh...</h3>
+            <p>Please wait while we load the face detection model.</p>
+        </div>
+
+
+        <div id="demo" class="demo-container" style="display: none;">
+            <div class="video-section">
+                <div class="video-container">
+                    <video class="input_video" id="inputVideo" autoplay muted playsinline></video>
+                    <canvas class="output_canvas" id="outputCanvas"></canvas>
+                </div>
+                
+                <div class="controls">
+                    <button id="toggleBtn" class="btn">Start Camera</button>
+                    <button id="screenshotBtn" class="btn" disabled>Screenshot</button>
+                </div>
+            </div>
+
+            <div class="info-panel">
+                <div class="status">
+                    <h3>📊 Detection Status</h3>
+                    <div class="status-item">
+                        <span class="status-label">Faces Detected:</span>
+                        <span class="status-value" id="faceCount">0</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Landmarks:</span>
+                        <span class="status-value" id="landmarkCount">0</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Camera Status:</span>
+                        <span class="status-value" id="cameraStatus">Not started</span>
+                    </div>
+                </div>
+
+                <div class="metrics">
+                    <h3>⚡ Performance</h3>
+                    <div class="metric-item">
+                        <span>Processing Time:</span>
+                        <span id="processingTime">--ms</span>
+                    </div>
+                    <div class="metric-item">
+                        <span>FPS:</span>
+                        <span id="fps">--</span>
+                    </div>
+                    <div class="metric-item">
+                        <span>Frames Processed:</span>
+                        <span id="frameCount">0</span>
+                    </div>
+                </div>
+
+                <div class="metrics">
+                    <h3>🔧 Settings</h3>
+                    <div class="metric-item">
+                        <span>Model:</span>
+                        <span>MediaPipe Face Mesh</span>
+                    </div>
+                    <div class="metric-item">
+                        <span>Max Faces:</span>
+                        <span>2</span>
+                    </div>
+                    <div class="metric-item">
+                        <span>Detection Confidence:</span>
+                        <span>0.7</span>
+                    </div>
+                </div>
+
+                <div id="error" class="error" style="display: none;"></div>
+                <div id="success" class="success" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let faceMesh = null;
+        let camera = null;
+        let isRunning = false;
+        let frameCount = 0;
+        let lastTime = 0;
+        let fps = 0;
+
+        // Initialize MediaPipe Face Mesh
+        async function initializeFaceMesh() {
+            try {
+                faceMesh = new FaceMesh({
+                    locateFile: (file) => {
+                        return `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`;
+                    }
+                });
+
+                faceMesh.setOptions({
+                    maxNumFaces: 2,
+                    refineLandmarks: true,
+                    minDetectionConfidence: 0.7,
+                    minTrackingConfidence: 0.5
+                });
+
+                faceMesh.onResults(onResults);
+
+                showSuccess('MediaPipe Face Mesh initialized successfully!');
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('demo').style.display = 'flex';
+                
+            } catch (error) {
+                showError('Failed to initialize MediaPipe Face Mesh: ' + error.message);
+            }
+        }
+
+        // Handle face detection results
+        function onResults(results) {
+            const videoElement = document.getElementById('inputVideo');
+            const canvasElement = document.getElementById('outputCanvas');
+            const canvasCtx = canvasElement.getContext('2d');
+
+            // Set canvas size to match video
+            canvasElement.width = videoElement.videoWidth;
+            canvasElement.height = videoElement.videoHeight;
+
+            // Clear canvas
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+            // Draw the video frame
+            canvasCtx.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+
+            // Update metrics
+            updateMetrics(results);
+
+            // Draw face mesh if faces detected
+            if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+                for (const landmarks of results.multiFaceLandmarks) {
+                    drawLandmarks(canvasCtx, landmarks, canvasElement.width, canvasElement.height);
+                }
+            }
+        }
+
+        // Draw face landmarks
+        function drawLandmarks(ctx, landmarks, width, height) {
+            ctx.fillStyle = '#00ff00';
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 1;
+
+            // Draw landmark points
+            landmarks.forEach((landmark, index) => {
+                const x = landmark.x * width;
+                const y = landmark.y * height;
+                
+                ctx.beginPath();
+                ctx.arc(x, y, 1, 0, 2 * Math.PI);
+                ctx.fill();
+            });
+
+            // Draw face contour (outline)
+            drawFaceContour(ctx, landmarks, width, height);
+        }
+
+        // Draw face contour
+        function drawFaceContour(ctx, landmarks, width, height) {
+            const FACE_OVAL = [
+                10, 338, 297, 332, 284, 251, 389, 356, 454, 323, 361, 288,
+                397, 365, 379, 378, 400, 377, 152, 148, 176, 149, 150, 136,
+                172, 58, 132, 93, 234, 127, 162, 21, 54, 103, 67, 109
+            ];
+
+            ctx.strokeStyle = '#00ff00';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+
+            FACE_OVAL.forEach((index, i) => {
+                const landmark = landmarks[index];
+                const x = landmark.x * width;
+                const y = landmark.y * height;
+                
+                if (i === 0) {
+                    ctx.moveTo(x, y);
+                } else {
+                    ctx.lineTo(x, y);
+                }
+            });
+
+            ctx.closePath();
+            ctx.stroke();
+        }
+
+        // Update performance metrics
+        function updateMetrics(results) {
+            frameCount++;
+            
+            const now = performance.now();
+            const processingTime = now - lastTime;
+            lastTime = now;
+
+            // Update FPS every 30 frames
+            if (frameCount % 30 === 0) {
+                fps = Math.round(1000 / processingTime);
+                document.getElementById('fps').textContent = fps;
+            }
+
+            // Update UI
+            const faceCount = results.multiFaceLandmarks ? results.multiFaceLandmarks.length : 0;
+            const landmarkCount = faceCount > 0 ? results.multiFaceLandmarks[0].length : 0;
+
+            document.getElementById('faceCount').textContent = faceCount;
+            document.getElementById('landmarkCount').textContent = landmarkCount;
+            document.getElementById('processingTime').textContent = `${processingTime.toFixed(1)}ms`;
+            document.getElementById('frameCount').textContent = frameCount;
+        }
+
+        // Start camera
+        async function startCamera() {
+            try {
+                const videoElement = document.getElementById('inputVideo');
+                
+                camera = new Camera(videoElement, {
+                    onFrame: async () => {
+                        if (faceMesh && isRunning) {
+                            await faceMesh.send({ image: videoElement });
+                        }
+                    },
+                    width: 640,
+                    height: 480
+                });
+
+                await camera.start();
+                
+                isRunning = true;
+                frameCount = 0;
+                lastTime = performance.now();
+
+                document.getElementById('toggleBtn').textContent = 'Stop Camera';
+                document.getElementById('screenshotBtn').disabled = false;
+                document.getElementById('cameraStatus').textContent = 'Running';
+
+                showSuccess('Camera started successfully!');
+                
+            } catch (error) {
+                showError('Failed to start camera: ' + error.message);
+            }
+        }
+
+        // Stop camera
+        function stopCamera() {
+            isRunning = false;
+            
+            if (camera) {
+                camera.stop();
+            }
+
+            document.getElementById('toggleBtn').textContent = 'Start Camera';
+            document.getElementById('screenshotBtn').disabled = true;
+            document.getElementById('cameraStatus').textContent = 'Stopped';
+
+            // Clear canvas
+            const canvasElement = document.getElementById('outputCanvas');
+            const canvasCtx = canvasElement.getContext('2d');
+            canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
+
+            showSuccess('Camera stopped');
+        }
+
+        // Capture screenshot
+        function captureScreenshot() {
+            const canvasElement = document.getElementById('outputCanvas');
+            const link = document.createElement('a');
+            link.download = `face-tracking-${Date.now()}.png`;
+            link.href = canvasElement.toDataURL();
+            link.click();
+            
+            showSuccess('Screenshot captured!');
+        }
+
+        // Utility functions
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => errorDiv.style.display = 'none', 5000);
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('success');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            setTimeout(() => successDiv.style.display = 'none', 3000);
+        }
+
+        // Toggle button functionality
+        function toggleCamera() {
+            if (isRunning) {
+                stopCamera();
+            } else {
+                startCamera();
+            }
+        }
+
+        // Event listeners
+        document.getElementById('toggleBtn').addEventListener('click', toggleCamera);
+        document.getElementById('screenshotBtn').addEventListener('click', captureScreenshot);
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (camera) {
+                camera.stop();
+            }
+        });
+
+        // Initialize when page loads
+        window.addEventListener('load', initializeFaceMesh);
+    </script>
+</body>
+</html>

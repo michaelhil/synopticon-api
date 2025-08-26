@@ -1,11 +1,11 @@
 {
   "name": "synopticon-api",
-  "version": "0.5.4",
+  "version": "0.5.5",
   "description": "synopticon-api: an open-source platform for real-time multi-modal behavioral analysis and sensor synchronization",
-  "main": "src/services/api/minimal-server.js",
+  "main": "src/services/api/server.js",
   "type": "module",
   "scripts": {
-    "dev": "bunx --bun vite",
+    "dev:vite": "bunx --bun vite",
     "build": "bun run build:ts && bunx --bun vite build",
     "build:ts": "bun x tsc --noEmit",
     "build:analyze": "bun run build && bun run scripts/optimize-build.js",
@@ -17,16 +17,9 @@
     "test:lazy-loading": "bun test tests/lazy-loading.test.js",
     "build:shaders": "bun run scripts/compile-shaders.js",
     "start": "bun run serve",
-    "serve": "bun src/services/api/minimal-server.js",
-    "serve:express": "bun src/services/api/simple-server.js",
-    "demo": "bun src/services/api/enhanced-server.js",
-    "api:dev": "bun --watch src/services/api/minimal-server.js",
-    "api:start": "bun src/services/api/minimal-server.js",
-    "api:enhanced": "bun src/services/api/enhanced-server.js",
-    "api:typescript": "bun src/services/api/server-bun.ts",
-    "api:test": "curl http://localhost:3000/api/health",
-    "server:dev": "bun --watch src/services/api/enhanced-server.js",
-    "server:ts": "bun --watch src/services/api/server-bun.ts"
+    "serve": "bun src/services/api/server.js",
+    "dev": "bun --watch src/services/api/server.js",
+    "api:test": "curl http://localhost:3000/api/health"
   },
   "keywords": [
     "face-detection",

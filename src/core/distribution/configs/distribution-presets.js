@@ -25,7 +25,10 @@ export const getDistributionPresets = () => ({
         enabled: true,
         baseUrl: process.env.HTTP_WEBHOOK_URL || 'http://localhost:3000',
         timeout: 10000,
-        retryCount: 3
+        retryCount: 3,
+        endpoints: {
+          health: '/api/health'
+        }
       }
     }
   },
@@ -49,7 +52,7 @@ export const getDistributionPresets = () => ({
         baseUrl: process.env.HTTP_WEBHOOK_URL || 'http://localhost:3000',
         endpoints: {
           webhook: '/webhook/synopticon',
-          health: '/health'
+          health: '/api/health'
         }
       },
       websocket: {
