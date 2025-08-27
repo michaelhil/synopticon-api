@@ -1,0 +1,14 @@
+{
+  "mcpServers": {
+    "synopticon-docker": {
+      "command": "bun",
+      "args": ["src/services/mcp/server.ts"],
+      "env": {
+        "SYNOPTICON_API_URL": "http://localhost:3000",
+        "MCP_TRANSPORT": "stdio",
+        "MCP_DEBUG": "false",
+        "DOCKER_CONTAINER": "true"
+      }
+    }
+  }
+}

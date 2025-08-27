@@ -155,5 +155,5 @@ export { createFaceAnalysisServer } from './services/api/server.ts';
 export { createSpeechAnalysisAPI, createSpeechRecognition, createLLMClient } from './features/speech-analysis/index.js';
 
 // Version information
-export const VERSION = '0.5.6'; // Clean import structure, MQTT builtin implementation
+export const VERSION = '0.5.7'; // MCP integration for LLM control
 export const BUILD = 'knip-optimized';

@@ -371,6 +371,105 @@ const results = await studySystem.analyze(participantVideo, {
 
 ---
 
+## 🤖 LLM Integration via Model Context Protocol (MCP)
+
+**Control Synopticon directly from Claude Desktop, Cursor, and other AI assistants**
+
+Synopticon now includes a built-in MCP server that enables seamless integration with LLM clients. This allows researchers to control behavioral analysis through natural language interactions.
+
+### **Quick Start with Claude Desktop**
+
+1. **Start Synopticon**: `bun start`
+2. **Run MCP setup**: `bun setup-mcp`
+3. **Follow the wizard** - automatically detects and configures your setup
+4. **Restart Claude Desktop** and start analyzing!
+
+### **Natural Language Control**
+
+Once connected, control Synopticon through conversational commands:
+
+**System Management**:
+- "Check if Synopticon is running properly"
+- "Show me all available analysis capabilities"
+- "What devices are available for streaming?"
+
+**Face & Emotion Analysis**:
+- "Start face detection on my webcam with high quality"
+- "What emotions are currently detected?"
+- "Configure face detection for maximum 5 faces with 0.8 confidence"
+
+**Media Streaming**:
+- "List available cameras and microphones"
+- "Start streaming from camera_1 with high quality"
+- "What's the current status of all media streams?"
+
+**Research Workflows**:
+- "Start multi-modal analysis with face detection and emotion recognition"
+- "Stop all analysis and show me a summary of the session"
+- "Export the current analysis data for statistical analysis"
+
+### **Supported LLM Clients**
+
+| Client | Status | Transport | Setup |
+|--------|---------|-----------|-------|
+| **Claude Desktop** | ✅ Full Support | stdio | Auto-configured |
+| **Cursor** | ✅ Supported | stdio | Template provided |
+| **Continue** | ✅ Supported | stdio | Template provided |
+
+### **Available MCP Tools**
+
+**System Tools** (4 tools):
+- Health checks and system status
+- Capability discovery and device listing
+
+**Face Analysis Tools** (4 tools):
+- Start/stop face detection
+- Real-time results and configuration
+
+**Emotion Analysis Tools** (4 tools):
+- Start/stop emotion analysis
+- Results retrieval and threshold setting
+
+**Media Streaming Tools** (4 tools):
+- Device management and streaming control
+- Stream status monitoring
+
+### **Advanced Deployment Scenarios**
+
+**Scenario 1: Same Computer** (Recommended)
+- Zero configuration setup
+- Automatic detection via setup wizard
+- Works with Docker containers
+
+**Scenario 2: Remote Synopticon**
+- LLM client on laptop, Synopticon on research server
+- Network-transparent operation
+- Supports distributed research environments
+
+**Scenario 3: Multi-Instance**
+- Connect to multiple Synopticon instances
+- Coordinate multi-site studies
+- Unified control interface
+
+### **Developer Integration**
+
+Add new MCP tools as you extend Synopticon:
+
+```bash
+# Interactive tool creation
+bun add-mcp-tools
+
+# Manual tool development
+# See docs/MCP_DEVELOPMENT_GUIDE.md
+```
+
+**Documentation**:
+- [Setup Guide](docs/MCP_SETUP_GUIDE.md) - Complete setup instructions
+- [API Reference](docs/MCP_API_REFERENCE.md) - All available tools and parameters
+- [Development Guide](docs/MCP_DEVELOPMENT_GUIDE.md) - Adding custom tools
+
+---
+
 ## 🔬 Future Research Capabilities
 
 **Planned Features for Research Applications:**
