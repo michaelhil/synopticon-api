@@ -1,0 +1,1230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediaPipe WebRTC Integration Demo</title>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+    <script type="module" src="./mediapipe-webrtc-processor.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: white;
+            padding: 20px;
+            margin: 0;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .panel {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        .video-container {
+            position: relative;
+            display: inline-block;
+        }
+        
+        video {
+            width: 100%;
+            max-width: 400px;
+            height: auto;
+            background: black;
+            border-radius: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .overlay-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            border-radius: 10px;
+        }
+        
+        button {
+            background: linear-gradient(45deg, #4CAF50, #45a049);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            cursor: pointer;
+            margin: 5px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.3);
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(76, 175, 80, 0.4);
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        
+        .status-connected { background: #4CAF50; }
+        .status-disconnected { background: #f44336; }
+        .status-processing { background: #ff9800; animation: pulse 1s infinite; }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        #log {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px;
+            height: 300px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            border-radius: 10px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        .metrics {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .metric {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .metric-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #4CAF50;
+        }
+        
+        .metric-label {
+            font-size: 12px;
+            opacity: 0.8;
+            margin-top: 5px;
+        }
+        
+        .analysis-data {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 10px;
+            margin-top: 10px;
+            font-family: 'Courier New', monospace;
+            font-size: 11px;
+        }
+        
+        .info-panel {
+            border-left: 4px solid #2196F3;
+            background: rgba(33, 150, 243, 0.1);
+        }
+        
+        .header {
+            position: relative;
+            margin-bottom: 30px;
+        }
+        
+        .back-link {
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: transform 0.2s;
+        }
+        
+        .back-link:hover {
+            transform: translateX(-5px);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="../playground/index.html" class="back-link">← Back to Demos</a>
+            <h1>🧠 MediaPipe WebRTC Integration Demo</h1>
+        </div>
+        
+        
+        <div class="grid">
+            <div class="panel">
+                <h3>📹 Local Stream with MediaPipe Analysis</h3>
+                <div class="video-container">
+                    <video id="localVideo" autoplay muted></video>
+                    <canvas id="localOverlay" class="overlay-canvas"></canvas>
+                </div>
+                <div>
+                    <span class="status-indicator" id="cameraStatus"></span>
+                    <button id="cameraBtn" onclick="toggleCamera()">Stop Camera</button>
+                    
+                    <span class="status-indicator" id="mediaPipeStatus"></span>
+                    <button id="mediaPipeBtn" onclick="toggleMediaPipe()" disabled>Start MediaPipe</button>
+                    
+                    <span class="status-indicator" id="streamStatus"></span>
+                    <button id="streamBtn" onclick="toggleStreaming()" disabled>Start Stream</button>
+                </div>
+                
+                <div class="metrics">
+                    <div class="metric">
+                        <div class="metric-value" id="fpsValue">0</div>
+                        <div class="metric-label">FPS</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="qualityValue">medium</div>
+                        <div class="metric-label">Quality</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="confidenceValue">0%</div>
+                        <div class="metric-label">Confidence</div>
+                    </div>
+                    <div class="metric">
+                        <div class="metric-value" id="poseValue">0°,0°,0°</div>
+                        <div class="metric-label">Yaw,Pitch,Roll</div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="panel">
+                <h3>📺 Remote Stream + Analysis</h3>
+                <div class="video-container">
+                    <video id="remoteVideo" autoplay></video>
+                    <canvas id="remoteOverlay" class="overlay-canvas"></canvas>
+                </div>
+                <div>
+                    <span class="status-indicator" id="connectionStatus"></span>
+                    <button id="connectBtn" onclick="toggleConnection()">Connect to Stream</button>
+                </div>
+                
+                <div id="remoteAnalysis" class="analysis-data">
+                    <div><strong>Waiting for analysis data...</strong></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="panel">
+            <h3>📊 System Log</h3>
+            <div id="log"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createMediaPipeWebRTCProcessor } from './mediapipe-webrtc-processor.js';
+        
+        // Global state
+        let localStream = null;
+        let peerConnection = null;
+        let dataChannel = null;
+        let ws = null;
+        let sessionId = null;
+        let isStreamer = false;
+        let isStreaming = false;
+        let isConnected = false;
+        let mediaPipeProcessor = null;
+        let isMediaPipeActive = false;
+        
+        // Canvas overlay contexts
+        let localOverlayCtx = null;
+        let remoteOverlayCtx = null;
+        
+        // Performance monitoring
+        let framesSent = 0;
+        let framesReceived = 0;
+        let lastStatsUpdate = performance.now();
+        let lastFrameReceived = performance.now();
+        let connectionHealthTimer = null;
+
+        const config = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' }
+            ]
+        };
+
+        function log(msg, type = 'info') {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            const colors = {
+                info: '#0f0',
+                warn: '#ff0',
+                error: '#f44',
+                analysis: '#4CAF50'
+            };
+            
+            logDiv.innerHTML += `<div style="color:${colors[type]}">[${time}] ${msg}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(msg);
+        }
+
+        function updateStatus(elementId, connected) {
+            const element = document.getElementById(elementId);
+            element.className = `status-indicator ${connected ? 'status-connected' : 'status-disconnected'}`;
+        }
+
+        function updateProcessingStatus(elementId, processing) {
+            const element = document.getElementById(elementId);
+            element.className = `status-indicator ${processing ? 'status-processing' : 'status-disconnected'}`;
+        }
+
+        async function toggleCamera() {
+            if (localStream) {
+                // Stop camera
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+                document.getElementById('localVideo').srcObject = null;
+                document.getElementById('cameraBtn').textContent = 'Start Camera';
+                document.getElementById('mediaPipeBtn').disabled = true;
+                updateStatus('cameraStatus', false);
+                
+                // Stop MediaPipe and streaming if active
+                if (isMediaPipeActive) await toggleMediaPipe();
+                if (isStreaming) await toggleStreaming();
+                
+                log('Camera stopped');
+            } else {
+                // Start camera
+                try {
+                    log('Requesting camera access...');
+                    
+                    // Check MediaPipe availability first
+                    log('Checking MediaPipe availability...');
+                    if (typeof window.FaceMesh === 'undefined') {
+                        log('MediaPipe FaceMesh not loaded yet, checking scripts...', 'warn');
+                        log('Available window properties: ' + Object.keys(window).filter(k => k.includes('MediaPipe') || k.includes('Face')).join(', '));
+                    } else {
+                        log('MediaPipe FaceMesh is available', 'info');
+                    }
+                    
+                    localStream = await navigator.mediaDevices.getUserMedia({ 
+                        video: { 
+                            width: { ideal: 640 },
+                            height: { ideal: 480 }
+                        }, 
+                        audio: true 
+                    });
+                    
+                    const video = document.getElementById('localVideo');
+                    video.srcObject = localStream;
+                    document.getElementById('cameraBtn').textContent = 'Stop Camera';
+                    document.getElementById('mediaPipeBtn').disabled = false;
+                    updateStatus('cameraStatus', true);
+                    
+                    // Initialize overlay canvas
+                    const overlay = document.getElementById('localOverlay');
+                    localOverlayCtx = overlay.getContext('2d');
+                    
+                    video.onloadedmetadata = () => {
+                        overlay.width = video.videoWidth;
+                        overlay.height = video.videoHeight;
+                        log(`Video loaded: ${video.videoWidth}x${video.videoHeight}`);
+                    };
+                    
+                    log('Camera started successfully');
+                    
+                } catch (error) {
+                    log('Camera error: ' + error.message, 'error');
+                    log('Error stack: ' + error.stack, 'error');
+                    updateStatus('cameraStatus', false);
+                }
+            }
+        }
+
+        async function toggleMediaPipe() {
+            if (isMediaPipeActive) {
+                // Stop MediaPipe
+                if (mediaPipeProcessor) {
+                    await mediaPipeProcessor.cleanup();
+                    mediaPipeProcessor = null;
+                }
+                isMediaPipeActive = false;
+                document.getElementById('mediaPipeBtn').textContent = 'Start MediaPipe';
+                document.getElementById('streamBtn').disabled = true;
+                updateStatus('mediaPipeStatus', false);
+                
+                // Clear overlay
+                if (localOverlayCtx) {
+                    const overlay = document.getElementById('localOverlay');
+                    localOverlayCtx.clearRect(0, 0, overlay.width, overlay.height);
+                }
+                
+                log('MediaPipe stopped');
+            } else {
+                // Start MediaPipe
+                try {
+                    log('Initializing MediaPipe...');
+                    updateProcessingStatus('mediaPipeStatus', true);
+                    
+                    mediaPipeProcessor = createMediaPipeWebRTCProcessor({
+                        capabilities: ['face_detection', 'face_landmarks', 'pose_estimation_3dof', 'emotion_analysis'],
+                        quality: 'medium',
+                        adaptiveProcessing: true,
+                        targetFPS: 30,
+                        enablePerformanceMonitoring: true
+                    });
+                    
+                    // Set up event handlers
+                    mediaPipeProcessor.onAnalysis((result) => {
+                        handleMediaPipeAnalysis(result);
+                    });
+                    
+                    mediaPipeProcessor.onError((error) => {
+                        log('MediaPipe error: ' + error.message, 'error');
+                    });
+                    
+                    mediaPipeProcessor.onQualityChange((quality) => {
+                        document.getElementById('qualityValue').textContent = quality;
+                        log(`MediaPipe quality adapted to: ${quality}`, 'analysis');
+                    });
+                    
+                    mediaPipeProcessor.onPerformance((metrics) => {
+                        document.getElementById('fpsValue').textContent = Math.round(metrics.fps);
+                    });
+                    
+                    // Initialize MediaPipe
+                    const success = await mediaPipeProcessor.initialize();
+                    if (success) {
+                        isMediaPipeActive = true;
+                        document.getElementById('mediaPipeBtn').textContent = 'Stop MediaPipe';
+                        document.getElementById('streamBtn').disabled = false;
+                        updateStatus('mediaPipeStatus', true);
+                        
+                        // Start processing frames
+                        startMediaPipeProcessing();
+                        log('MediaPipe initialized successfully');
+                    } else {
+                        throw new Error('MediaPipe initialization failed');
+                    }
+                    
+                } catch (error) {
+                    log('MediaPipe initialization error: ' + error.message, 'error');
+                    updateStatus('mediaPipeStatus', false);
+                }
+            }
+        }
+
+        function startMediaPipeProcessing() {
+            if (!isMediaPipeActive || !mediaPipeProcessor || !localStream) return;
+            
+            const video = document.getElementById('localVideo');
+            
+            const processFrame = async () => {
+                if (isMediaPipeActive && video.videoWidth > 0) {
+                    try {
+                        await mediaPipeProcessor.processFrame(video);
+                    } catch (error) {
+                        log('Frame processing error: ' + error.message, 'error');
+                    }
+                }
+                
+                if (isMediaPipeActive) {
+                    requestAnimationFrame(processFrame);
+                }
+            };
+            
+            requestAnimationFrame(processFrame);
+        }
+
+        function handleMediaPipeAnalysis(result) {
+            // Update UI metrics
+            document.getElementById('confidenceValue').textContent = Math.round(result.confidence * 100) + '%';
+            document.getElementById('poseValue').textContent = 
+                `${Math.round(result.pose.yaw)}°,${Math.round(result.pose.pitch)}°,${Math.round(result.pose.roll)}°`;
+            
+            // Draw landmarks on overlay
+            drawLandmarks(localOverlayCtx, result.landmarks);
+            
+            // Send analysis data through WebRTC data channel if streaming
+            if (dataChannel && dataChannel.readyState === 'open') {
+                try {
+                    const analysisMessage = {
+                        type: 'mediapipe_analysis',
+                        timestamp: result.timestamp,
+                        landmarks: result.landmarks,
+                        pose: result.pose,
+                        emotions: result.emotions,
+                        confidence: result.confidence
+                    };
+                    
+                    dataChannel.send(JSON.stringify(analysisMessage));
+                    framesSent++;
+                    
+                } catch (error) {
+                    log('Error sending analysis data: ' + error.message, 'error');
+                }
+            }
+        }
+
+        function drawLandmarks(ctx, landmarks) {
+            if (!ctx || !landmarks) return;
+            
+            const canvas = ctx.canvas;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw all facial regions with different colors
+            if (landmarks.regions) {
+                // Face outline - green
+                drawLandmarkRegion(ctx, landmarks.regions.faceOutline, '#4CAF50', 2, true);
+                
+                // Eyes - blue
+                drawLandmarkRegion(ctx, landmarks.regions.leftEye, '#2196F3', 1.5, true);
+                drawLandmarkRegion(ctx, landmarks.regions.rightEye, '#2196F3', 1.5, true);
+                
+                // Eyebrows - cyan
+                drawLandmarkRegion(ctx, landmarks.regions.leftEyebrow, '#00BCD4', 1.5, true);
+                drawLandmarkRegion(ctx, landmarks.regions.rightEyebrow, '#00BCD4', 1.5, true);
+                
+                // Nose - orange
+                drawLandmarkRegion(ctx, landmarks.regions.nose, '#FF9800', 1, false);
+                
+                // Mouth - red
+                drawLandmarkRegion(ctx, landmarks.regions.mouth, '#F44336', 2, true);
+                
+                // Cheeks - purple
+                drawLandmarkRegion(ctx, landmarks.regions.leftCheek, '#9C27B0', 1, false);
+                drawLandmarkRegion(ctx, landmarks.regions.rightCheek, '#9C27B0', 1, false);
+                
+                // Jaw - yellow
+                drawLandmarkRegion(ctx, landmarks.regions.jaw, '#FFEB3B', 1.5, true);
+            }
+            
+            // Draw key points as larger circles
+            if (landmarks.keyPoints) {
+                const keyPointColors = {
+                    leftEye: '#2196F3',
+                    rightEye: '#2196F3',
+                    noseTip: '#FF5722',
+                    mouthCenter: '#E91E63',
+                    chin: '#FFEB3B',
+                    foreheadCenter: '#4CAF50'
+                };
+                
+                Object.entries(landmarks.keyPoints).forEach(([name, point]) => {
+                    if (point && typeof point.x === 'number') {
+                        ctx.fillStyle = keyPointColors[name] || '#FFF';
+                        ctx.beginPath();
+                        ctx.arc(
+                            point.x * canvas.width, 
+                            point.y * canvas.height, 
+                            4, 0, 2 * Math.PI
+                        );
+                        ctx.fill();
+                        
+                        // Add white border
+                        ctx.strokeStyle = '#FFFFFF';
+                        ctx.lineWidth = 1;
+                        ctx.stroke();
+                    }
+                });
+            }
+            
+            // Draw pose orientation arrow
+            if (landmarks.pose && landmarks.keyPoints.noseTip) {
+                const noseTip = landmarks.keyPoints.noseTip;
+                ctx.strokeStyle = '#FF5722';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.moveTo(noseTip.x * canvas.width, noseTip.y * canvas.height);
+                
+                const arrowLength = 60;
+                const yawRad = landmarks.pose.yaw * Math.PI / 180;
+                const pitchRad = landmarks.pose.pitch * Math.PI / 180;
+                
+                ctx.lineTo(
+                    (noseTip.x * canvas.width) + Math.sin(yawRad) * arrowLength,
+                    (noseTip.y * canvas.height) - Math.cos(yawRad) * arrowLength * Math.cos(pitchRad)
+                );
+                ctx.stroke();
+                
+                // Draw arrow head
+                const headX = (noseTip.x * canvas.width) + Math.sin(yawRad) * arrowLength;
+                const headY = (noseTip.y * canvas.height) - Math.cos(yawRad) * arrowLength * Math.cos(pitchRad);
+                
+                ctx.beginPath();
+                ctx.moveTo(headX, headY);
+                ctx.lineTo(headX - 10 * Math.cos(yawRad + 0.5), headY - 10 * Math.sin(yawRad + 0.5));
+                ctx.moveTo(headX, headY);
+                ctx.lineTo(headX - 10 * Math.cos(yawRad - 0.5), headY - 10 * Math.sin(yawRad - 0.5));
+                ctx.stroke();
+            }
+            
+            // Draw ALL individual landmarks as tiny dots (for full 468-point mesh)
+            if (landmarks.points && landmarks.points.length > 0) {
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+                landmarks.points.forEach((point, index) => {
+                    if (point && typeof point.x === 'number' && typeof point.y === 'number') {
+                        ctx.beginPath();
+                        ctx.arc(
+                            point.x * canvas.width, 
+                            point.y * canvas.height, 
+                            0.8, 0, 2 * Math.PI
+                        );
+                        ctx.fill();
+                    }
+                });
+            }
+            
+            // Draw landmark count info
+            if (landmarks.totalLandmarks) {
+                ctx.fillStyle = '#FFFFFF';
+                ctx.font = '12px monospace';
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 3;
+                ctx.strokeText(`${landmarks.totalLandmarks} landmarks`, 10, 20);
+                ctx.fillText(`${landmarks.totalLandmarks} landmarks`, 10, 20);
+                
+                // Show region counts
+                if (landmarks.regions) {
+                    const regionCounts = Object.entries(landmarks.regions)
+                        .map(([name, points]) => `${name}: ${points.length}`)
+                        .join(' | ');
+                    ctx.font = '10px monospace';
+                    ctx.strokeText(regionCounts, 10, 35);
+                    ctx.fillText(regionCounts, 10, 35);
+                }
+            }
+        }
+
+        function drawLandmarkRegion(ctx, points, color, lineWidth, connect) {
+            if (!points || points.length === 0) return;
+            
+            const canvas = ctx.canvas;
+            
+            if (connect && points.length > 2) {
+                // Draw connected lines
+                ctx.strokeStyle = color;
+                ctx.lineWidth = lineWidth;
+                ctx.globalAlpha = 0.8;
+                ctx.beginPath();
+                
+                const firstPoint = points[0];
+                ctx.moveTo(firstPoint.x * canvas.width, firstPoint.y * canvas.height);
+                
+                for (let i = 1; i < points.length; i++) {
+                    const point = points[i];
+                    ctx.lineTo(point.x * canvas.width, point.y * canvas.height);
+                }
+                
+                // Close the shape
+                ctx.closePath();
+                ctx.stroke();
+                ctx.globalAlpha = 1.0;
+            }
+            
+            // Draw individual points
+            ctx.fillStyle = color;
+            ctx.globalAlpha = 0.8;
+            points.forEach(point => {
+                if (point && typeof point.x === 'number' && typeof point.y === 'number') {
+                    ctx.beginPath();
+                    ctx.arc(
+                        point.x * canvas.width, 
+                        point.y * canvas.height, 
+                        2, 0, 2 * Math.PI
+                    );
+                    ctx.fill();
+                }
+            });
+            ctx.globalAlpha = 1.0;
+        }
+
+        async function toggleStreaming() {
+            if (isStreaming) {
+                // Stop streaming
+                isStreaming = false;
+                isStreamer = false;
+                
+                if (peerConnection) {
+                    peerConnection.close();
+                    peerConnection = null;
+                    dataChannel = null;
+                }
+                
+                if (ws) {
+                    ws.close();
+                    ws = null;
+                }
+                
+                document.getElementById('streamBtn').textContent = 'Start Stream';
+                updateStatus('streamStatus', false);
+                log('Streaming stopped');
+            } else {
+                // Start streaming
+                if (!localStream) {
+                    log('Please start camera first', 'warn');
+                    return;
+                }
+
+                if (!isMediaPipeActive) {
+                    log('Please start MediaPipe first', 'warn');
+                    return;
+                }
+
+                isStreamer = true;
+                isStreaming = true;
+                log('Setting up WebRTC streaming with MediaPipe analysis...');
+                
+                await connectWebSocket();
+                setupPeerConnection();
+                
+                document.getElementById('streamBtn').textContent = 'Stop Stream';
+                updateStatus('streamStatus', true);
+            }
+        }
+
+        async function toggleConnection() {
+            if (isConnected) {
+                // Disconnect
+                isConnected = false;
+                
+                if (peerConnection) {
+                    peerConnection.close();
+                    peerConnection = null;
+                }
+                
+                if (ws) {
+                    ws.close();
+                    ws = null;
+                }
+                
+                document.getElementById('remoteVideo').srcObject = null;
+                document.getElementById('connectBtn').textContent = 'Connect to Stream';
+                updateStatus('connectionStatus', false);
+                
+                // Clear remote analysis display and overlay
+                document.getElementById('remoteAnalysis').innerHTML = '<div><strong>Waiting for analysis data...</strong></div>';
+                if (remoteOverlayCtx) {
+                    const canvas = remoteOverlayCtx.canvas;
+                    remoteOverlayCtx.clearRect(0, 0, canvas.width, canvas.height);
+                }
+                
+                // Stop connection health monitoring
+                stopConnectionHealthMonitoring();
+                
+                log('Disconnected from stream');
+            } else {
+                // Connect
+                if (isStreamer) {
+                    log('Already streaming - use another tab to receive', 'warn');
+                    return;
+                }
+
+                isConnected = true;
+                log('Connecting to receive stream and analysis...');
+                
+                // Reset frame counter
+                framesReceived = 0;
+                
+                // Initialize remote overlay canvas
+                const remoteOverlay = document.getElementById('remoteOverlay');
+                remoteOverlayCtx = remoteOverlay.getContext('2d');
+                
+                // Ensure canvas has reasonable default dimensions
+                if (remoteOverlay.width === 0 || remoteOverlay.height === 0) {
+                    remoteOverlay.width = 640;
+                    remoteOverlay.height = 480;
+                    log('Set default canvas dimensions: 640x480');
+                }
+                
+                try {
+                    await connectWebSocket();
+                    setupPeerConnection();
+                    
+                    // Wait a moment for WebSocket to fully establish, then request offers
+                    setTimeout(() => {
+                        log('Requesting offers from active streamers...');
+                        sendSignaling({
+                            type: 'request_offer'
+                        });
+                    }, 500);
+                    
+                } catch (error) {
+                    log('Failed to reconnect: ' + error.message, 'error');
+                    isConnected = false;
+                    document.getElementById('connectBtn').textContent = 'Connect to Stream';
+                    updateStatus('connectionStatus', false);
+                    return;
+                }
+                
+                document.getElementById('connectBtn').textContent = 'Disconnect';
+                updateStatus('connectionStatus', true);
+                
+                // Start connection health monitoring
+                startConnectionHealthMonitoring();
+            }
+        }
+
+        function connectWebSocket() {
+            return new Promise((resolve, reject) => {
+                // Close existing connection if any
+                if (ws && ws.readyState !== WebSocket.CLOSED) {
+                    ws.close();
+                    ws = null;
+                }
+
+                log('Connecting to signaling server...');
+                ws = new WebSocket(`ws://${window.location.host}/ws`);
+                
+                let resolved = false;
+                
+                ws.onopen = () => {
+                    sessionId = 'ws_' + Date.now() + '_' + Math.random().toString(36).substr(2, 16);
+                    log(`WebSocket connected (${sessionId})`);
+                    if (!resolved) {
+                        resolved = true;
+                        resolve();
+                    }
+                };
+                
+                ws.onmessage = handleSignalingMessage;
+                
+                ws.onerror = (error) => {
+                    log('WebSocket error: ' + error, 'error');
+                    if (!resolved) {
+                        resolved = true;
+                        reject(error);
+                    }
+                };
+                
+                ws.onclose = (event) => {
+                    log(`WebSocket closed (${event.code}: ${event.reason})`);
+                    if (isConnected || isStreaming) {
+                        log('WebSocket closed unexpectedly - connection lost');
+                    }
+                };
+                
+                // Timeout after 10 seconds
+                setTimeout(() => {
+                    if (!resolved) {
+                        resolved = true;
+                        reject(new Error('WebSocket connection timeout'));
+                    }
+                }, 10000);
+            });
+        }
+
+        function setupPeerConnection() {
+            peerConnection = new RTCPeerConnection(config);
+            
+            // Set up data channel for MediaPipe analysis
+            if (isStreamer) {
+                dataChannel = peerConnection.createDataChannel('mediapipe', {
+                    ordered: false,
+                    maxRetransmits: 0
+                });
+                
+                dataChannel.onopen = () => {
+                    log('MediaPipe data channel opened', 'analysis');
+                };
+                
+                dataChannel.onclose = () => {
+                    log('MediaPipe data channel closed');
+                };
+                
+                dataChannel.onerror = (error) => {
+                    log('Data channel error: ' + error, 'error');
+                };
+            } else {
+                // Receiver: listen for data channel
+                peerConnection.ondatachannel = (event) => {
+                    const channel = event.channel;
+                    log(`Received data channel: ${channel.label}`, 'analysis');
+                    
+                    channel.onmessage = (event) => {
+                        handleAnalysisData(event.data);
+                    };
+                };
+            }
+            
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    sendSignaling({
+                        type: 'webrtc_ice',
+                        candidate: event.candidate
+                    });
+                }
+            };
+            
+            peerConnection.ontrack = (event) => {
+                log('Received remote stream');
+                const remoteVideo = document.getElementById('remoteVideo');
+                remoteVideo.srcObject = event.streams[0];
+                
+                // Set up remote overlay canvas with comprehensive initialization
+                const setupRemoteOverlay = () => {
+                    const remoteOverlay = document.getElementById('remoteOverlay');
+                    if (remoteVideo.videoWidth > 0 && remoteVideo.videoHeight > 0) {
+                        remoteOverlay.width = remoteVideo.videoWidth;
+                        remoteOverlay.height = remoteVideo.videoHeight;
+                        
+                        // Reinitialize overlay context after video loads
+                        remoteOverlayCtx = remoteOverlay.getContext('2d');
+                        
+                        log(`Remote overlay initialized: video=${remoteVideo.videoWidth}x${remoteVideo.videoHeight}, canvas=${remoteOverlay.width}x${remoteOverlay.height}`, 'analysis');
+                    } else {
+                        log('Video dimensions not ready, retrying overlay setup...', 'warn');
+                        setTimeout(setupRemoteOverlay, 100);
+                    }
+                };
+                
+                remoteVideo.onloadedmetadata = setupRemoteOverlay;
+                remoteVideo.oncanplay = setupRemoteOverlay;
+            };
+            
+            // Monitor connection state changes
+            peerConnection.onconnectionstatechange = () => {
+                const state = peerConnection.connectionState;
+                log(`WebRTC connection state: ${state}`);
+                
+                if (state === 'failed' || state === 'disconnected') {
+                    log('WebRTC connection failed/disconnected');
+                    if (isConnected && !isStreamer) {
+                        log('Attempting to reconnect...');
+                        setTimeout(() => {
+                            if (isConnected) {
+                                toggleConnection(); // Disconnect
+                                setTimeout(() => toggleConnection(), 1000); // Reconnect after 1s
+                            }
+                        }, 2000);
+                    }
+                } else if (state === 'connected') {
+                    log('WebRTC connection established successfully', 'analysis');
+                }
+            };
+            
+            // Monitor ICE connection state
+            peerConnection.oniceconnectionstatechange = () => {
+                const state = peerConnection.iceConnectionState;
+                log(`ICE connection state: ${state}`);
+            };
+
+            if (localStream) {
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
+                
+                if (isStreamer) {
+                    createOffer();
+                }
+            }
+        }
+
+        function handleAnalysisData(data) {
+            try {
+                const analysis = JSON.parse(data);
+                if (analysis.type === 'mediapipe_analysis') {
+                    framesReceived++;
+                    lastFrameReceived = performance.now();
+                    
+                    // Update analysis display only every 10th frame to reduce DOM overhead
+                    if (framesReceived % 10 === 0) {
+                        const remoteAnalysis = document.getElementById('remoteAnalysis');
+                        const landmarks = analysis.landmarks;
+                        const emotions = analysis.emotions;
+                        
+                        remoteAnalysis.innerHTML = `
+                            <div><strong>🧠 Real-time MediaPipe Analysis</strong></div>
+                            <div style="margin: 10px 0; border-bottom: 1px solid #444; padding-bottom: 8px;">
+                                <strong>📊 Overview:</strong> ${landmarks.totalLandmarks || 468} landmarks detected
+                                | Confidence: <span style="color: ${analysis.confidence > 0.8 ? '#4CAF50' : analysis.confidence > 0.5 ? '#FF9800' : '#F44336'}">${Math.round(analysis.confidence * 100)}%</span>
+                            </div>
+                            
+                            <div style="margin: 8px 0;">
+                                <strong>🎯 Head Pose (3DOF):</strong><br>
+                                <span style="color: #2196F3;">Yaw: ${Math.round(analysis.pose.yaw)}°</span> | 
+                                <span style="color: #4CAF50;">Pitch: ${Math.round(analysis.pose.pitch)}°</span> | 
+                                <span style="color: #FF9800;">Roll: ${Math.round(analysis.pose.roll)}°</span>
+                            </div>
+                            
+                            <div style="margin: 8px 0;">
+                                <strong>😊 Emotion Analysis:</strong><br>
+                                <div style="font-size: 11px; margin-left: 10px;">
+                                    Happy: <span style="color: #4CAF50">${Math.round(emotions.happy * 100)}%</span> |
+                                    Neutral: <span style="color: #9E9E9E">${Math.round(emotions.neutral * 100)}%</span> |
+                                    Sad: <span style="color: #2196F3">${Math.round(emotions.sad * 100)}%</span>
+                                </div>
+                            </div>
+                            
+                            <div style="margin: 8px 0;">
+                                <strong>👁️ Key Features:</strong><br>
+                                <div style="font-size: 10px; margin-left: 10px;">
+                                    Eyes: L(${Math.round(landmarks.keyPoints.leftEye.x * 100)}, ${Math.round(landmarks.keyPoints.leftEye.y * 100)}) 
+                                    R(${Math.round(landmarks.keyPoints.rightEye.x * 100)}, ${Math.round(landmarks.keyPoints.rightEye.y * 100)})<br>
+                                    Nose: (${Math.round(landmarks.keyPoints.noseTip.x * 100)}, ${Math.round(landmarks.keyPoints.noseTip.y * 100)}) |
+                                    Mouth: (${Math.round(landmarks.keyPoints.mouthCenter.x * 100)}, ${Math.round(landmarks.keyPoints.mouthCenter.y * 100)})
+                                </div>
+                            </div>
+                            
+                            <div style="margin-top: 10px; font-size: 10px; opacity: 0.7; border-top: 1px solid #444; padding-top: 8px;">
+                                <strong>📡 Stream Stats:</strong><br>
+                                Frames: ${framesReceived} received | 
+                                Regions: ${Object.keys(landmarks.regions || {}).length} mapped |
+                                Time: ${new Date(analysis.timestamp).toLocaleTimeString()}
+                            </div>
+                        `;
+                    }
+                    
+                    // Draw landmarks on remote overlay (optimized for performance)
+                    if (remoteOverlayCtx && analysis.landmarks) {
+                        drawLandmarks(remoteOverlayCtx, analysis.landmarks);
+                    } else if (!remoteOverlayCtx && analysis.landmarks) {
+                        // One-time reinitialization attempt if context is missing
+                        const remoteOverlay = document.getElementById('remoteOverlay');
+                        const remoteVideo = document.getElementById('remoteVideo');
+                        if (remoteOverlay && remoteVideo && remoteVideo.videoWidth > 0) {
+                            remoteOverlay.width = remoteVideo.videoWidth;
+                            remoteOverlay.height = remoteVideo.videoHeight;
+                            remoteOverlayCtx = remoteOverlay.getContext('2d');
+                            if (remoteOverlayCtx) {
+                                drawLandmarks(remoteOverlayCtx, analysis.landmarks);
+                            }
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                log('Error parsing analysis data: ' + error.message, 'error');
+            }
+        }
+
+        async function createOffer() {
+            try {
+                log('Creating WebRTC offer...');
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                
+                sendSignaling({
+                    type: 'webrtc_offer',
+                    sdp: offer
+                });
+            } catch (error) {
+                log('Error creating offer: ' + error.message, 'error');
+            }
+        }
+
+        async function handleSignalingMessage(event) {
+            const message = JSON.parse(event.data);
+            
+            switch (message.type) {
+                case 'webrtc_offer':
+                    if (!isStreamer && peerConnection) {
+                        log('Received offer, creating answer...');
+                        await peerConnection.setRemoteDescription(message.sdp);
+                        const answer = await peerConnection.createAnswer();
+                        await peerConnection.setLocalDescription(answer);
+                        
+                        sendSignaling({
+                            type: 'webrtc_answer',
+                            sdp: answer,
+                            targetSession: message.sourceSession
+                        });
+                    }
+                    break;
+                    
+                case 'webrtc_answer':
+                    if (isStreamer && peerConnection) {
+                        log('Received answer - connection established');
+                        await peerConnection.setRemoteDescription(message.sdp);
+                    }
+                    break;
+                    
+                case 'webrtc_ice':
+                    if (peerConnection) {
+                        await peerConnection.addIceCandidate(message.candidate);
+                    }
+                    break;
+                    
+                case 'request_offer':
+                    if (isStreamer) {
+                        log('Receiver requested offer, recreating peer connection...');
+                        
+                        // Close existing peer connection if it exists
+                        if (peerConnection) {
+                            peerConnection.close();
+                        }
+                        
+                        // Create fresh peer connection for new receiver
+                        setupPeerConnection();
+                        
+                        // Small delay to ensure receiver is ready, then create offer
+                        setTimeout(() => {
+                            createOffer();
+                        }, 200);
+                    }
+                    break;
+                    
+                default:
+                    break;
+            }
+        }
+
+        function sendSignaling(message) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    ...message,
+                    deviceId: 'mediapipe_webrtc_stream',
+                    timestamp: Date.now()
+                }));
+            }
+        }
+
+        // Connection health monitoring
+        function startConnectionHealthMonitoring() {
+            if (connectionHealthTimer) {
+                clearInterval(connectionHealthTimer);
+            }
+            
+            lastFrameReceived = performance.now();
+            
+            connectionHealthTimer = setInterval(() => {
+                if (!isConnected) return;
+                
+                const timeSinceLastFrame = performance.now() - lastFrameReceived;
+                
+                // If no frames received in 10 seconds, connection might be dead
+                if (timeSinceLastFrame > 10000) {
+                    log('No frames received for 10 seconds, connection may be dead', 'warn');
+                    
+                    // Attempt automatic reconnection
+                    if (isConnected && !isStreamer) {
+                        log('Attempting automatic reconnection...');
+                        setTimeout(async () => {
+                            await toggleConnection(); // Disconnect
+                            setTimeout(() => toggleConnection(), 2000); // Reconnect after 2s
+                        }, 1000);
+                    }
+                }
+            }, 5000); // Check every 5 seconds
+        }
+        
+        function stopConnectionHealthMonitoring() {
+            if (connectionHealthTimer) {
+                clearInterval(connectionHealthTimer);
+                connectionHealthTimer = null;
+            }
+        }
+
+        // Check if all MediaPipe scripts are loaded
+        function checkMediaPipeScripts() {
+            const requiredObjects = ['FaceMesh'];
+            const missing = requiredObjects.filter(obj => typeof window[obj] === 'undefined');
+            
+            if (missing.length > 0) {
+                log(`Missing MediaPipe objects: ${missing.join(', ')}`, 'warn');
+                log('Available objects: ' + Object.keys(window).filter(k => 
+                    k.includes('MediaPipe') || k.includes('Face') || k.includes('Camera')
+                ).join(', '));
+                return false;
+            }
+            
+            log('All required MediaPipe objects available');
+            return true;
+        }
+
+        // Wait for all scripts to load before starting
+        function waitForScripts() {
+            return new Promise((resolve) => {
+                if (checkMediaPipeScripts()) {
+                    resolve();
+                    return;
+                }
+                
+                let attempts = 0;
+                const maxAttempts = 50; // 5 seconds
+                
+                const checkInterval = setInterval(() => {
+                    attempts++;
+                    log(`Waiting for MediaPipe scripts... (${attempts}/${maxAttempts})`);
+                    
+                    if (checkMediaPipeScripts()) {
+                        clearInterval(checkInterval);
+                        resolve();
+                    } else if (attempts >= maxAttempts) {
+                        clearInterval(checkInterval);
+                        log('MediaPipe scripts failed to load completely', 'error');
+                        resolve(); // Continue anyway
+                    }
+                }, 100);
+            });
+        }
+
+        // Auto-start camera on load
+        document.addEventListener('DOMContentLoaded', async () => {
+            log('MediaPipe WebRTC Demo loaded');
+            
+            // Wait for all scripts to load
+            log('Waiting for MediaPipe scripts to load...');
+            await waitForScripts();
+            
+            log('Auto-starting camera...');
+            await toggleCamera();
+            
+            // Update stats periodically
+            setInterval(() => {
+                const now = performance.now();
+                if (now - lastStatsUpdate > 5000) {
+                    if (framesSent > 0 || framesReceived > 0) {
+                        log(`Stats: Sent ${framesSent} analysis frames, Received ${framesReceived} analysis frames`, 'analysis');
+                    }
+                    lastStatsUpdate = now;
+                }
+            }, 5000);
+        });
+
+        // Export functions to global scope for onclick handlers
+        window.toggleCamera = toggleCamera;
+        window.toggleMediaPipe = toggleMediaPipe;
+        window.toggleStreaming = toggleStreaming;
+        window.toggleConnection = toggleConnection;
+    </script>
+    
+    <!-- Info Panel moved to bottom for more video space -->
+    <div class="panel info-panel">
+        <h3>ℹ️ Real-Time Face Analysis with WebRTC</h3>
+        <p><strong>1.</strong> Open this page in two browser tabs</p>
+        <p><strong>2.</strong> First tab: Start streaming with MediaPipe analysis</p>
+        <p><strong>3.</strong> Second tab: Connect to receive video + analysis data</p>
+        <p><strong>Features:</strong> Face landmarks, 3DOF pose estimation, basic emotions, adaptive quality</p>
+    </div>
+    
+</body>
+</html>

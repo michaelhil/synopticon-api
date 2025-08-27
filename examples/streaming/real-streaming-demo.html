@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real Media Streaming Demo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #1a1a1a;
+            color: #fff;
+            height: 100vh;
+            overflow: hidden;
+        }
+        
+        .container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            height: 100vh;
+            gap: 1px;
+            background: #333;
+        }
+        
+        .panel {
+            background: #2a2a2a;
+            padding: 20px;
+            overflow-y: auto;
+        }
+        
+        .panel h2 {
+            margin-bottom: 20px;
+            color: #4CAF50;
+            border-bottom: 2px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        
+        /* Sources Panel */
+        .source-device {
+            background: #1e1e1e;
+            border: 1px solid #555;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            padding: 15px;
+        }
+        
+        .device-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        
+        .device-name {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .device-type {
+            background: #555;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+        
+        .preview-container {
+            position: relative;
+            background: #000;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .preview-video {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+        }
+        
+        .preview-placeholder {
+            width: 100%;
+            height: 120px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #888;
+            font-size: 12px;
+        }
+        
+        .stream-button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            transition: background 0.2s;
+        }
+        
+        .stream-button:hover {
+            background: #45a049;
+        }
+        
+        .stream-button.streaming {
+            background: #f44336;
+        }
+        
+        .stream-button.streaming:hover {
+            background: #da190b;
+        }
+        
+        /* Receiver Panel */
+        .stream-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        
+        .incoming-stream {
+            background: #1e1e1e;
+            border: 1px solid #555;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        
+        .stream-header {
+            padding: 10px;
+            background: #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .stream-title {
+            font-weight: bold;
+            font-size: 14px;
+        }
+        
+        .stream-status {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+        }
+        
+        .stream-status.live {
+            background: #4CAF50;
+        }
+        
+        .stream-status.connecting {
+            background: #FF9800;
+        }
+        
+        .stream-video {
+            width: 100%;
+            height: 200px;
+            object-fit: cover;
+            background: #000;
+        }
+        
+        .stream-info {
+            padding: 10px;
+            font-size: 12px;
+            color: #ccc;
+        }
+        
+        .status-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #333;
+            padding: 10px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+        }
+        
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #f44336;
+        }
+        
+        .status-dot.connected {
+            background: #4CAF50;
+        }
+        
+        .console-panel {
+            position: fixed;
+            bottom: 50px;
+            left: 0;
+            right: 0;
+            height: 150px;
+            background: rgba(0, 0, 0, 0.9);
+            border-top: 1px solid #333;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 11px;
+            overflow-y: auto;
+            color: #0f0;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .console-panel.visible {
+            display: block;
+        }
+        
+        .console-toggle {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #333;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+            z-index: 1001;
+        }
+</head>
+<body>
+    <div class="container">
+        <!-- Sources Panel -->
+        <div class="panel">
+            <h2>📹 Media Sources</h2>
+            <div id="sources-container">
+                <div class="source-device">
+                    <div class="device-header">
+                        <span class="device-name">Loading devices...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Receiver Panel -->
+        <div class="panel">
+            <h2>📺 Incoming Streams</h2>
+            <div class="stream-grid" id="streams-container">
+                <div class="incoming-stream">
+                    <div class="stream-header">
+                        <span class="stream-title">No streams</span>
+                        <span class="stream-status">Waiting for streams...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <button class="console-toggle" id="console-toggle">Console</button>
+    <div class="console-panel" id="console-panel"></div>
+    
+    <div class="status-bar">
+        <div class="connection-status">
+            <div class="status-dot" id="connection-dot"></div>
+            <span id="connection-text">Connecting...</span>
+        </div>
+        <div id="stats">
+            <span id="device-count">0 devices</span> • 
+            <span id="stream-count">0 streams</span>
+        </div>
+    </div>
+
+    <script>
+        class MediaStreamingDemo {
+            constructor() {
+                this.ws = null;
+                this.devices = new Map();
+                this.streams = new Map();
+                this.localStreams = new Map();
+                this.consoleVisible = false;
+                
+                this.init();
+            }
+            
+            log(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                const consolePanel = document.getElementById('console-panel');
+                if (consolePanel) {
+                    const color = type === 'error' ? '#f44' : type === 'success' ? '#4f4' : '#0f0';
+                    consolePanel.innerHTML += `<div style="color: ${color}">[${timestamp}] ${message}</div>`;
+                    consolePanel.scrollTop = consolePanel.scrollHeight;
+                }
+                console.log(`[${timestamp}] ${message}`);
+            }
+            
+            toggleConsole() {
+                const panel = document.getElementById('console-panel');
+                this.consoleVisible = !this.consoleVisible;
+                panel.className = this.consoleVisible ? 'console-panel visible' : 'console-panel';
+            }
+            
+            async init() {
+                await this.connectWebSocket();
+                await this.discoverDevices();
+                this.startStatsUpdate();
+            }
+            
+            async connectWebSocket() {
+                const wsUrl = `ws://${window.location.host}/ws`;
+                this.ws = new WebSocket(wsUrl);
+                
+                this.ws.onopen = () => {
+                    this.updateConnectionStatus(true);
+                    console.log('WebSocket connected');
+                };
+                
+                this.ws.onclose = () => {
+                    this.updateConnectionStatus(false);
+                    console.log('WebSocket disconnected');
+                    setTimeout(() => this.connectWebSocket(), 3000);
+                };
+                
+                this.ws.onmessage = (event) => {
+                    this.handleWebSocketMessage(event);
+                };
+            }
+            
+            handleWebSocketMessage(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    
+                    switch (data.type) {
+                        case 'stream_data':
+                            this.handleIncomingStream(data);
+                            break;
+                        case 'stream_started':
+                            this.handleStreamStarted(data);
+                            break;
+                        case 'stream_stopped':
+                            this.handleStreamStopped(data);
+                            break;
+                    }
+                } catch (error) {
+                    console.error('Failed to parse WebSocket message:', error);
+                }
+            }
+            
+            async discoverDevices() {
+                try {
+                    this.log('Discovering media devices...', 'info');
+                    
+                    // Get real browser devices first
+                    const browserDevices = await navigator.mediaDevices.enumerateDevices();
+                    this.log(`Found ${browserDevices.length} browser devices`, 'info');
+                    
+                    // Get server devices for coordination
+                    const response = await fetch('/api/media/devices');
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Map server devices to browser devices
+                        const mappedDevices = this.mapDevices(browserDevices, result.devices);
+                        this.updateDevices(mappedDevices);
+                        this.log(`Mapped ${mappedDevices.length} devices`, 'success');
+                    }
+                } catch (error) {
+                    this.log(`Device discovery failed: ${error.message}`, 'error');
+                }
+            }
+            
+            mapDevices(browserDevices, serverDevices) {
+                // Use real browser device IDs
+                return browserDevices
+                    .filter(device => device.kind === 'videoinput' || device.kind === 'audioinput')
+                    .map(device => ({
+                        id: device.deviceId,
+                        label: device.label || `${device.kind} Device`,
+                        type: device.kind,
+                        groupId: device.groupId
+                    }));
+            }
+            
+            updateDevices(devices) {
+                const container = document.getElementById('sources-container');
+                container.innerHTML = '';
+                
+                devices.forEach(device => {
+                    this.devices.set(device.id, device);
+                    const element = this.createDeviceElement(device);
+                    container.appendChild(element);
+                    
+                    if (device.type === 'videoinput') {
+                        this.setupPreview(device.id);
+                    }
+                });
+                
+                this.updateStats();
+            }
+            
+            createDeviceElement(device) {
+                const div = document.createElement('div');
+                div.className = 'source-device';
+                const shortId = device.id.substring(0, 8);
+                
+                // Create header
+                const header = document.createElement('div');
+                header.className = 'device-header';
+                header.innerHTML = `<span class="device-name">${device.label} (${shortId})</span><span class="device-type">${device.type}</span>`;
+                
+                // Create preview container
+                const previewContainer = document.createElement('div');
+                previewContainer.className = 'preview-container';
+                
+                if (device.type === 'videoinput') {
+                    const video = document.createElement('video');
+                    video.className = 'preview-video';
+                    video.id = `preview-${device.id}`;
+                    video.muted = true;
+                    video.autoplay = true;
+                    previewContainer.appendChild(video);
+                } else {
+                    previewContainer.innerHTML = '<div class="preview-placeholder">🎤 Audio Device</div>';
+                }
+                
+                // Create button
+                const button = document.createElement('button');
+                button.className = 'stream-button';
+                button.textContent = 'Start Stream';
+                button.onclick = () => this.toggleStream(device.id);
+                
+                div.appendChild(header);
+                div.appendChild(previewContainer);
+                div.appendChild(button);
+                
+                return div;
+            }
+            
+            async setupPreview(deviceId) {
+                try {
+                    const device = this.devices.get(deviceId);
+                    this.log(`Setting up preview for ${device.label}`, 'info');
+                    
+                    const constraints = {
+                        video: deviceId ? { deviceId: { ideal: deviceId } } : true,
+                        audio: false
+                    };
+                    
+                    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    const video = document.getElementById(`preview-${deviceId}`);
+                    if (video) {
+                        video.srcObject = stream;
+                        this.log(`Preview active for ${device.label}`, 'success');
+                    }
+                } catch (error) {
+                    this.log(`Preview setup failed for ${deviceId}: ${error.message}`, 'error');
+                    // Try fallback with no deviceId constraint
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+                        const video = document.getElementById(`preview-${deviceId}`);
+                        if (video) {
+                            video.srcObject = stream;
+                            this.log(`Preview using fallback for ${deviceId}`, 'info');
+                        }
+                    } catch (fallbackError) {
+                        this.log(`Fallback preview failed: ${fallbackError.message}`, 'error');
+                    }
+                }
+            }
+            
+            async toggleStream(deviceId) {
+                const device = this.devices.get(deviceId);
+                const deviceElement = document.getElementById(`preview-${deviceId}`)?.parentElement?.parentElement;
+                const button = deviceElement?.querySelector('.stream-button');
+                
+                if (this.localStreams.has(deviceId)) {
+                    await this.stopStream(deviceId);
+                    button.textContent = 'Start Stream';
+                    button.classList.remove('streaming');
+                } else {
+                    await this.startStream(deviceId);
+                    button.textContent = 'Stop Stream';
+                    button.classList.add('streaming');
+                }
+            }
+            
+            async startStream(deviceId) {
+                try {
+                    const device = this.devices.get(deviceId);
+                    this.log(`Starting stream for ${device.label}`, 'info');
+                    
+                    const constraints = this.getStreamConstraints(device);
+                    this.log(`Using constraints: ${JSON.stringify(constraints)}`, 'info');
+                    
+                    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    this.localStreams.set(deviceId, stream);
+                    
+                    // Start sending frames via WebSocket
+                    this.startFrameCapture(deviceId, stream);
+                    
+                    // Notify server
+                    await fetch('/api/media/streams', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            deviceId,
+                            quality: 'medium',
+                            autoStart: true
+                        })
+                    });
+                    
+                    this.log(`Stream started for ${device.label}`, 'success');
+                    
+                } catch (error) {
+                    this.log(`Failed to start stream for ${deviceId}: ${error.message}`, 'error');
+                }
+            }
+            
+            async stopStream(deviceId) {
+                const stream = this.localStreams.get(deviceId);
+                if (stream) {
+                    stream.getTracks().forEach(track => track.stop());
+                    this.localStreams.delete(deviceId);
+                }
+                
+                // Stop frame capture
+                if (this.frameCaptures && this.frameCaptures.has(deviceId)) {
+                    clearInterval(this.frameCaptures.get(deviceId));
+                    this.frameCaptures.delete(deviceId);
+                }
+            }
+            
+            getStreamConstraints(device) {
+                const constraints = {};
+                
+                if (device.type === 'videoinput') {
+                    constraints.video = {
+                        deviceId: device.id ? { ideal: device.id } : undefined,
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 30 }
+                    };
+                    constraints.audio = false;
+                }
+                
+                if (device.type === 'audioinput') {
+                    constraints.audio = {
+                        deviceId: device.id ? { ideal: device.id } : undefined,
+                        sampleRate: 44100,
+                        channelCount: 2
+                    };
+                    constraints.video = false;
+                }
+                
+                return constraints;
+            }
+            
+            startFrameCapture(deviceId, stream) {
+                if (stream.getVideoTracks().length === 0) return;
+                
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                const video = document.createElement('video');
+                
+                video.srcObject = stream;
+                video.play();
+                
+                video.onloadedmetadata = () => {
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+                    
+                    if (!this.frameCaptures) this.frameCaptures = new Map();
+                    
+                    const captureInterval = setInterval(() => {
+                        if (this.ws.readyState === WebSocket.OPEN) {
+                            ctx.drawImage(video, 0, 0);
+                            canvas.toBlob((blob) => {
+                                if (blob) {
+                                    this.sendFrame(deviceId, blob);
+                                }
+                            }, 'image/jpeg', 0.8);
+                        }
+                    }, 100); // 10 FPS
+                    
+                    this.frameCaptures.set(deviceId, captureInterval);
+                };
+            }
+            
+            sendFrame(deviceId, blob) {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    if (this.ws.readyState === WebSocket.OPEN) {
+                        this.ws.send(JSON.stringify({
+                            type: 'stream_frame',
+                            deviceId,
+                            timestamp: Date.now(),
+                            data: reader.result
+                        }));
+                    }
+                };
+                reader.readAsDataURL(blob);
+            }
+            
+            handleIncomingStream(data) {
+                const { deviceId, data: frameData } = data;
+                let streamElement = this.streams.get(deviceId);
+                
+                if (!streamElement) {
+                    streamElement = this.createStreamElement(deviceId);
+                    this.streams.set(deviceId, streamElement);
+                    document.getElementById('streams-container').appendChild(streamElement.element);
+                }
+                
+                // Update video with new frame
+                const video = streamElement.element.querySelector('.stream-video');
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    const ctx = canvas.getContext('2d');
+                    canvas.width = img.width;
+                    canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    
+                    canvas.toBlob((blob) => {
+                        const url = URL.createObjectURL(blob);
+                        video.src = url;
+                    });
+                };
+                img.src = frameData;
+                
+                this.updateStats();
+            }
+            
+            createStreamElement(deviceId) {
+                const device = this.devices.get(deviceId) || { label: `Device ${deviceId}` };
+                const div = document.createElement('div');
+                div.className = 'incoming-stream';
+                div.innerHTML = `
+                    <div class="stream-header">
+                        <span class="stream-title">${device.label}</span>
+                        <span class="stream-status live">LIVE</span>
+                    </div>
+                    <video class="stream-video" autoplay muted></video>
+                    <div class="stream-info">
+                        Quality: Medium • FPS: ~10 • Latency: <span class="latency">--</span>ms
+                    </div>
+                `;
+                
+                return { element: div, deviceId, lastFrame: Date.now() };
+            }
+            
+            handleStreamStarted(data) {
+                console.log('Stream started:', data);
+            }
+            
+            handleStreamStopped(data) {
+                const streamElement = this.streams.get(data.deviceId);
+                if (streamElement) {
+                    streamElement.element.remove();
+                    this.streams.delete(data.deviceId);
+                    this.updateStats();
+                }
+            }
+            
+            updateConnectionStatus(connected) {
+                const dot = document.getElementById('connection-dot');
+                const text = document.getElementById('connection-text');
+                
+                if (connected) {
+                    dot.classList.add('connected');
+                    text.textContent = 'Connected';
+                } else {
+                    dot.classList.remove('connected');
+                    text.textContent = 'Disconnected';
+                }
+            }
+            
+            updateStats() {
+                document.getElementById('device-count').textContent = `${this.devices.size} devices`;
+                document.getElementById('stream-count').textContent = `${this.streams.size} streams`;
+            }
+            
+            startStatsUpdate() {
+                setInterval(() => {
+                    // Update stream latencies
+                    this.streams.forEach((streamElement, deviceId) => {
+                        const latencySpan = streamElement.element.querySelector('.latency');
+                        const latency = Date.now() - streamElement.lastFrame;
+                        if (latencySpan) {
+                            latencySpan.textContent = Math.min(latency, 9999);
+                        }
+                    });
+                }, 1000);
+            }
+        }
+        
+        // Initialize demo
+        let demo;
+        document.addEventListener('DOMContentLoaded', () => {
+            console.log('DOM loaded, initializing demo...');
+            try {
+                demo = new MediaStreamingDemo();
+                
+                // Setup console toggle
+                const consoleToggle = document.getElementById('console-toggle');
+                if (consoleToggle) {
+                    consoleToggle.addEventListener('click', () => {
+                        if (demo) demo.toggleConsole();
+                    });
+                }
+                
+                console.log('Demo initialized successfully');
+            } catch (error) {
+                console.error('Demo initialization failed:', error);
+                document.body.innerHTML = '<h1 style="color:red">Demo failed to load: ' + error.message + '</h1>';
+            }
+        });
+    </script>
+</body>
+</html>

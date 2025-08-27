@@ -9,7 +9,7 @@ const loadedScripts = new Set();
 
 // Load a single script with SRI verification and fallback support
 export const loadScript = (scriptConfig) => {
-  // Handle legacy string format for backward compatibility
+  // Handle string format
   if (typeof scriptConfig === 'string') {
     scriptConfig = { url: scriptConfig };
   }

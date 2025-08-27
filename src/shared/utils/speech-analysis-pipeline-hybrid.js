@@ -5,7 +5,7 @@
  */
 
 import { createPipeline } from '../core/pipeline.js';
-import { detectRuntime, checkFeatures } from './runtime-detector.js';
+import { checkFeatures, detectRuntime } from './runtime-detector.js';
 import { measureAsync } from '../core/performance-monitor.js';
 import { 
   Capability, 

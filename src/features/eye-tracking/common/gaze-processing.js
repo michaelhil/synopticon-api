@@ -4,10 +4,10 @@
  */
 
 import { 
-  createGazeData, 
   createEyeState, 
-  createGazeSemantics, 
-  createEyeTrackingResult 
+  createEyeTrackingResult, 
+  createGazeData, 
+  createGazeSemantics 
 } from '../../../core/configuration/types.ts';
 
 // Gaze data validation and normalization

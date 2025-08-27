@@ -9,8 +9,8 @@ import { createPipelineConfig } from '../../../../core/pipeline/pipeline-config.
 import { createImageProcessor } from '../../../../core/engine/image-processor.js';
 import { getGlobalResourcePool } from '../../../../core/performance/resource-pool.js';
 import { createEyeTracker } from '../../index.js';
-import { createEyeTrackingResult, createGazeData, Capability, createPerformanceProfile } from '../../../../core/configuration/types.js';
-import { handleError, ErrorCategory, ErrorSeverity } from '../../../../shared/utils/error-handler.js';
+import { Capability, createEyeTrackingResult, createGazeData, createPerformanceProfile } from '../../../../core/configuration/types.js';
+import { ErrorCategory, ErrorSeverity, handleError } from '../../../../shared/utils/error-handler.js';
 
 // Eye tracking pipeline factory
 export const createEyeTrackingPipeline = (userConfig = {}) => {

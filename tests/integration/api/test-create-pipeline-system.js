@@ -448,20 +448,20 @@ try {
   recordTest('Interface Compliance', 'Pipeline has required methods', false, error);
 }
 
-// Test 15: Legacy Compatibility Methods
+// Test 15: Required Pipeline Methods
 try {
   const config = createBasicPipelineConfig();
   const pipeline = createPipeline(config);
   
-  const hasLegacyMethods = 
+  const hasRequiredMethods = 
     typeof pipeline.getHealthStatus === 'function' &&
     typeof pipeline.getPerformanceMetrics === 'function' &&
     typeof pipeline.isCapable === 'function' &&
     typeof pipeline.supportsRealtime === 'function' &&
     typeof pipeline.isHealthy === 'function';
     
-  recordTest('Interface Compliance', 'Pipeline has legacy compatibility methods',
-    hasLegacyMethods,
+  recordTest('Interface Compliance', 'Pipeline has required methods',
+    hasRequiredMethods,
     null,
     {
       hasHealthStatus: typeof pipeline.getHealthStatus === 'function',
@@ -470,7 +470,7 @@ try {
     }
   );
 } catch (error) {
-  recordTest('Interface Compliance', 'Pipeline has legacy compatibility methods', false, error);
+  recordTest('Interface Compliance', 'Pipeline has required methods', false, error);
 }
 
 // Test 16: Method Return Types
@@ -726,7 +726,7 @@ try {
 
 console.log('\n🎯 Testing Capability Matching...\n');
 
-// Test 25: Compatible Pipeline Detection
+// Test 25: Pipeline Matching
 try {
   const pipelines = [
     createPipeline(createBasicPipelineConfig({ 
@@ -753,7 +753,7 @@ try {
   
   const compatible = findCompatiblePipelines(pipelines, requirements);
   
-  recordTest('Capability Matching', 'Find compatible pipelines correctly',
+  recordTest('Capability Matching', 'Find matching pipelines correctly',
     compatible.length === 2 && // face-only and face-emotion should match
     compatible.some(p => p.name === 'face-only') &&
     compatible.some(p => p.name === 'face-emotion'),

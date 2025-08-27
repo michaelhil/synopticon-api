@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediaPipe WebRTC Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        
+        .video-container {
+            position: relative;
+            display: inline-block;
+            margin: 10px;
+        }
+        
+        video {
+            width: 640px;
+            height: 480px;
+            background: #000;
+            border: 2px solid #333;
+        }
+        
+        canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            pointer-events: none;
+            border: 2px solid #333;
+        }
+        
+        .controls {
+            margin: 20px 0;
+        }
+        
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            margin: 5px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        button:hover {
+            background: #45a049;
+        }
+        
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        
+        .status {
+            background: #333;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <h1>MediaPipe Face Mesh WebRTC Demo</h1>
+    
+    <div class="controls">
+        <button id="startBtn">Start Camera</button>
+        <button id="stopBtn" disabled>Stop Camera</button>
+    </div>
+    
+    <div id="status" class="status">Ready</div>
+    
+    <div class="video-container">
+        <video id="localVideo" autoplay muted playsinline></video>
+        <canvas id="overlay"></canvas>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/face_mesh.js" crossorigin="anonymous"></script>
+
+    <script type="module">
+        // Inline face detector to avoid import issues
+        const createFaceDetector = async () => {
+            console.log('Creating inline face detector...');
+            let faceMesh = null;
+            
+            try {
+                faceMesh = new FaceMesh({
+                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/face_mesh/${file}`
+                });
+                
+                faceMesh.setOptions({
+                    maxNumFaces: 1,
+                    refineLandmarks: true,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.5
+                });
+                
+                await faceMesh.initialize();
+                console.log('Inline MediaPipe initialized');
+                
+                return {
+                    detectFaces: async (videoElement) => {
+                        return new Promise((resolve) => {
+                            faceMesh.onResults(resolve);
+                            faceMesh.send({ image: videoElement });
+                        });
+                    }
+                };
+            } catch (error) {
+                console.error('Inline face detector failed:', error);
+                throw error;
+            }
+        };
+        
+        import { createVideoHandler } from './video-handler.js?v=3';
+        import { createOverlayRenderer } from './overlay-renderer.js?v=3';
+        
+        // Core application state
+        const state = {
+            isRunning: false,
+            video: null,
+            canvas: null,
+            detector: null,
+            videoHandler: null,
+            renderer: null
+        };
+        
+        // DOM elements
+        const elements = {
+            startBtn: document.getElementById('startBtn'),
+            stopBtn: document.getElementById('stopBtn'),
+            status: document.getElementById('status'),
+            video: document.getElementById('localVideo'),
+            overlay: document.getElementById('overlay')
+        };
+        
+        // Status logging
+        const updateStatus = (message) => {
+            elements.status.textContent = `${new Date().toLocaleTimeString()} - ${message}`;
+            console.log(message);
+        };
+        
+        // Initialize components
+        const initializeComponents = async () => {
+            try {
+                updateStatus('Initializing components...');
+                
+                // Create video handler first (no async needed)
+                state.videoHandler = createVideoHandler();
+                updateStatus('Video handler initialized');
+                
+                // Create overlay renderer
+                state.renderer = createOverlayRenderer(elements.overlay);
+                updateStatus('Overlay renderer initialized');
+                
+                // Create detector last (async operation)
+                try {
+                    console.log('Creating face detector...');
+                    state.detector = await createFaceDetector();
+                    updateStatus('Face detector initialized');
+                } catch (error) {
+                    console.error('Face detector creation failed:', error);
+                    throw new Error(`Face detector failed: ${error.message}`);
+                }
+                
+                return true;
+            } catch (error) {
+                updateStatus(`Initialization failed: ${error.message}`);
+                console.error('Initialization error:', error);
+                return false;
+            }
+        };
+        
+        // Start camera and processing
+        const startCamera = async () => {
+            if (state.isRunning) return;
+            
+            try {
+                updateStatus('Starting camera...');
+                elements.startBtn.disabled = true;
+                
+                // Check if components are initialized
+                if (!state.videoHandler) {
+                    throw new Error('Video handler not initialized');
+                }
+                if (!state.renderer) {
+                    throw new Error('Renderer not initialized');
+                }
+                if (!state.detector) {
+                    throw new Error('Face detector not initialized');
+                }
+                
+                // Get camera stream
+                const stream = await state.videoHandler.startCamera();
+                elements.video.srcObject = stream;
+                
+                // Wait for video metadata
+                await new Promise((resolve) => {
+                    elements.video.addEventListener('loadedmetadata', resolve, { once: true });
+                });
+                
+                // Setup overlay canvas
+                state.renderer.setupCanvas(elements.video);
+                
+                // Start face detection processing
+                startProcessing();
+                
+                state.isRunning = true;
+                elements.stopBtn.disabled = false;
+                updateStatus('Camera started - processing faces');
+                
+            } catch (error) {
+                updateStatus(`Camera start failed: ${error.message}`);
+                console.error('Camera start error:', error);
+                elements.startBtn.disabled = false;
+            }
+        };
+        
+        // Stop camera and processing
+        const stopCamera = () => {
+            if (!state.isRunning) return;
+            
+            state.videoHandler.stopCamera();
+            state.renderer.clear();
+            elements.video.srcObject = null;
+            
+            state.isRunning = false;
+            elements.startBtn.disabled = false;
+            elements.stopBtn.disabled = true;
+            
+            updateStatus('Camera stopped');
+        };
+        
+        // Main processing loop
+        const startProcessing = () => {
+            console.log('Starting face processing loop...');
+            
+            const processFrame = async () => {
+                if (!state.isRunning) {
+                    console.log('Processing stopped - state.isRunning is false');
+                    return;
+                }
+                
+                console.log('Processing frame...');
+                
+                try {
+                    // Detect faces in current video frame
+                    console.log('Calling detectFaces...');
+                    const results = await state.detector.detectFaces(elements.video);
+                    
+                    console.log('Face detection results:', {
+                        hasFaces: !!results.multiFaceLandmarks,
+                        faceCount: results.multiFaceLandmarks?.length || 0,
+                        firstFaceLandmarks: results.multiFaceLandmarks?.[0]?.length || 0
+                    });
+                    
+                    // Render face mesh overlay
+                    state.renderer.renderFaces(results);
+                    
+                } catch (error) {
+                    console.error('Frame processing error:', error);
+                }
+                
+                // Continue processing
+                requestAnimationFrame(processFrame);
+            };
+            
+            processFrame();
+        };
+        
+        // Event listeners
+        elements.startBtn.addEventListener('click', startCamera);
+        elements.stopBtn.addEventListener('click', stopCamera);
+        
+        // Wait for MediaPipe scripts to load
+        const waitForMediaPipe = () => {
+            return new Promise((resolve) => {
+                const checkMediaPipe = () => {
+                    if (typeof FaceMesh !== 'undefined') {
+                        console.log('MediaPipe scripts loaded');
+                        resolve();
+                    } else {
+                        console.log('Waiting for MediaPipe scripts...');
+                        setTimeout(checkMediaPipe, 100);
+                    }
+                };
+                checkMediaPipe();
+            });
+        };
+        
+        // Initialize on page load
+        document.addEventListener('DOMContentLoaded', async () => {
+            updateStatus('Loading MediaPipe scripts...');
+            await waitForMediaPipe();
+            
+            const initialized = await initializeComponents();
+            if (initialized) {
+                updateStatus('Ready - click Start Camera');
+            }
+        });
+    </script>
+</body>
+</html>

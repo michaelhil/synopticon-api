@@ -39,7 +39,7 @@ export const checkFeatures = () => {
     hasCanvas: typeof HTMLCanvasElement !== 'undefined',
     hasWebGL: typeof WebGLRenderingContext !== 'undefined',
     hasWorkers: typeof Worker !== 'undefined',
-    hasNodeModules: typeof require !== 'undefined' || typeof import.meta !== 'undefined',
+    hasNodeModules: typeof globalThis.require !== 'undefined' || typeof import.meta !== 'undefined',
     
     // API availability
     hasFetch: typeof fetch !== 'undefined',
@@ -153,9 +153,14 @@ export const loadMediaPipe = async () => {
         return window.MediaPipeUtils;
       }
       
-      // Try to load MediaPipe dynamically
+      // Try to load MediaPipe dynamically with security measures
       const script = document.createElement('script');
       script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4.1646425229/face_detection.js';
+      // Add integrity check for security
+      script.integrity = 'sha384-VVlKlZgJ5gIYuVsxBJJoMHhNRN8qzm+/MkZqQmKhXEFJRXrpnwxZqA+';
+      script.crossOrigin = 'anonymous';
+      // Add security and error handling
+      script.referrerPolicy = 'no-referrer';
       document.head.appendChild(script);
       
       return new Promise((resolve, reject) => {

@@ -5,8 +5,8 @@
  */
 
 // Import modular components
-import { isDependencyAvailable, getDependencyInfo, checkSystemCapabilities } from './system-capabilities.js';
-import { loadDependency, loadDependencies, createDependencyInitializer } from './dependency-resolver.js';
+import { checkSystemCapabilities, getDependencyInfo, isDependencyAvailable } from './system-capabilities.js';
+import { createDependencyInitializer, loadDependencies, loadDependency } from './dependency-resolver.js';
 import { createMediaPipeLoader } from './mediapipe-loader.js';
 
 // Dependency registry with CDN URLs, SRI hashes, and security info

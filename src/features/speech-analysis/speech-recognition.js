@@ -18,7 +18,7 @@ import { createBackendManager } from './recognition/backend-manager.js';
 import { createEventManager } from './recognition/event-manager.js';
 import { createMetricsCalculator } from './recognition/metrics-calculator.js';
 import { createWebSpeechAPIBackend } from './recognition/web-speech-backend.js';
-import { createFallbackBackend } from './recognition/fallback-backend.js';
+// Fallback backend removed - Web Speech API only
 
 // Speech recognition backends configuration
 const SPEECH_BACKENDS = {
@@ -28,12 +28,6 @@ const SPEECH_BACKENDS = {
     requirements: ['browser', 'https'],
     availability: 'chrome_edge'
   },
-  speech_recognition_fallback: {
-    name: 'Comprehensive Text Input Simulation',
-    description: 'Advanced text input fallback with UI for development and testing',
-    requirements: ['browser'],
-    availability: 'universal'
-  }
 };
 
 // Create speech recognition factory

@@ -4,22 +4,22 @@
  */
 
 import {
-  createHistoryManager,
   applyMiddlewares,
-  createPersistenceManager,
   createDevToolsManager,
+  createHistoryManager,
+  createPersistenceManager,
   createSubscriptionManager,
   createTimerManager
 } from './state-helpers.js';
 import {
   StateUpdateType,
-  createSetOperation,
-  createUpdateOperation,
+  createBatchOperations,
   createDeleteOperation,
-  createBatchOperations
+  createSetOperation,
+  createUpdateOperation
 } from './state-operations.js';
 
-// Re-export StateUpdateType for compatibility
+// Re-export StateUpdateType
 export { StateUpdateType };
 
 // State subscription types

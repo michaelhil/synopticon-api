@@ -8,23 +8,23 @@ import { createPipelineConfig } from '../../core/pipeline/pipeline-config.js';
 import { createImageProcessor } from '../../core/engine/image-processor.js';
 import { getGlobalResourcePool } from '../../core/performance/resource-pool.js';
 import { 
+  IRIS_LANDMARKS,
+  MEDIAPIPE_LANDMARKS,
+  calculateFaceBoundingBox,
+  checkMediaPipeAvailability,
   createMediaPipeBase,
   createMediaPipeLoader,
-  checkMediaPipeAvailability,
-  MEDIAPIPE_LANDMARKS,
-  IRIS_LANDMARKS,
-  extractKeyPoints,
-  calculateFaceBoundingBox
+  extractKeyPoints
 } from '../../core/integration/mediapipe-commons.js';
 import { 
   Capability,
-  createPerformanceProfile,
-  createFaceResult,
-  createPose6DOF,
+  createAnalysisResult,
   createEyeResult,
-  createAnalysisResult
+  createFaceResult,
+  createPerformanceProfile,
+  createPose6DOF
 } from '../../core/configuration/types.ts';
-import { handleError, ErrorCategory, ErrorSeverity } from '../../shared/utils/error-handler.js';
+import { ErrorCategory, ErrorSeverity, handleError } from '../../shared/utils/error-handler.js';
 
 // Use MediaPipe commons for shared configuration
 

@@ -4,13 +4,13 @@
  */
 
 import { ComponentState } from './component-integration.js';
-import { createErrorBoundary, ErrorSeverity, RecoveryStrategy } from './error-boundaries.js';
+import { ErrorSeverity, RecoveryStrategy, createErrorBoundary } from './error-boundaries.js';
 import { calculateExecutionOrder } from './lifecycle-helpers.js';
 import { 
-  createInitializeAllOperation,
-  createStartAllOperation, 
-  createStopAllOperation,
-  createCleanupAllOperation
+  createCleanupAllOperation,
+  createInitializeAllOperation, 
+  createStartAllOperation,
+  createStopAllOperation
 } from './lifecycle-bulk-operations.js';
 
 // Lifecycle phases

@@ -4,16 +4,16 @@
  */
 
 import createSpeechAnalysisAPI, {
-  validatePrompts,
-  suggestPrompts,
-  analyzeContext,
   CONTEXT_STRATEGIES,
-  createSpeechRecognitionResult,
-  createSpeechAnalysisResult,
+  analyzeContext,
   createConversationContext,
   createLLMConfig,
+  createSpeechAnalysisResult,
+  createSpeechEvent,
   createSpeechPipelineStatus,
-  createSpeechEvent
+  createSpeechRecognitionResult,
+  suggestPrompts,
+  validatePrompts
 } from './core/index.ts';
 
 // Import remaining core factory functions for backward compatibility

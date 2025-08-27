@@ -28,6 +28,25 @@
             margin-bottom: 2rem;
             box-shadow: 0 8px 32px rgba(0,0,0,0.1);
             text-align: center;
+            position: relative;
+        }
+
+        .back-link {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: transform 0.2s;
+            z-index: 10;
+        }
+
+        .back-link:hover {
+            transform: translateX(-5px);
         }
         
         .header h1 {
@@ -293,6 +312,7 @@
 <body>
     <div class="container">
         <div class="header">
+            <a href="index.html" class="back-link">← Back to Demos</a>
             <div class="phase-badge">Phase 2: Multi-Device Coordination</div>
             <h1>🎥 Enhanced Media Streaming Demo</h1>
             <p>Advanced multi-device coordination with adaptive quality control, load balancing, and network monitoring</p>
@@ -733,11 +753,11 @@
             log('Performing health check...', 'info');
             
             try {
-                const result = await apiCall('/api/media/health');
+                const result = await apiCall('/api/media/health/enhanced');
                 
                 if (result.success && result.health) {
                     const health = result.health;
-                    log(`System Health: ${health.overall} | Media: ${health.mediaStreaming} | Uptime: ${formatDuration(health.uptime)}`, 'success');
+                    log(`System Health: ${health.overall} | Media API: ${health.mediaAPI} | Uptime: ${formatDuration(health.uptime)}`, 'success');
                     updateNetworkStatus(health.overall === 'healthy');
                 } else {
                     log(`Health check failed: ${result.error}`, 'error');
@@ -833,11 +853,11 @@
         function startAutoRefresh() {
             setInterval(() => {
                 getCoordinatorStatus();
-            }, 5000);
+            }, 30000);
 
             setInterval(() => {
                 getHealthCheck();
-            }, 10000);
+            }, 30000);
         }
 
         // Initialize

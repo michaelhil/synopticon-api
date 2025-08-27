@@ -19,7 +19,7 @@
         }
 
         .container {
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
             background: rgba(255, 255, 255, 0.95);
             border-radius: 15px;
@@ -75,18 +75,35 @@
 
         .demos {
             display: grid;
-            gap: 20px;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 25px;
+            margin-bottom: 40px;
         }
 
         .demo-card {
-            background: #f8f9fa;
-            border-radius: 10px;
+            background: white;
+            border-radius: 12px;
             padding: 25px;
             border: 2px solid #e9ecef;
             transition: all 0.3s ease;
             text-decoration: none;
             color: inherit;
-            display: block;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .demo-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transform: translateY(-100%);
+            transition: transform 0.3s ease;
         }
 
         .demo-card:hover {
@@ -95,20 +112,43 @@
             box-shadow: 0 10px 30px rgba(102, 126, 234, 0.2);
         }
 
+        .demo-card:hover::before {
+            transform: translateY(0);
+        }
+
+        /* Responsive grid layouts */
+        @media (max-width: 1024px) {
+            .demos {
+                grid-template-columns: repeat(2, 1fr);
+            }
+        }
+
+        @media (max-width: 640px) {
+            .demos {
+                grid-template-columns: 1fr;
+            }
+        }
+
         .demo-title {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: bold;
             color: #333;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
+        }
+
+        .demo-icon {
+            font-size: 28px;
         }
 
         .demo-description {
             color: #666;
-            line-height: 1.6;
+            line-height: 1.5;
             margin-bottom: 15px;
+            font-size: 14px;
+            flex-grow: 1;
         }
 
         .demo-features {
@@ -169,6 +209,84 @@
             Powered by zero-dependency, Bun-native architecture</p>
         </div>
 
+        <div class="demos">
+            <a href="/examples/playground/face-tracking-demo.html" class="demo-card">
+                <div class="demo-title">
+                    <span class="demo-icon">🎭</span>
+                    <span>Face Tracking</span>
+                </div>
+                <div class="demo-description">
+                    Real-time face mesh detection with 468 facial landmarks. Track facial contours, eye movements, and expressions with MediaPipe.
+                </div>
+                <div class="demo-features">
+                    <span class="feature-badge">MediaPipe</span>
+                    <span class="feature-badge">468 Landmarks</span>
+                    <span class="feature-badge">WebGL</span>
+                </div>
+            </a>
+
+            <a href="/examples/playground/emotion-detection-demo.html" class="demo-card">
+                <div class="demo-title">
+                    <span class="demo-icon">😊</span>
+                    <span>Emotion Detection</span>
+                </div>
+                <div class="demo-description">
+                    Advanced emotion analysis using CNN models with 7-emotion classification. Real-time detection with confidence scores.
+                </div>
+                <div class="demo-features">
+                    <span class="feature-badge">CNN Model</span>
+                    <span class="feature-badge">7 Emotions</span>
+                    <span class="feature-badge">Live Analysis</span>
+                </div>
+            </a>
+
+            <a href="/examples/playground/eye-tracking-demo.html" class="demo-card">
+                <div class="demo-title">
+                    <span class="demo-icon">👁️</span>
+                    <span>Eye Tracking</span>
+                </div>
+                <div class="demo-description">
+                    Precise gaze estimation and eye movement tracking. Includes pupil detection, blink detection, and attention analysis.
+                </div>
+                <div class="demo-features">
+                    <span class="feature-badge">Gaze Detection</span>
+                    <span class="feature-badge">Pupil Tracking</span>
+                    <span class="feature-badge">Attention Maps</span>
+                </div>
+            </a>
+
+
+            <div class="demo-card coming-soon">
+                <div class="demo-title">
+                    <span class="demo-icon">🎤</span>
+                    <span>Speech Analysis</span>
+                </div>
+                <div class="demo-description">
+                    Real-time speech recognition with emotion detection and conversation analytics. Advanced audio processing.
+                </div>
+                <div class="demo-features">
+                    <span class="feature-badge">Voice AI</span>
+                    <span class="feature-badge">Speaker ID</span>
+                    <span class="feature-badge">Coming Soon</span>
+                </div>
+            </div>
+
+            <a href="/examples/streaming/mediapipe-webrtc-demo.html" class="demo-card">
+                <div class="demo-title">
+                    <span class="demo-icon">🧠</span>
+                    <span>MediaPipe WebRTC</span>
+                </div>
+                <div class="demo-description">
+                    Real-time peer-to-peer video streaming with MediaPipe face analysis. WebRTC data channels for analysis transmission.
+                </div>
+                <div class="demo-features">
+                    <span class="feature-badge">WebRTC P2P</span>
+                    <span class="feature-badge">Face Mesh</span>
+                    <span class="feature-badge">Data Channels</span>
+                </div>
+            </a>
+        </div>
+
         <div class="stats">
             <div class="stat-card">
                 <div class="stat-number">38.8MB</div>
@@ -185,89 +303,6 @@
             <div class="stat-card">
                 <div class="stat-number">&lt;1ms</div>
                 <div class="stat-label">Face Detection Time</div>
-            </div>
-        </div>
-
-        <div class="demos">
-            <a href="/examples/playground/face-tracking-demo.html" class="demo-card">
-                <div class="demo-title">
-                    🎭 Real-Time Face Tracking
-                </div>
-                <div class="demo-description">
-                    Experience real-time face mesh detection with 468 facial landmarks using MediaPipe. 
-                    See facial contours, eye tracking, and mouth movements detected in real-time from your webcam.
-                </div>
-                <div class="demo-features">
-                    <span class="feature-badge">MediaPipe</span>
-                    <span class="feature-badge">468 Landmarks</span>
-                    <span class="feature-badge">Real-Time</span>
-                    <span class="feature-badge">WebGL Accelerated</span>
-                </div>
-            </a>
-
-            <a href="/examples/playground/emotion-detection-demo.html" class="demo-card">
-                <div class="demo-title">
-                    😊 Emotion Recognition
-                </div>
-                <div class="demo-description">
-                    Advanced emotion analysis using CNN models with 7-emotion classification. 
-                    Real-time emotion detection with confidence scores and live camera feed.
-                </div>
-                <div class="demo-features">
-                    <span class="feature-badge">CNN Model</span>
-                    <span class="feature-badge">7 Emotions</span>
-                    <span class="feature-badge">Real-Time</span>
-                    <span class="feature-badge">Live Analysis</span>
-                </div>
-            </a>
-
-            <a href="/examples/playground/eye-tracking-demo.html" class="demo-card">
-                <div class="demo-title">
-                    👁️ Eye Tracking
-                </div>
-                <div class="demo-description">
-                    Precise gaze estimation and eye movement tracking for attention analysis. 
-                    Includes pupil detection, blink detection, and gaze direction calculation.
-                </div>
-                <div class="demo-features">
-                    <span class="feature-badge">Gaze Estimation</span>
-                    <span class="feature-badge">Pupil Tracking</span>
-                    <span class="feature-badge">Blink Detection</span>
-                    <span class="feature-badge">Attention Maps</span>
-                </div>
-            </a>
-
-            <a href="/examples/playground/enhanced-media-streaming-demo.html" class="demo-card">
-                <div class="demo-title">
-                    🎥 Enhanced Media Streaming
-                </div>
-                <div class="demo-description">
-                    Advanced multi-device media streaming with adaptive quality control, load balancing, and real-time monitoring. 
-                    Features device discovery, batch operations, and comprehensive coordinator management.
-                </div>
-                <div class="demo-features">
-                    <span class="feature-badge">Multi-Device</span>
-                    <span class="feature-badge">Quality Control</span>
-                    <span class="feature-badge">Load Balancing</span>
-                    <span class="feature-badge">WebSocket Streaming</span>
-                    <span class="feature-badge">Real-Time Stats</span>
-                </div>
-            </a>
-
-            <div class="demo-card coming-soon">
-                <div class="demo-title">
-                    🎤 Speech Analysis
-                </div>
-                <div class="demo-description">
-                    Real-time speech recognition, emotion detection in voice, and conversation analytics. 
-                    Advanced audio processing with speaker diarization capabilities.
-                </div>
-                <div class="demo-features">
-                    <span class="feature-badge">Speech Recognition</span>
-                    <span class="feature-badge">Voice Emotions</span>
-                    <span class="feature-badge">Speaker ID</span>
-                    <span class="feature-badge">Real-Time</span>
-                </div>
             </div>
         </div>
 

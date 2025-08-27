@@ -4,7 +4,7 @@
  */
 
 import { INTERPOLATION_METHODS } from '../image-operations.js';
-import { handleError, ErrorCategory, ErrorSeverity } from '../../../shared/utils/error-handler.js';
+import { ErrorCategory, ErrorSeverity, handleError } from '../../../shared/utils/error-handler.js';
 
 export const createResizeProcessor = (resourcePool) => {
   /**

@@ -3,7 +3,7 @@
  * Handles cleanup and memory management
  */
 
-import { handleError, ErrorCategory, ErrorSeverity } from '../../shared/utils/error-handler.js';
+import { ErrorCategory, ErrorSeverity, handleError } from '../../shared/utils/error-handler.js';
 
 export const createGarbageCollector = (state, poolConfig, canvasManager) => {
   const updateMemoryPressure = () => {

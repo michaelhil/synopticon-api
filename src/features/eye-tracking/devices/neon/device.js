@@ -4,12 +4,12 @@
  * Following functional programming patterns with factory functions
  */
 
-import { createWebSocketTransport, createHttpTransport } from '../../../../core/integration/transport.ts';
+import { createHttpTransport, createWebSocketTransport } from '../../../../core/integration/transport.ts';
 import { createDataStream } from '../../../../core/state/streams.js';
 import { createGazeProcessor } from '../../common/gaze-processing.js';
 import { 
-  createDeviceStatus, 
   createCalibrationResult, 
+  createDeviceStatus, 
   createEyeTrackingResult 
 } from '../../../../core/configuration/types.ts';
 

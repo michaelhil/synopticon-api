@@ -3,9 +3,9 @@
  * Handles image filtering operations like blur, sharpen, edge detection
  */
 
-import { handleError, ErrorCategory, ErrorSeverity } from '../../../shared/utils/error-handler.js';
+import { ErrorCategory, ErrorSeverity, handleError } from '../../../shared/utils/error-handler.js';
 
-export const createFilterProcessor = (resourcePool) => {
+export const createFilterProcessor = (_resourcePool) => {
   // Common convolution kernels
   const KERNELS = {
     BLUR: [
@@ -173,7 +173,7 @@ export const createFilterProcessor = (resourcePool) => {
     try {
       const { data, width, height } = imageData;
       const outputData = new Uint8ClampedArray(data.length);
-      const windowSize = radius * 2 + 1;
+      const _windowSize = radius * 2 + 1;
       
       for (let y = 0; y < height; y++) {
         for (let x = 0; x < width; x++) {

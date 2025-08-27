@@ -6,8 +6,8 @@
 
 import { createLLMClient } from './llm-client.js';
 import {
-  createSpeechAnalysisResult,
   createAnalysisPromptResult,
+  createSpeechAnalysisResult,
   createSpeechEvent
 } from '../../core/configuration/types.ts';
 

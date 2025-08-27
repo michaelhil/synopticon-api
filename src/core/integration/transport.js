@@ -329,7 +329,7 @@ export const createWebSocketTransport = (config = {}) => {
 // HTTP transport factory using Bun's fetch
 export const createHttpTransport = (config = {}) => {
   const state = {
-    baseUrl: config.baseUrl || (process.env.TRANSPORT_BASE_URL || 'http://localhost:8080'),
+    baseUrl: config.baseUrl || (process.env.TRANSPORT_BASE_URL || 'http://localhost:8080'), // localhost HTTP OK for dev
     headers: config.headers || {
       'Content-Type': 'application/json'
     },

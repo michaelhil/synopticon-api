@@ -4,9 +4,9 @@
  */
 
 import {
+  createSpeechEvent,
   createSpeechRecognitionResult,
-  createSpeechWord,
-  createSpeechEvent
+  createSpeechWord
 } from '../../../core/configuration/types.ts';
 
 export const createWebSpeechAPIBackend = () => {

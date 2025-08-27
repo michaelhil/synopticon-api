@@ -9,27 +9,27 @@ import { createPipelineConfig } from '../../core/pipeline/pipeline-config.js';
 import { createImageProcessor } from '../../core/engine/image-processor.js';
 import { getGlobalResourcePool } from '../../core/performance/resource-pool.js';
 import { 
+  MEDIAPIPE_LANDMARKS,
+  calculateFaceBoundingBox,
+  checkMediaPipeAvailability,
   createMediaPipeBase,
   createMediaPipeLoader,
-  checkMediaPipeAvailability,
-  MEDIAPIPE_LANDMARKS,
-  extractKeyPoints,
-  calculateFaceBoundingBox
+  extractKeyPoints
 } from '../../core/integration/mediapipe-commons.js';
 import { 
   Capability,
-  createPerformanceProfile,
+  createAnalysisResult,
   createFaceResult,
-  createPose3DOF,
-  createAnalysisResult
+  createPerformanceProfile,
+  createPose3DOF
 } from '../../core/configuration/types.ts';
-import { handleError, ErrorCategory, ErrorSeverity } from '../../shared/utils/error-handler.js';
+import { ErrorCategory, ErrorSeverity, handleError } from '../../shared/utils/error-handler.js';
 import { 
-  detectRuntime, 
   checkFeatures, 
-  loadMediaPipe, 
+  createUniversalCanvas, 
+  detectRuntime, 
   imageToMediaPipe,
-  createUniversalCanvas 
+  loadMediaPipe 
 } from '../../shared/utils/runtime-detector.js';
 
 // 3DOF pose estimation from MediaPipe landmarks

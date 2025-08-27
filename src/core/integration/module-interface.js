@@ -33,7 +33,7 @@ export const createAnalysisModule = (implementation) => {
   if (!implementation.process) {
     throw new Error('Module must implement process() function');
   }
-  if (!implementation.meta,data) {
+  if (!implementation.metadata) {
     throw new Error('Module must provide metadata object');
   }
 

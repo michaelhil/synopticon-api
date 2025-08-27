@@ -110,7 +110,7 @@ export const createPipelineInterface = (state, operations) => {
     // Lifecycle
     cleanup,
     
-    // Pipeline interface compatibility
+    // Pipeline interface
     name: `media_streaming_${state.deviceInfo.id}`,
     type: 'media_streaming',
     metadata: {

@@ -3,7 +3,7 @@
 // Integration test to verify the functional conversion works end-to-end
 import createFaceAnalysisEngine from '../../src/index.js';
 import { createCameraManager, FrameProcessor } from '../../src/shared/utils/camera.js';
-import { createWebGLEngine } from '../../src/core/webgl-engine.js';
+import { createWebGLEngine } from '../../src/core/engine/webgl-engine.js';
 
 console.log('🧪 Running integration tests...\n');
 

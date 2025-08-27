@@ -43,7 +43,7 @@
  * ```
  */
 
-import { handleError, ErrorCategory, ErrorSeverity } from '../../shared/utils/error-handler.js';
+import { ErrorCategory, ErrorSeverity, handleError } from '../../shared/utils/error-handler.js';
 
 // Pipeline module mapping with lazy loading functions
 const PIPELINE_LOADERS = {

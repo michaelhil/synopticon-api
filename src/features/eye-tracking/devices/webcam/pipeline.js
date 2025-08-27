@@ -8,25 +8,25 @@ import { createPipelineConfig } from '../../../../core/pipeline/pipeline-config.
 import { createImageProcessor } from '../../../../core/engine/image-processor.js';
 import { getGlobalResourcePool } from '../../../../core/performance/resource-pool.js';
 import { 
+  IRIS_LANDMARKS as SHARED_IRIS_LANDMARKS,
+  calculateEyeAspectRatio,
+  checkMediaPipeAvailability,
   createMediaPipeBase,
   createMediaPipeLoader,
-  checkMediaPipeAvailability,
-  IRIS_LANDMARKS as SHARED_IRIS_LANDMARKS,
-  extractIrisLandmarks,
-  calculateEyeAspectRatio
+  extractIrisLandmarks
 } from '../../../../core/integration/mediapipe-commons.js';
 import { 
   Capability,
-  createPerformanceProfile,
+  createAnalysisResult,
   createEyeResult,
-  createAnalysisResult
+  createPerformanceProfile
 } from '../../../../core/configuration/types.js';
-import { handleError, ErrorCategory, ErrorSeverity } from '../../../../shared/utils/error-handler.js';
+import { ErrorCategory, ErrorSeverity, handleError } from '../../../../shared/utils/error-handler.js';
 
-// Use shared iris landmarks from MediaPipe commons (maintaining local compatibility)
+// Use shared iris landmarks from MediaPipe commons
 const IRIS_LANDMARKS = SHARED_IRIS_LANDMARKS;
 
-// Extended iris landmark definitions (maintaining backward compatibility)
+// Extended iris landmark definitions
 const EXTENDED_IRIS_LANDMARKS = {
   // Inherit from shared landmarks
   ...SHARED_IRIS_LANDMARKS,

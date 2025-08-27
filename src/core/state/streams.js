@@ -353,24 +353,24 @@ export const streamFactory = createStreamFactory();
 
 // Register basic stream types
 streamFactory.register('generic', createDataStream);
-streamFactory.register('video', (,config) => createDataStream({ 
+streamFactory.register('video', (_type, config) => createDataStream({ 
   ...config, 
   sampleRate: 30,
   bufferSize: 60 
 }));
-streamFactory.register('audio', (,config) => createDataStream({ 
+streamFactory.register('audio', (_type, config) => createDataStream({ 
   ...config, 
   sampleRate: 16000,
   bufferSize: 1600 
 }));
-streamFactory.register('sensor', (,config) => createDataStream({ 
+streamFactory.register('sensor', (_type, config) => createDataStream({ 
   ...config, 
   sampleRate: 100,
   bufferSize: 500 
 }));
 
 // Eye tracking stream with high-frequency data support and optimizations
-streamFactory.register('eyetracking', (,config) => {
+streamFactory.register('eyetracking', (_type, config) => {
   const optimizedConfig = {
     ...config, 
     sampleRate: 200, // 200Hz for eye tracking

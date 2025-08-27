@@ -1,0 +1,500 @@
+{
+  "title": "WebRTC Implementation Guide for Synopticon API",
+  "version": "1.0.0",
+  "lastUpdated": "2024-01-27",
+  "overview": {
+    "description": "Complete guide for WebRTC implementation in Synopticon, including architecture, signaling, troubleshooting, and performance optimization",
+    "scope": "WebRTC video streaming, face landmark transmission, MediaPipe integration",
+    "keyComponents": [
+      "WebSocket signaling server",
+      "WebRTC peer connections",
+      "MediaPipe face detection",
+      "Data channel for landmarks"
+    ]
+  },
+  
+  "architecture": {
+    "systemDesign": {
+      "description": "Two-phase WebRTC architecture with discovery and direct signaling",
+      "phases": {
+        "discovery": {
+          "description": "Broadcast phase where receivers find broadcasters",
+          "flow": [
+            "Receiver connects to WebSocket server",
+            "Receiver broadcasts 'request_offer' message",
+            "Server adds sourceSession and broadcasts to all",
+            "Broadcasters receive message with sourceSession"
+          ],
+          "messageFormat": {
+            "type": "request_offer",
+            "deviceId": "sessionId",
+            "timestamp": "Date.now()",
+            "targetSession": null
+          }
+        },
+        "directSignaling": {
+          "description": "Targeted peer-to-peer signaling phase",
+          "flow": [
+            "Broadcaster sends targeted offer to receiver",
+            "Receiver sends targeted answer to broadcaster",
+            "Both exchange ICE candidates directly"
+          ],
+          "messageFormat": {
+            "type": "webrtc_offer | webrtc_answer | webrtc_ice",
+            "deviceId": "sessionId",
+            "timestamp": "Date.now()",
+            "targetSession": "peerSessionId",
+            "sdp": "RTCSessionDescription (for offer/answer)",
+            "candidate": "RTCIceCandidate (for ICE)"
+          }
+        }
+      }
+    },
+    
+    "serverInfrastructure": {
+      "websocketHandler": {
+        "path": "src/services/api/websocket/message-handlers.js",
+        "supportedMessages": [
+          "configure",
+          "webrtc_offer",
+          "webrtc_answer",
+          "webrtc_ice",
+          "request_offer",
+          "stream_frame"
+        ],
+        "routing": {
+          "broadcast": "Messages without targetSession",
+          "targeted": "Messages with targetSession get sourceSession added"
+        }
+      },
+      "mediaStreamHandler": {
+        "path": "src/services/api/websocket/media-stream-handler.ts",
+        "keyFunction": "handleWebRTCSignaling",
+        "logic": {
+          "withTargetSession": "Send directly to specific peer with sourceSession added",
+          "withoutTargetSession": "Broadcast to all sessions except sender with sourceSession added"
+        },
+        "criticalFix": {
+          "problem": "Broadcast messages didn't include sourceSession",
+          "solution": "Modified handleWebRTCSignaling to add sourceSession to broadcast messages",
+          "code": "const messageWithSource = { ...message, sourceSession: sessionId }; broadcast(messageWithSource, sessionId);"
+        }
+      }
+    },
+    
+    "clientArchitecture": {
+      "roles": {
+        "broadcaster": {
+          "responsibilities": [
+            "Capture local video/audio stream",
+            "Process video through MediaPipe",
+            "Create WebRTC offer when receiver found",
+            "Send face landmarks via data channel"
+          ],
+          "state": {
+            "role": "broadcaster",
+            "isBroadcasting": true,
+            "peerSessionId": "receiver's session ID"
+          }
+        },
+        "receiver": {
+          "responsibilities": [
+            "Broadcast request_offer to find broadcaster",
+            "Accept WebRTC offer and send answer",
+            "Receive video stream",
+            "Receive and render face landmarks"
+          ],
+          "state": {
+            "role": "receiver",
+            "peerSessionId": "broadcaster's session ID"
+          }
+        }
+      },
+      "components": {
+        "peerConnection": {
+          "configuration": {
+            "iceServers": [
+              { "urls": "stun:stun.l.google.com:19302" }
+            ],
+            "bundlePolicy": "max-bundle",
+            "rtcpMuxPolicy": "require"
+          },
+          "videoEncoding": {
+            "maxBitrate": 1500000,
+            "maxFramerate": 25,
+            "note": "Balanced for quality vs performance"
+          }
+        },
+        "dataChannel": {
+          "name": "faceData",
+          "ordered": true,
+          "throttling": {
+            "targetFPS": 12,
+            "reason": "Reduce CPU load while maintaining smooth animation"
+          }
+        }
+      }
+    }
+  },
+  
+  "problemsAndSolutions": {
+    "signalingIssues": {
+      "sessionIdMismatch": {
+        "problem": "Broadcaster used random stream ID, receiver used WebSocket session ID",
+        "symptoms": "IDs don't match, connection fails",
+        "solution": "Both use WebSocket session IDs consistently",
+        "implementation": "Removed generateStreamId(), use state.sessionId everywhere"
+      },
+      
+      "broadcastSignaling": {
+        "problem": "WebRTC offers/answers were broadcast to all sessions",
+        "symptoms": "Multiple sessions receiving offers meant for specific peers",
+        "solution": "Use targetSession for direct peer-to-peer messaging",
+        "implementation": "Always include targetSession in WebRTC messages except request_offer"
+      },
+      
+      "missingSourceSession": {
+        "problem": "Broadcast messages didn't include sourceSession",
+        "symptoms": "Receiver broadcasts request_offer, broadcaster doesn't know who sent it",
+        "solution": "Modified server to add sourceSession to broadcast messages",
+        "code": {
+          "file": "media-stream-handler.ts:171-176",
+          "fix": "const messageWithSource = { ...message, sourceSession: sessionId };"
+        }
+      },
+      
+      "unknownMessageType": {
+        "problem": "Server rejected custom message types like webrtc_seek_broadcaster",
+        "symptoms": "Error: Unknown message type: webrtc_seek_broadcaster",
+        "solution": "Use existing message type 'request_offer' instead",
+        "implementation": "Changed webrtc_seek_broadcaster to request_offer"
+      },
+      
+      "notificationWrapper": {
+        "problem": "Tried to wrap WebRTC messages in notification format",
+        "symptoms": "Error: Unknown message type: notification",
+        "solution": "Send WebRTC messages directly without wrapper",
+        "badCode": "{ type: 'notification', topic: 'webrtc_broadcast', data: {...} }",
+        "goodCode": "{ type: 'webrtc_offer', targetSession: peerId, sdp: offer }"
+      }
+    },
+    
+    "performanceIssues": {
+      "lowFPSWhenBroadcasting": {
+        "problem": "FPS drops from 55 to 25 when broadcasting starts",
+        "causes": [
+          "HD video encoding on main thread",
+          "JSON serialization of 468 landmarks",
+          "High frequency data transmission"
+        ],
+        "solutions": {
+          "videoOptimization": {
+            "maxBitrate": "Reduced from 2Mbps to 1.5Mbps",
+            "maxFramerate": "Reduced from 30 to 25 FPS",
+            "resolution": "Keep at 720p for quality"
+          },
+          "dataThrottling": {
+            "targetDataFPS": "Reduced from 15 to 12 FPS",
+            "implementation": "Check time since last send before transmitting"
+          },
+          "landmarkOptimization": {
+            "precision": "Reduced from 15 to 4 decimal places",
+            "savings": "40% reduction in JSON size"
+          },
+          "mediaPipeConfig": {
+            "refineLandmarks": "Set to false for better performance",
+            "selfieMode": "Removed - caused coordinate mirroring issues"
+          }
+        }
+      },
+      
+      "multipleTabs": {
+        "problem": "Multiple tabs running MediaPipe caused severe performance issues",
+        "symptoms": "12-25 FPS on Firefox, memory pressure warnings",
+        "solution": "Limit to 2 tabs (1 broadcaster, 1 receiver)",
+        "explanation": "Each tab runs separate MediaPipe instance consuming significant resources"
+      },
+      
+      "faceMeshDisplacement": {
+        "problem": "Face mesh appeared displaced and moved inversely",
+        "cause": "selfieMode: true mirrors coordinates horizontally",
+        "solution": "Remove selfieMode or set to false",
+        "implementation": "Removed selfieMode from MediaPipe options"
+      }
+    },
+    
+    "videoQualityIssues": {
+      "pixelatedVideo": {
+        "problem": "Receiver sees pixelated video",
+        "cause": "Low resolution (640x480) and bitrate",
+        "solution": {
+          "resolution": "Increased to 1280x720 (HD)",
+          "bitrate": "Set to 1.5Mbps for good quality",
+          "frameRate": "25 FPS for smooth motion",
+          "css": "Updated max-width/height to 1280x720"
+        }
+      },
+      
+      "initialFaceMeshMissing": {
+        "problem": "Face mesh doesn't appear when camera first starts",
+        "cause": "Canvas not properly initialized on video load",
+        "solution": {
+          "immediatSetup": "Setup canvas immediately on loadedmetadata",
+          "dimensionCheck": "Wait for video dimensions before canvas setup",
+          "retryLogic": "Auto-retry setup after 500ms",
+          "contextInit": "Always get canvas context to ensure initialization"
+        }
+      }
+    },
+    
+    "uiUsabilityIssues": {
+      "tooManyButtons": {
+        "problem": "Separate stop button was redundant",
+        "solution": "Made all buttons toggles - click to start, click again to stop",
+        "implementation": {
+          "camera": "toggleCamera() stops if running, starts if not",
+          "broadcast": "toggleBroadcasting() with text change",
+          "receive": "toggleReceiving() with text change"
+        }
+      },
+      
+      "colorDistinction": {
+        "problem": "Local and remote face mesh looked identical",
+        "solution": "Remote mesh rendered in red, local in green",
+        "implementation": "drawFaceMesh() takes isRemote parameter"
+      }
+    },
+    
+    "browserCompatibility": {
+      "firefoxPerformance": {
+        "problem": "Firefox had worse performance than Safari",
+        "causes": "Console logging, no hardware acceleration",
+        "solutions": [
+          "Remove console.log from frequent operations",
+          "Reduce data channel frequency",
+          "Use requestAnimationFrame properly"
+        ]
+      },
+      
+      "caching": {
+        "problem": "Browser cached old JavaScript causing confusion",
+        "symptoms": "Fixed code still showing old behavior",
+        "solution": "Add cache-busting query parameters or use incognito mode",
+        "example": "?v=Date.now() or hard refresh"
+      }
+    }
+  },
+  
+  "implementationPatterns": {
+    "signaling": {
+      "connectionFlow": {
+        "broadcaster": [
+          "Connect to WebSocket server",
+          "Send configure message",
+          "Create peer connection",
+          "Add local stream tracks",
+          "Create data channel",
+          "Wait for request_offer",
+          "Create and send targeted offer",
+          "Receive answer",
+          "Exchange ICE candidates"
+        ],
+        "receiver": [
+          "Connect to WebSocket server",
+          "Send configure message", 
+          "Create peer connection",
+          "Send request_offer broadcast",
+          "Receive targeted offer",
+          "Create and send targeted answer",
+          "Exchange ICE candidates",
+          "Receive stream and data channel"
+        ]
+      },
+      
+      "messageExamples": {
+        "configure": {
+          "type": "configure",
+          "requirements": { "webrtc": true }
+        },
+        "requestOffer": {
+          "type": "request_offer",
+          "deviceId": "ws_receiver_123",
+          "timestamp": 1234567890
+        },
+        "webrtcOffer": {
+          "type": "webrtc_offer",
+          "targetSession": "ws_receiver_123",
+          "deviceId": "ws_broadcaster_456",
+          "sdp": "RTCSessionDescription object"
+        },
+        "webrtcAnswer": {
+          "type": "webrtc_answer",
+          "targetSession": "ws_broadcaster_456",
+          "deviceId": "ws_receiver_123",
+          "sdp": "RTCSessionDescription object"
+        },
+        "webrtcIce": {
+          "type": "webrtc_ice",
+          "targetSession": "ws_receiver_123",
+          "deviceId": "ws_broadcaster_456",
+          "candidate": "RTCIceCandidate object"
+        }
+      }
+    },
+    
+    "dataTransmission": {
+      "faceLandmarks": {
+        "format": {
+          "type": "face_landmarks",
+          "timestamp": "Date.now()",
+          "landmarks": "Array of face landmark arrays"
+        },
+        "optimization": {
+          "throttling": "Send at 12 FPS instead of video FPS",
+          "precision": "Round to 4 decimal places",
+          "compression": "Consider binary format for production"
+        }
+      },
+      
+      "performanceMonitoring": {
+        "metrics": [
+          "Frame processing time",
+          "Data channel queue size",
+          "Network round-trip time",
+          "CPU usage percentage"
+        ],
+        "adaptiveQuality": {
+          "trigger": "FPS below threshold",
+          "actions": [
+            "Reduce landmark precision",
+            "Lower data transmission rate",
+            "Decrease video quality"
+          ]
+        }
+      }
+    },
+    
+    "errorHandling": {
+      "connectionFailures": {
+        "iceFailure": {
+          "detection": "connectionState === 'failed'",
+          "recovery": "Recreate peer connection and retry"
+        },
+        "signalingTimeout": {
+          "detection": "No response after 10 seconds",
+          "recovery": "Reconnect WebSocket and retry"
+        }
+      },
+      
+      "gracefulDegradation": {
+        "noMediaPipe": {
+          "detection": "typeof FaceMesh === 'undefined'",
+          "fallback": "Stream video without face tracking"
+        },
+        "lowPerformance": {
+          "detection": "FPS consistently below 15",
+          "fallback": "Disable face tracking, video only"
+        }
+      }
+    }
+  },
+  
+  "bestPractices": {
+    "development": {
+      "testing": [
+        "Always test with exactly 2 tabs initially",
+        "Use browser developer tools Network tab to monitor WebSocket messages",
+        "Check console for sourceSession in messages",
+        "Monitor FPS counter during streaming",
+        "Test on both Firefox and Safari"
+      ],
+      "debugging": {
+        "webSocketMessages": "Log all sent/received messages with type and session IDs",
+        "peerConnection": "Monitor connectionState and iceConnectionState",
+        "dataChannel": "Check readyState before sending",
+        "performance": "Use Performance API to measure operations"
+      }
+    },
+    
+    "production": {
+      "optimization": [
+        "Use TURN servers for NAT traversal",
+        "Implement connection quality monitoring",
+        "Add fallback STUN servers",
+        "Consider SFU for multi-party scenarios",
+        "Use binary data format for landmarks"
+      ],
+      "security": [
+        "Validate all session IDs",
+        "Implement rate limiting on signaling",
+        "Use HTTPS/WSS in production",
+        "Add authentication to WebSocket connection"
+      ]
+    },
+    
+    "codeOrganization": {
+      "separation": {
+        "signaling": "Separate WebSocket handling from WebRTC logic",
+        "mediaProcessing": "Isolate MediaPipe code from streaming",
+        "uiLogic": "Keep UI updates separate from core functionality"
+      },
+      "stateManagement": {
+        "centralized": "Single state object for all connection state",
+        "immutable": "Don't modify state directly, create new objects",
+        "typed": "Use TypeScript or JSDoc for type safety"
+      }
+    }
+  },
+  
+  "futureEnhancements": {
+    "planned": {
+      "multiParty": {
+        "description": "Support for multiple receivers",
+        "approach": "Maintain array of peer connections",
+        "considerations": "CPU/bandwidth limitations"
+      },
+      "recording": {
+        "description": "Server-side recording capability",
+        "approach": "Use MediaRecorder API or server-side compositor",
+        "storage": "Consider chunked upload to cloud storage"
+      },
+      "mobileSupport": {
+        "description": "Optimize for mobile browsers",
+        "challenges": "Limited MediaPipe support, battery consumption",
+        "solutions": "Lower resolution, reduced face tracking rate"
+      }
+    },
+    
+    "experimental": {
+      "webCodecs": {
+        "benefit": "Better control over video encoding",
+        "status": "Limited browser support"
+      },
+      "webTransport": {
+        "benefit": "Lower latency than WebRTC data channels",
+        "status": "Emerging standard"
+      },
+      "aiEnhancement": {
+        "possibilities": [
+          "Background replacement",
+          "Expression enhancement",
+          "Gesture recognition"
+        ]
+      }
+    }
+  },
+  
+  "references": {
+    "files": {
+      "demo": "/examples/streaming/webrtc-signaling-demo.html",
+      "serverHandler": "/src/services/api/websocket/message-handlers.js",
+      "mediaStreamHandler": "/src/services/api/websocket/media-stream-handler.ts",
+      "documentation": "/docs/webrtc-signaling-architecture.md"
+    },
+    "externalResources": [
+      "https://webrtc.org/getting-started/peer-connections",
+      "https://developer.mozilla.org/en-US/docs/Web/API/WebRTC_API",
+      "https://google.github.io/mediapipe/solutions/face_mesh.html"
+    ]
+  }
+}

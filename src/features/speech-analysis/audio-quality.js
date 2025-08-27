@@ -4,7 +4,7 @@
  * Following functional programming patterns with factory functions
  */
 
-import { detectRuntime, checkFeatures } from '../../shared/utils/runtime-detector.js';
+import { checkFeatures, detectRuntime } from '../../shared/utils/runtime-detector.js';
 import { createSpeechEvent } from '../../core/configuration/types.ts';
 
 // Audio quality metrics factory

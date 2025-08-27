@@ -27,7 +27,7 @@
  * ```
  */
 
-import { detectRuntime, checkFeatures } from '../../shared/utils/runtime-detector.js';
+import { checkFeatures, detectRuntime } from '../../shared/utils/runtime-detector.js';
 import { createAnalysisPromptResult } from '../../core/configuration/types.ts';
 import { createLLMConfig, createLLMState } from './llm-config.js';
 import { createBackendManager } from './llm-backends.js';

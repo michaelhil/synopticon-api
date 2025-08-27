@@ -135,7 +135,7 @@ export const createProsodicAnalyzer = (config = {}) => {
     const recent = state.featureHistory.slice(-windowSize);
     const energyThreshold = recent.reduce((sum, f) => sum + f.energy.rms, 0) / recent.length * 1.5;
     
-    let peaks = [];
+    const peaks = [];
     for (let i = 1; i < recent.length - 1; i++) {
       if (recent[i].energy.rms > energyThreshold &&
           recent[i].energy.rms > recent[i-1].energy.rms &&
@@ -175,7 +175,7 @@ export const createProsodicAnalyzer = (config = {}) => {
       return features;
     }
     
-    let normalizedFeatures = { ...features };
+    const normalizedFeatures = { ...features };
     
     if (state.config.adaptiveNormalization && state.featureHistory.length > 10) {
       // Update normalization statistics

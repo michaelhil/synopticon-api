@@ -4,7 +4,7 @@
  */
 
 import { createWebSocketSessionManager } from './session-manager.js';
-import { createWebSocketMessageHandlers } from './message-handlers.js';
+import { createWebSocketMessageHandlers } from './message-handlers.ts';
 import { createWebSocketFrameProcessor } from './frame-processor.js';
 
 /**

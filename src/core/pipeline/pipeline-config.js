@@ -6,9 +6,9 @@
 
 import { createConfigValidator } from '../configuration/config-validator.js';
 import { createLogger } from '../../shared/utils/logger.js';
-import { handleError, ErrorCategory, ErrorSeverity } from '../../shared/utils/error-handler.js';
+import { ErrorCategory, ErrorSeverity, handleError } from '../../shared/utils/error-handler.js';
 
-const logger = createLogger({ level: 2 });
+const _logger = createLogger({ level: 2 });
 
 // Base configuration common to all pipelines
 const BASE_CONFIG = {
@@ -119,7 +119,7 @@ const VALIDATION_RULES = {
  * @param {Object} config - Configuration to validate
  * @returns {boolean} - True if valid
  */
-const validateConfig = (type, config) => {
+const _validateConfig = (type, config) => {
   const rules = VALIDATION_RULES[type];
   if (!rules) return true;
   

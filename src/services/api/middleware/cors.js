@@ -321,7 +321,7 @@ export const createCORSMiddleware = (config = {}) => {
     isOriginAllowed,
     getConfig: () => ({ ...state.config }),
     
-    // Direct access for legacy compatibility
+    // Direct access
     createHeaders: createCORSHeaders
   };
 };

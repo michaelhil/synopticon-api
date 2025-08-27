@@ -180,9 +180,8 @@ export const createServerAnalysisHandler = (config = {}) => {
   };
 };
 
-// Create complete server analysis handler (original functionality)
+// Create complete server analysis handler
 export const createServerAnalysisEndpoint = (config = {}) => {
-  // Preserve original API for backward compatibility
   const state = {
     sessions: new Map(),
     config: {

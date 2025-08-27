@@ -4,9 +4,9 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'bun:test';
-import { createLazyPipelineRegistry } from '../../src/core/lazy-pipeline-registry.js';
-import { createLoadingStateManager, LoadingStates, ProgressStages } from '../../src/core/loading-state-manager.js';
-import { createPipelinePreloader, PreloadingStrategies, UsageContexts } from '../../src/core/pipeline-preloader.js';
+import { createLazyPipelineRegistry } from '../../src/core/pipeline/lazy-pipeline-registry.js';
+import { createLoadingStateManager, LoadingStates, ProgressStages } from '../../src/core/state/loading-state-manager.js';
+import { createPipelinePreloader, PreloadingStrategies, UsageContexts } from '../../src/core/pipeline/pipeline-preloader.js';
 import { createLazyOrchestrator, createQuickStartOrchestrator } from '../../src/index.js';
 
 // Mock pipeline modules for testing

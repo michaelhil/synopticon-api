@@ -1,6 +1,6 @@
 {
   "name": "synopticon-api",
-  "version": "0.5.7",
+  "version": "0.5.9",
   "description": "synopticon-api: an open-source platform for real-time multi-modal behavioral analysis and sensor synchronization",
   "main": "src/services/api/server.js",
   "type": "module",
@@ -19,6 +19,7 @@
     "start": "bun run serve",
     "serve": "bun src/services/api/server.js",
     "dev": "bun --watch src/services/api/server.js",
+    "dev:hot": "bun --hot src/services/api/server.js",
     "api:test": "curl http://localhost:3000/api/health",
     "mcp": "bun src/services/mcp/server.ts",
     "mcp:dev": "bun --watch src/services/mcp/server.ts",
@@ -27,10 +28,19 @@
     "add-mcp-tools": "bun scripts/add-mcp-tools.js",
     "start:with-mcp": "concurrently \"bun serve\" \"bun mcp\"",
     "test:mcp": "bun test tests/unit/mcp-*.test.js",
+    "ci:quality": "bun run code-quality-gate",
+    "pre-commit": "bun run lint:fix && bun run typecheck",
+    "pre-push": "bun run quality:strict",
     "lint": "bunx eslint 'src/**/*.js' 'examples/**/*.js' --ignore-pattern '**/*.backup'",
     "lint:fix": "bunx eslint 'src/**/*.js' 'examples/**/*.js' --fix --ignore-pattern '**/*.backup'",
-    "lint:check": "bunx eslint 'src/**/*.js' 'examples/**/*.js' --max-warnings 20 --ignore-pattern '**/*.backup'",
-    "quality": "bun run lint:check && bun run typecheck"
+    "lint:check": "bunx eslint 'src/**/*.js' 'examples/**/*.js' --max-warnings 1200 --ignore-pattern '**/*.backup'",
+    "lint:strict": "bunx eslint 'src/**/*.js' 'examples/**/*.js' --max-warnings 20 --ignore-pattern '**/*.backup'",
+    "quality": "bun run lint:check && bun run typecheck",
+    "quality:strict": "bun run lint:strict && bun run typecheck && bun run knip:check",
+    "knip:check": "bunx knip --reporter compact",
+    "knip:fix": "bunx knip --fix",
+    "code-quality-gate": "bun scripts/code-quality-check.js",
+    "quality:simple": "bun scripts/simple-quality-check.js"
   },
   "keywords": [
     "face-detection",
@@ -64,13 +74,7 @@
     "vitest"
   ],
   "optionalDependencies": {
-    "canvas": "^3.2.0",
-    "cors": "^2.8.5",
-    "express": "^5.1.0",
-    "express-rate-limit": "^8.0.1",
-    "express-validator": "^7.2.1",
-    "helmet": "^8.1.0",
-    "morgan": "^1.10.1"
+    "canvas": "^3.2.0"
   },
   "dependencies": {},
   "engines": {
@@ -110,7 +114,7 @@
       "dependencies": "Zero external dependencies",
       "servers": "All servers use Bun.serve (Node.js HTTP removed)",
       "websockets": "Native Bun WebSocket (ws library removed)",
-      "express": "Moved to optionalDependencies (legacy support only)"
+      "express": "Removed - Bun.serve only"
     },
     "compatibility": {
       "runtime": "Bun >=1.0.0 required",

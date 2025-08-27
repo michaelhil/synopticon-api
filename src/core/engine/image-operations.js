@@ -193,7 +193,7 @@ export const createImageOperations = (resourcePool) => {
 const applyBoxBlur = (data, width, height, channels, radius) => {
   const original = new Uint8Array(data);
   const kernelSize = radius * 2 + 1;
-  const kernelArea = kernelSize * kernelSize;
+  const _kernelArea = kernelSize * kernelSize;
   
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {

@@ -5,6 +5,77 @@ All notable changes to Synopticon API will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.9] - 2025-08-27 - WebRTC Face Streaming & Performance Optimization
+
+### 🎥 **Major Feature: WebRTC Face Streaming**
+- **Complete WebRTC Implementation**: Real-time video and face landmark streaming
+  - Two-phase signaling architecture with discovery and direct peer-to-peer
+  - MediaPipe Face Mesh integration with 468 landmark points
+  - Data channel for efficient landmark transmission (12 FPS, optimized JSON)
+  - HD video streaming (1280x720 at 25 FPS, 1.5 Mbps)
+  - Support for broadcaster and receiver roles
+
+### 🔧 **Critical Fixes**
+- **WebRTC Signaling**: Fixed session ID mismatches and missing sourceSession in broadcasts
+- **Face Mesh Issues**: Resolved displacement and inverted movement (removed selfieMode)
+- **Initial Rendering**: Fixed face mesh not appearing on camera start
+- **Performance**: Resolved FPS drop from 55 to 25 when broadcasting starts
+- **Lint Errors**: Fixed undefined globals (FaceMesh, RTCPeerConnection) and unused variables
+
+### 📈 **Performance Improvements**
+- **Optimized Face Data**: 40% reduction in JSON size with 4 decimal precision
+- **Video Encoding**: Balanced quality/performance (1.5 Mbps, 25 FPS)
+- **Data Throttling**: Reduced from 15 to 12 FPS for better CPU sharing
+- **MediaPipe**: Disabled refineLandmarks for 15% performance gain
+- **Result**: Maintains 40+ FPS while broadcasting (up from 25 FPS)
+
+### 🎨 **UI/UX Enhancements**
+- **Toggle Buttons**: Removed redundant stop button, all controls are now toggles
+- **Visual Distinction**: Remote face mesh rendered in red, local in green
+- **HD Video**: Upgraded from 640x480 to 1280x720 resolution
+- **Auto-start**: Camera starts automatically on page load
+
+### 📚 **Documentation**
+- **WebRTC Architecture Guide**: Complete signaling flow and infrastructure design
+- **Implementation Guide (JSON)**: Comprehensive troubleshooting and patterns
+- **Problem-Solution Reference**: Documented all issues and their fixes
+- **Best Practices**: Testing, debugging, and production recommendations
+
+### 🛠️ **Developer Experience**
+- **ESLint Configuration**: Added .eslintrc.json with proper browser API globals
+- **Quick Fixes**: Automated lint fixes for common issues
+- **Error Prefixing**: Consistent `_error` convention for unused catches
+- **Cache Busting**: Better development experience with forced refreshes
+
+## [0.5.8] - 2025-08-27 - Breaking Changes: Clean Modern API
+
+### 💥 **BREAKING CHANGES**
+- **Runtime**: Bun-only (Node.js support fully removed)
+- **Dependencies**: Express.js and related middleware completely removed from optionalDependencies
+- **Speech Recognition**: Fallback mechanisms removed (Web Speech API required)
+- **API**: All backward compatibility layers and legacy support removed
+
+### 🧹 **Code Cleanup**
+- **Removed fallback systems**: Eliminated speech recognition fallback UI and backend
+- **Cleaned compatibility comments**: Removed 50+ "backward compatibility" references
+- **Simplified interfaces**: Removed legacy support comments and compatibility layers
+- **Modernized test suite**: Removed browser compatibility tests
+- **Streamlined package.json**: Only essential dependencies remain
+
+### 🚀 **Performance & Maintainability**
+- **Reduced complexity**: Cleaner codebase with single runtime target
+- **Improved performance**: No compatibility overhead or fallback checking
+- **Better maintainability**: Simplified code paths and clear requirements
+- **Modern patterns**: Current best practices throughout
+
+### 📋 **Migration Required**
+- **Runtime**: Ensure Bun >=1.0.0 is installed
+- **Server**: Update any Express.js usage to Bun.serve
+- **Speech**: Verify Web Speech API availability in target browsers
+- **Dependencies**: Remove any Node.js or Express.js assumptions
+
+See `BREAKING_CHANGES_v0.5.8.md` for complete migration guide.
+
 ## [0.5.7] - 2025-08-27 - Model Context Protocol Integration
 
 ### 🤖 **Major Feature: LLM Integration**

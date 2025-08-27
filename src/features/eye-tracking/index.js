@@ -9,10 +9,10 @@ import { createEyeTrackerDevice } from './devices/neon/device.js';
 import { createGazeProcessor } from './common/gaze-processing.js';
 import { createEyeTrackingStreaming, createEyeTrackingSystem } from './devices/neon/streaming.js';
 import { 
-  createEyeTrackingResult, 
-  createGazeData, 
+  createCalibrationResult, 
   createDeviceStatus, 
-  createCalibrationResult 
+  createEyeTrackingResult, 
+  createGazeData 
 } from '../../core/configuration/types.ts';
 
 // Import modular components

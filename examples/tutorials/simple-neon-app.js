@@ -4,7 +4,7 @@
  * This is the actual application you would run
  */
 
-import { createDistributionSessionManager, createDistributionConfigManager } from '../../src/core/distribution/index.js';
+import { createDistributionConfigManager, createDistributionSessionManager } from '../../src/core/distribution/index.js';
 
 // ==============================================================================
 // THIS IS YOUR ACTUAL APPLICATION

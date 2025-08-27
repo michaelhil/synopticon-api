@@ -6,8 +6,7 @@
 
 import { createEnhancedMemoryPool } from '../shared/utils/enhanced-memory-pool.js';
 
-// Legacy memory pool factory - REMOVED (deprecated function eliminated)
-// Use createEnhancedMemoryPool directly instead
+// Use createEnhancedMemoryPool directly
 
 // Enhanced memory pool factory for efficient object reuse
 export const createOptimizedMemoryPool = (config = {}) => {

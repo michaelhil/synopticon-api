@@ -6,7 +6,7 @@
 
 import { createWebGLEngine } from './webgl-engine.js';
 import { createCameraManager } from '../../shared/utils/camera.js';
-import { createErrorHandler, ErrorCategory, ErrorSeverity } from '../../shared/utils/error-handler.js';
+import { ErrorCategory, ErrorSeverity, createErrorHandler } from '../../shared/utils/error-handler.js';
 import { createAnalysisPipeline } from '../pipeline/analysis-pipeline.js';
 import { createConfigurationManager } from '../configuration/configuration.js';
 import { createOrchestrator } from '../orchestration/orchestrator.js';

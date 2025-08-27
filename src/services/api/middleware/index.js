@@ -175,7 +175,7 @@ export const createMiddlewareSystem = (config = {}) => {
     // Utility functions for common error responses
     createError: errorHandler.createError,
     
-    // Direct middleware functions (for legacy compatibility)
+    // Direct middleware functions
     handleCORS: corsMiddleware.corsMiddleware,
     handleError: errorHandler.handleError,
     handleRateLimit: rateLimiter.rateLimitMiddleware

@@ -3,6 +3,8 @@
  * Processes different types of WebSocket messages
  */
 
+import { createMediaStreamHandler } from './media-stream-handler.ts';
+
 /**
  * Create WebSocket message handler system
  * @param {Object} dependencies - Required dependencies
@@ -15,6 +17,9 @@ export const createWebSocketMessageHandlers = (dependencies) => {
     initializeEmotionPipeline,
     decodeFrame
   } = dependencies;
+  
+  // Create media streaming handler
+  const mediaStreamHandler = createMediaStreamHandler();
 
   /**
    * Process frame analysis message
@@ -231,6 +236,14 @@ export const createWebSocketMessageHandlers = (dependencies) => {
           handleSubscription(session, data);
           break;
           
+        case 'stream_frame':
+        case 'webrtc_offer':
+        case 'webrtc_answer':
+        case 'webrtc_ice':
+        case 'request_offer':
+          mediaStreamHandler.handleMessage(session.id, data);
+          break;
+          
         default:
           throw new Error(`Unknown message type: ${data.type}`);
       }
@@ -261,7 +274,8 @@ export const createWebSocketMessageHandlers = (dependencies) => {
    * @param {Object} metadata - Optional connection metadata
    */
   const handleConnection = (ws, metadata = {}) => {
-    const session = sessionManager.createSession(ws, meta,data);
+    const session = sessionManager.createSession(ws, metadata);
+    mediaStreamHandler.addSession(ws, session.id);
     return session;
   };
 
@@ -275,6 +289,7 @@ export const createWebSocketMessageHandlers = (dependencies) => {
     const session = sessionManager.getSessionByWebSocket(ws);
     if (session) {
       console.log(`🔌 WebSocket disconnected: ${session.id} (${code}: ${reason})`);
+      mediaStreamHandler.removeSession(session.id);
       sessionManager.removeSession(session.id);
     }
   };

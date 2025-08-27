@@ -3,15 +3,15 @@
  * Provides comprehensive validation for all configuration objects
  */
 
-import { handleError, ErrorCategory, ErrorSeverity } from '../../shared/utils/error-handler.js';
+import { ErrorCategory, ErrorSeverity, handleError } from '../../shared/utils/error-handler.js';
 import {
-  ValidationTypes,
-  SecurityRules,
   PROTECTED_KEYS,
-  validateRequired,
-  validateType,
+  SecurityRules,
+  ValidationTypes,
   validateConstraints,
-  validateSecurity
+  validateRequired,
+  validateSecurity,
+  validateType
 } from './validation-helpers.js';
 import { sanitizeConfig, validateAndThrow } from './validation-utilities.js';
 

@@ -6,11 +6,11 @@
 import createPipelineComposer, {
   CompositionPattern,
   ExecutionStrategy,
-  createSequentialComposition,
-  createParallelComposition,
-  createConditionalComposition,
   createAdaptiveComposition,
-  createCascadingComposition
+  createCascadingComposition,
+  createConditionalComposition,
+  createParallelComposition,
+  createSequentialComposition
 } from './composers/index.ts';
 
 // Export all the factory functions and constants for backward compatibility

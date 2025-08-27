@@ -20,6 +20,7 @@ Unlike traditional research tools that lock you into specific environments, Syno
 
 **🌐 Browser-First Research**
 - **Real-time analysis** in web-based simulators and training platforms
+- **WebRTC streaming** for remote face tracking and emotion analysis
 - **Zero installation** for participants - works in any modern browser
 - **Cross-platform compatibility** across Windows, macOS, and Linux
 - **WebGL acceleration** for high-performance analysis
@@ -579,8 +580,17 @@ Site C ─────────┘         ↓
 ### **Research-Focused Documentation**
 - **[API Guide](docs/guides/API_GUIDE.md)**: Complete API reference with research examples
 - **[Pipeline Setup Guide](docs/guides/PIPELINE_SETUP_GUIDE.md)**: Configure analysis pipelines for your study
+- **[WebRTC Implementation Guide](docs/webrtc-implementation-guide.json)**: Complete guide for real-time streaming
 - **[Docker Deployment Guide](docs/guides/DOCKER_DEPLOYMENT_GUIDE.md)**: Production deployment for research labs
 - **[Integration Examples](examples/)**: Real-world integration examples for common research scenarios
+
+### **🎥 NEW: WebRTC Face Streaming (v0.5.9)**
+Real-time face tracking and emotion analysis over WebRTC for remote research:
+- **HD Video Streaming**: 1280x720 at 25 FPS with optimized encoding
+- **Face Landmark Transmission**: 468 facial landmarks via data channels
+- **Two-Phase Signaling**: Discovery and peer-to-peer architecture
+- **Performance Optimized**: Maintains 40+ FPS during streaming
+- **Demo**: `/examples/streaming/webrtc-signaling-demo.html`
 
 ### **Community & Support**
 - **GitHub Issues**: Report bugs and request research-specific features

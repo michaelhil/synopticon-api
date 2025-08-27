@@ -70,8 +70,8 @@ export const createPipelineRegistry = () => {
   };
   
   const pluginLoader = createPluginLoader();
-  const operations = createRegistryOperations(state);
-  const queries = createRegistryQueries(state);
+  // const operations = createRegistryOperations(state); // Missing function
+  // const queries = createRegistryQueries(state); // Missing function
   
   // Direct pipeline registration
   const register = (name, pipelineOrFactory, metadata = {}) => {

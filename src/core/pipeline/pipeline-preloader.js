@@ -46,8 +46,8 @@
 
 import { createLazyPipelineRegistry } from './lazy-pipeline-registry.js';
 import { createLoadingStateManager } from '../state/loading-state-manager.js';
-import { handleError, ErrorCategory, ErrorSeverity } from '../../shared/utils/error-handler.js';
-import { createPreloaderConfig, PreloadingStrategies, UsageContexts } from './preloader-config.js';
+import { ErrorCategory, ErrorSeverity, handleError } from '../../shared/utils/error-handler.js';
+import { PreloadingStrategies, UsageContexts, createPreloaderConfig } from './preloader-config.js';
 import { createDeviceDetector } from './device-detector.js';
 import { createUsageTracker } from './usage-tracker.js';
 import { createPreloadScheduler } from './preload-scheduler.js';

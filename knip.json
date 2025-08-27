@@ -3,18 +3,47 @@
     "src/index.js",
     "src/browser-speech-client.js",
     "examples/**/*.js",
-    "src/services/**/*.js"
+    "src/services/api/server.js",
+    "src/services/mcp/server.ts",
+    "scripts/*.js"
   ],
   "project": [
     "src/**/*.js",
     "src/**/*.ts",
-    "examples/**/*.js"
+    "examples/**/*.js",
+    "scripts/**/*.js"
   ],
   "ignore": [
     "archive/**/*",
+    "docs/**/*",
     "**/*.backup",
     "**/*.test.js",
-    "**/*.spec.js"
+    "**/*.spec.js",
+    "**/test-*.js",
+    "tests/**/*",
+    "BREAKING_CHANGES_*.md",
+    "*_REPORT.md",
+    "*_ROADMAP.md"
   ],
-  "includeEntryExports": true
+  "includeEntryExports": true,
+  "workspaces": {
+    ".": {
+      "entry": [
+        "src/index.js",
+        "src/services/api/server.js",
+        "src/services/mcp/server.ts"
+      ]
+    }
+  },
+  "rules": {
+    "files": "error",
+    "dependencies": "error",
+    "devDependencies": "warn",
+    "exports": "warn",
+    "types": "warn",
+    "duplicates": "error"
+  },
+  "typescript": {
+    "config": "tsconfig.json"
+  }
 }

@@ -117,7 +117,7 @@ export const createDeviceDetector = () => {
       if (typeof localStorage !== 'undefined') {
         isFirstVisit = !localStorage.getItem('synopticon_usage_history');
       }
-    } catch (error) {
+    } catch (_error) {
       // localStorage not available (Node.js/test environment)
     }
     

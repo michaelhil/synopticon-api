@@ -9,7 +9,7 @@ import { createHardwareTimestampAligner } from './aligners/hardware-aligner.js';
 import { createSoftwareTimestampAligner } from './aligners/software-aligner.js';
 import { createBufferBasedAligner } from './aligners/buffer-aligner.js';
 import { createEventDrivenAligner } from './aligners/event-aligner.js';
-import { createSyncMetrics, createQualityCalculator } from './metrics/sync-metrics.js';
+import { createQualityCalculator, createSyncMetrics } from './metrics/sync-metrics.js';
 
 /**
  * Main synchronization engine factory

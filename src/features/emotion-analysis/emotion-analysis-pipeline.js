@@ -7,11 +7,11 @@ import { createPipeline } from '../../core/pipeline/pipeline.ts';
 import { createPipelineConfig } from '../../core/pipeline/pipeline-config.js';
 import { 
   Capability,
-  createPerformanceProfile,
+  createAnalysisResult,
   createEmotionResult,
-  createAnalysisResult
+  createPerformanceProfile
 } from '../../core/configuration/types.ts';
-import { createRealCNNModel, EMOTION_LABELS } from './real-cnn-model.js';
+import { EMOTION_LABELS, createRealCNNModel } from './real-cnn-model.js';
 
 /**
  * Creates real emotion analysis pipeline with face detection

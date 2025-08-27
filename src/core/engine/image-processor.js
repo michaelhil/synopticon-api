@@ -5,8 +5,8 @@
  */
 
 import { getGlobalResourcePool } from '../performance/resource-pool.js';
-import { handleError, ErrorCategory, ErrorSeverity } from '../../shared/utils/error-handler.js';
-import { createImageOperations, IMAGE_FORMATS, INTERPOLATION_METHODS } from './image-operations.js';
+import { ErrorCategory, ErrorSeverity, handleError } from '../../shared/utils/error-handler.js';
+import { IMAGE_FORMATS, INTERPOLATION_METHODS, createImageOperations } from './image-operations.js';
 import { createProcessingCache } from './image-processing-cache.js';
 
 /**
@@ -61,7 +61,7 @@ export const createImageProcessor = (config = {}) => {
     }
   };
   
-  const resize = async (imageData, targetWidth, targetHeight, method) => {
+  const _resize = async (imageData, targetWidth, targetHeight, method) => {
     return processWithCache(
       'resize', 
       { width: targetWidth, height: targetHeight, method },
@@ -69,7 +69,7 @@ export const createImageProcessor = (config = {}) => {
     );
   };
   
-  const convert = async (imageData, fromFormat, toFormat) => {
+  const _convert = async (imageData, fromFormat, toFormat) => {
     return processWithCache(
       'convert',
       { fromFormat, toFormat },
@@ -77,7 +77,7 @@ export const createImageProcessor = (config = {}) => {
     );
   };
   
-  const crop = async (imageData, x, y, width, height) => {
+  const _crop = async (imageData, x, y, width, height) => {
     return processWithCache(
       'crop',
       { x, y, width, height },
@@ -85,7 +85,7 @@ export const createImageProcessor = (config = {}) => {
     );
   };
   
-  const filter = async (imageData, filterType, intensity) => {
+  const _filter = async (imageData, filterType, intensity) => {
     return processWithCache(
       'filter',
       { filterType, intensity },

@@ -3,7 +3,7 @@
  * Handles WebGL context pooling and lifecycle management
  */
 
-import { handleError, ErrorCategory, ErrorSeverity } from '../../shared/utils/error-handler.js';
+import { ErrorCategory, ErrorSeverity, handleError } from '../../shared/utils/error-handler.js';
 
 export const createWebGLManager = (state, poolConfig, canvasManager) => {
   const getWebGLContext = (type = 'webgl2', width = 640, height = 480) => {

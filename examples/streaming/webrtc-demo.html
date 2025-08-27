@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Streaming Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #222;
+            color: white;
+            padding: 20px;
+        }
+        .panel {
+            background: #333;
+            padding: 20px;
+            margin: 10px 0;
+            border-radius: 8px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:disabled {
+            background: #666;
+            cursor: not-allowed;
+        }
+        video {
+            width: 300px;
+            height: 200px;
+            background: black;
+            margin: 10px 0;
+        }
+        #log {
+            background: black;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        .info-panel {
+            background: #444;
+            border-left: 4px solid #2196F3;
+        }
+    </style>
+</head>
+<body>
+    <h1>📡 WebRTC Streaming Demo</h1>
+    
+    <div class="panel info-panel">
+        <h3>ℹ️ Instructions</h3>
+        <p><strong>1.</strong> Open this page in two browser tabs</p>
+        <p><strong>2.</strong> In first tab: Click "Start Camera" then "Start Streaming"</p>
+        <p><strong>3.</strong> In second tab: Click "Connect to Stream" to receive video</p>
+    </div>
+    
+    <div class="panel">
+        <h3>📹 Local Camera</h3>
+        <video id="localVideo" autoplay muted></video><br>
+        <button id="startCameraBtn" onclick="toggleCamera()">Stop Camera</button>
+        <button id="startStreamBtn" onclick="toggleStreaming()" disabled>Start Streaming</button>
+    </div>
+    
+    <div class="panel">
+        <h3>📺 Remote Stream</h3>
+        <video id="remoteVideo" autoplay></video><br>
+        <button id="connectBtn" onclick="toggleConnection()">Connect to Stream</button>
+    </div>
+    
+    <div class="panel">
+        <h3>📊 Connection Log</h3>
+        <div id="log"></div>
+    </div>
+
+    <script>
+        let localStream = null;
+        let peerConnection = null;
+        let ws = null;
+        let sessionId = null;
+        let isStreamer = false;
+        let isStreaming = false;
+        let isConnected = false;
+
+        const config = {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' }
+            ]
+        };
+
+        function log(msg) {
+            const logDiv = document.getElementById('log');
+            const time = new Date().toLocaleTimeString();
+            logDiv.innerHTML += `<div style="color:#0f0">[${time}] ${msg}</div>`;
+            logDiv.scrollTop = logDiv.scrollHeight;
+            console.log(msg);
+        }
+
+        async function toggleCamera() {
+            if (localStream) {
+                // Stop camera
+                localStream.getTracks().forEach(track => track.stop());
+                localStream = null;
+                document.getElementById('localVideo').srcObject = null;
+                document.getElementById('startCameraBtn').textContent = 'Start Camera';
+                document.getElementById('startStreamBtn').disabled = true;
+                
+                // Stop streaming if active
+                if (isStreaming) {
+                    toggleStreaming();
+                }
+                
+                log('Camera stopped');
+            } else {
+                // Start camera
+                try {
+                    log('Requesting camera access...');
+                    localStream = await navigator.mediaDevices.getUserMedia({ 
+                        video: true, 
+                        audio: true 
+                    });
+                    
+                    document.getElementById('localVideo').srcObject = localStream;
+                    document.getElementById('startCameraBtn').textContent = 'Stop Camera';
+                    document.getElementById('startStreamBtn').disabled = false;
+                    log('Camera started successfully');
+                    
+                } catch (error) {
+                    log('Camera error: ' + error.message);
+                }
+            }
+        }
+
+        async function startCamera() {
+            if (!localStream) {
+                await toggleCamera();
+            }
+        }
+
+        async function toggleStreaming() {
+            if (isStreaming) {
+                // Stop streaming
+                isStreaming = false;
+                isStreamer = false;
+                
+                if (peerConnection) {
+                    peerConnection.close();
+                    peerConnection = null;
+                }
+                
+                if (ws) {
+                    ws.close();
+                    ws = null;
+                }
+                
+                document.getElementById('startStreamBtn').textContent = 'Start Streaming';
+                log('Streaming stopped');
+            } else {
+                // Start streaming
+                if (!localStream) {
+                    log('Please start camera first');
+                    return;
+                }
+
+                isStreamer = true;
+                isStreaming = true;
+                log('Setting up WebRTC for streaming...');
+                
+                await connectWebSocket();
+                setupPeerConnection();
+                
+                document.getElementById('startStreamBtn').textContent = 'Stop Streaming';
+            }
+        }
+
+        async function toggleConnection() {
+            if (isConnected) {
+                // Disconnect
+                isConnected = false;
+                
+                if (peerConnection) {
+                    peerConnection.close();
+                    peerConnection = null;
+                }
+                
+                if (ws) {
+                    ws.close();
+                    ws = null;
+                }
+                
+                document.getElementById('remoteVideo').srcObject = null;
+                document.getElementById('connectBtn').textContent = 'Connect to Stream';
+                log('Disconnected from stream');
+            } else {
+                // Connect
+                if (isStreamer) {
+                    log('Already streaming - use another tab to receive');
+                    return;
+                }
+
+                isConnected = true;
+                log('Connecting to receive stream...');
+                await connectWebSocket();
+                setupPeerConnection();
+                
+                // Request active streamers to send offers
+                sendSignaling({
+                    type: 'request_offer'
+                });
+                
+                document.getElementById('connectBtn').textContent = 'Disconnect';
+            }
+        }
+
+        // Legacy functions for backwards compatibility
+        async function startStreaming() {
+            if (!isStreaming) {
+                await toggleStreaming();
+            }
+        }
+
+        async function connectToStream() {
+            if (!isConnected) {
+                await toggleConnection();
+            }
+        }
+
+        function connectWebSocket() {
+            return new Promise((resolve) => {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    resolve();
+                    return;
+                }
+
+                log('Connecting to signaling server...');
+                ws = new WebSocket(`ws://${window.location.host}/ws`);
+                
+                ws.onopen = () => {
+                    sessionId = 'ws_' + Date.now() + '_' + Math.random().toString(36).substr(2, 16);
+                    log(`WebSocket connected (${sessionId})`);
+                    resolve();
+                };
+                
+                ws.onmessage = handleSignalingMessage;
+                ws.onerror = (error) => log('WebSocket error: ' + error);
+                ws.onclose = () => log('WebSocket closed');
+            });
+        }
+
+        function setupPeerConnection() {
+            peerConnection = new RTCPeerConnection(config);
+            
+            peerConnection.onicecandidate = (event) => {
+                if (event.candidate) {
+                    sendSignaling({
+                        type: 'webrtc_ice',
+                        candidate: event.candidate
+                    });
+                }
+            };
+            
+            peerConnection.ontrack = (event) => {
+                log('Received remote stream');
+                document.getElementById('remoteVideo').srcObject = event.streams[0];
+            };
+
+            if (localStream) {
+                localStream.getTracks().forEach(track => {
+                    peerConnection.addTrack(track, localStream);
+                });
+                
+                if (isStreamer) {
+                    createOffer();
+                }
+            }
+        }
+
+        async function createOffer() {
+            try {
+                log('Creating WebRTC offer...');
+                const offer = await peerConnection.createOffer();
+                await peerConnection.setLocalDescription(offer);
+                
+                sendSignaling({
+                    type: 'webrtc_offer',
+                    sdp: offer
+                });
+            } catch (error) {
+                log('Error creating offer: ' + error.message);
+            }
+        }
+
+        async function handleSignalingMessage(event) {
+            const message = JSON.parse(event.data);
+            
+            switch (message.type) {
+                case 'webrtc_offer':
+                    if (!isStreamer && peerConnection) {
+                        log('Received offer, creating answer...');
+                        await peerConnection.setRemoteDescription(message.sdp);
+                        const answer = await peerConnection.createAnswer();
+                        await peerConnection.setLocalDescription(answer);
+                        
+                        sendSignaling({
+                            type: 'webrtc_answer',
+                            sdp: answer,
+                            targetSession: message.sourceSession
+                        });
+                    }
+                    break;
+                    
+                case 'webrtc_answer':
+                    if (isStreamer && peerConnection) {
+                        log('Received answer');
+                        await peerConnection.setRemoteDescription(message.sdp);
+                    }
+                    break;
+                    
+                case 'webrtc_ice':
+                    if (peerConnection) {
+                        await peerConnection.addIceCandidate(message.candidate);
+                    }
+                    break;
+                    
+                case 'request_offer':
+                    if (isStreamer && peerConnection) {
+                        log('Receiver requested offer, sending...');
+                        createOffer();
+                    }
+                    break;
+                    
+                default:
+                    break;
+            }
+        }
+
+        function sendSignaling(message) {
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({
+                    ...message,
+                    deviceId: 'webrtc_stream',
+                    timestamp: Date.now()
+                }));
+            }
+        }
+
+        // Auto-start camera on load
+        document.addEventListener('DOMContentLoaded', async () => {
+            log('Page loaded - WebRTC demo ready');
+            log('Auto-starting camera...');
+            await startCamera();
+        });
+    </script>
+</body>
+</html>

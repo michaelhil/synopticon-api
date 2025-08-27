@@ -5,8 +5,8 @@
  */
 
 import {
-  createSpeechEvent,
-  createConversationContext
+  createConversationContext,
+  createSpeechEvent
 } from '../../core/configuration/types.ts';
 
 // Import modular analytics components

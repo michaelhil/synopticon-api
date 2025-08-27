@@ -34,6 +34,24 @@
         .header {
             text-align: center;
             margin-bottom: 30px;
+            position: relative;
+        }
+
+        .back-link {
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #FF6B6B 0%, #4ECDC4 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: transform 0.2s;
+        }
+
+        .back-link:hover {
+            transform: translateX(-5px);
         }
 
         .header h1 {
@@ -241,6 +259,7 @@
 <body>
     <div class="container">
         <div class="header">
+            <a href="index.html" class="back-link">← Back to Demos</a>
             <h1>😊 Emotion Detection Demo</h1>
             <p>Real-time emotion analysis using 7-emotion CNN classification</p>
         </div>

@@ -3,7 +3,7 @@
  */
 
 import { PreloadingStrategies } from './preloader-config.js';
-import { handleError, ErrorCategory, ErrorSeverity } from '../../shared/utils/error-handler.js';
+import { ErrorCategory, ErrorSeverity, handleError } from '../../shared/utils/error-handler.js';
 import { showLoadingToast } from '../../shared/utils/ui/loading-components.js';
 
 export const createPreloadScheduler = (registry, stateManager, usageTracker, config) => {

@@ -34,6 +34,7 @@
         .header {
             text-align: center;
             margin-bottom: 30px;
+            position: relative;
         }
 
         .header h1 {
@@ -47,6 +48,23 @@
         .header p {
             color: #666;
             font-size: 16px;
+        }
+
+        .back-link {
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: transform 0.2s;
+        }
+
+        .back-link:hover {
+            transform: translateX(-5px);
         }
 
         .demo-container {
@@ -194,6 +212,7 @@
 <body>
     <div class="container">
         <div class="header">
+            <a href="index.html" class="back-link">← Back to Demos</a>
             <h1>🎯 Face Tracking Demo</h1>
             <p>Real-time face mesh detection using MediaPipe</p>
         </div>
@@ -505,8 +524,19 @@
             }
         });
 
-        // Initialize when page loads
-        window.addEventListener('load', initializeFaceMesh);
+        // Auto-start camera after initialization
+        async function initializeAndAutoStart() {
+            await initializeFaceMesh();
+            // Auto-start camera after a brief delay to ensure everything is loaded
+            setTimeout(() => {
+                if (!isRunning) {
+                    startCamera();
+                }
+            }, 500);
+        }
+
+        // Initialize and auto-start when page loads
+        window.addEventListener('load', initializeAndAutoStart);
     </script>
 </body>
 </html>

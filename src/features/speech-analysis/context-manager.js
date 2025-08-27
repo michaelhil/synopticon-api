@@ -4,15 +4,9 @@
  */
 
 import createContextManager, {
-  analyzeContext,
   CONTEXT_STRATEGIES,
   ContextStrategy,
-  type ContextManagerConfiguration,
-  type ConversationContext,
-  type ContextChunk,
-  type SemanticSearchResult,
-  type TopicExtractionResult,
-  type TopicEvolutionResult
+  analyzeContext
 } from './context/index.ts';
 
 // Export the main factory function
@@ -25,14 +19,8 @@ export {
   ContextStrategy
 };
 
-// Export types for TypeScript consumers
-export type {
-  ContextManagerConfiguration,
-  ConversationContext,
-  ContextChunk,
-  SemanticSearchResult,
-  TopicExtractionResult,
-  TopicEvolutionResult
-};
+// Types available from TypeScript import
+// ContextManagerConfiguration, ConversationContext, ContextChunk,
+// SemanticSearchResult, TopicExtractionResult, TopicEvolutionResult
 
 // Default export for backward compatibility

@@ -146,8 +146,8 @@ export const createFaceAnalysisServer = (config = {}) => {
       orchestrator.registerPipeline(emotionPipeline);
       emotionPipelineInitialized = true;
       console.log('✅ Emotion analysis pipeline lazy loaded and registered');
-    } catch (error) {
-      console.warn('⚠️ Failed to lazy load emotion analysis pipeline:', error.message);
+    } catch (_error) {
+      console.warn('⚠️ Failed to lazy load emotion analysis pipeline:', _error.message);
       throw error;
     }
   };
@@ -361,8 +361,8 @@ export const createFaceAnalysisServer = (config = {}) => {
               }
             });
           }
-        } catch (error) {
-          console.warn(`Static file error: ${error.message}`);
+        } catch (_error) {
+          console.warn(`Static file error: ${_error.message}`);
         }
         
         return new Response('File not found', { status: 404 });
@@ -411,8 +411,8 @@ export const createFaceAnalysisServer = (config = {}) => {
         await distributionSessionManager.cleanup();
       }
       
-    } catch (error) {
-      console.warn('Warning during cleanup:', error.message);
+    } catch (_error) {
+      console.warn('Warning during cleanup:', _error.message);
     }
     
     server.stop();
@@ -443,7 +443,7 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     
     try {
       await server.stop();
-    } catch (error) {
+    } catch (_error) {
       console.error("Error during cleanup:", error);
     }
     

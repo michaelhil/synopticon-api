@@ -43,7 +43,7 @@
  * ```
  */
 
-import { handleError, ErrorCategory, ErrorSeverity } from '../../shared/utils/error-handler.js';
+import { ErrorCategory, ErrorSeverity, handleError } from '../../shared/utils/error-handler.js';
 import { createLogger } from '../../shared/utils/logger.js';
 
 const logger = createLogger({ level: 2 });

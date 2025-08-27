@@ -30,6 +30,24 @@
         .header {
             text-align: center;
             margin-bottom: 30px;
+            position: relative;
+        }
+
+        .back-link {
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: transform 0.2s;
+        }
+
+        .back-link:hover {
+            transform: translateX(-5px);
         }
 
         .header h1 {
@@ -280,6 +298,7 @@
 
     <div class="container">
         <div class="header">
+            <a href="index.html" class="back-link">← Back to Demos</a>
             <h1>👁️ Eye Tracking Demo</h1>
             <p>Real-time gaze estimation and eye movement tracking using MediaPipe Face Mesh</p>
         </div>

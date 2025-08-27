@@ -10,7 +10,7 @@ import { createSpeechRecognition } from './speech-recognition.js';
 import { createAnalysisEngine } from './analysis-engine.js';
 import { createContextManager } from './context-manager.js';
 import {
-  createSpeechAnalysisResult,
+  // createSpeechAnalysisResult, // Available but not used
   createSpeechEvent,
   createSpeechPipelineStatus
 } from '../../core/configuration/types.ts';
@@ -250,7 +250,7 @@ export const createSpeechStreaming = (config = {}) => {
     }
 
     // Create context for this session
-    const contextId = await state.contextManager.createContext(sessionId);
+    const _contextId = await state.contextManager.createContext(sessionId);
     
     console.log(`📋 Created streaming session: ${sessionId}`);
     return sessionId;
@@ -358,7 +358,7 @@ export const createSpeechStreaming = (config = {}) => {
     if (!state.speechRecognition || !state.analysisEngine) return;
 
     // Handle speech recognition results
-    state.speechRecognition.onResult(async (,result) => {
+    state.speechRecognition.onResult(async (_event, result) => {
       state.metrics.totalTranscriptions++;
       state.metrics.lastActivity = Date.now();
 
@@ -376,7 +376,7 @@ export const createSpeechStreaming = (config = {}) => {
       }
     });
 
-    state.speechRecognition.onInterimResult((,result) => {
+    state.speechRecognition.onInterimResult((_event, result) => {
       // Handle interim results - could be used for real-time feedback
       console.log(`🎤 Interim: "${result.transcript}"`);
     });
@@ -427,7 +427,7 @@ export const createSpeechStreaming = (config = {}) => {
 
       // Analyze with context
       const startTime = performance.now();
-      const analysisResult = await state.analysisEngine.analyzeText(text, context, {
+      const _analysisResult = await state.analysisEngine.analyzeText(text, context, {
         conversationContext: {
           chunkIndex: state.contextManager.getContextData(state.activeSession)?.totalChunks || 0,
           totalChunks: state.contextManager.getContextData(state.activeSession)?.totalChunks || 1

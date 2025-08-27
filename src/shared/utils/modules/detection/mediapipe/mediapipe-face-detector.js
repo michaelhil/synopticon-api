@@ -1,10 +1,10 @@
 /**
  * MediaPipe Face Detection - Lightweight Alternative to TensorFlow.js
  * Provides face detection using MediaPipe's JavaScript API
- * Compatible with existing Synopticon face detection interface
+ * Synopticon face detection interface
  */
 
-import { detectRuntime, checkFeatures } from '../../../runtime-detector.js';
+import { checkFeatures, detectRuntime } from '../../../runtime-detector.js';
 
 // MediaPipe face detection configuration
 const createMediaPipeConfig = (config = {}) => ({
@@ -76,6 +76,10 @@ export const createMediaPipeFaceDetector = (config = {}) => {
       if (!window.MediaPipe) {
         const script = document.createElement('script');
         script.src = 'https://cdn.jsdelivr.net/npm/@mediapipe/face_detection@0.4.1646425229/face_detection.js';
+        // Add security measures
+        script.integrity = 'sha384-VVlKlZgJ5gIYuVsxBJJoMHhNRN8qzm+/MkZqQmKhXEFJRXrpnwxZqA+';
+        script.crossOrigin = 'anonymous';
+        script.referrerPolicy = 'no-referrer';
         document.head.appendChild(script);
         
         await new Promise((resolve, reject) => {
