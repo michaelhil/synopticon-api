@@ -81,7 +81,7 @@ export const createEmotionRoutes = ({
         console.log('🔍 Building response - faceResult.emotion:', faceResult.emotion);
         
         return createJSONResponse({
-          emotions: emotions,
+          emotions,
           dominant_emotion: {
             emotion: faceResult.emotion.emotion,
             confidence: faceResult.emotion.confidence

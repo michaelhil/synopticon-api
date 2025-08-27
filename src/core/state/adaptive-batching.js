@@ -87,4 +87,3 @@ export const createAdaptiveBatchScheduler = (config = {}) => {
   };
 };
 
-export default createAdaptiveBatchScheduler;

@@ -5,7 +5,10 @@
  */
 
 import { createConfigValidator } from '../configuration/config-validator.js';
+import { createLogger } from '../../shared/utils/logger.js';
 import { handleError, ErrorCategory, ErrorSeverity } from '../../shared/utils/error-handler.js';
+
+const logger = createLogger({ level: 2 });
 
 // Base configuration common to all pipelines
 const BASE_CONFIG = {

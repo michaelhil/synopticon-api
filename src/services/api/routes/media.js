@@ -37,7 +37,7 @@ export const createMediaRoutes = ({
       
       if (result.status === 'success') {
         // Register devices with coordinator if requested
-        let registrationResults = [];
+        const registrationResults = [];
         if (registerDevices && result.data.devices) {
           const coordinator = await getMultiDeviceCoordinator();
           for (const device of result.data.devices) {
@@ -161,7 +161,7 @@ export const createMediaRoutes = ({
         success: true,
         streamId: deviceId,
         device: device.label,
-        quality: quality,
+        quality,
         isStreaming: streamResult.success && autoStart,
         coordinator: true,
         streamResult: autoStart ? streamResult : undefined,
@@ -427,11 +427,11 @@ export const createMediaRoutes = ({
       return createJSONResponse({
         success: true,
         memory: {
-          heapUsed: Math.round(memoryStats.heapUsed / 1024 / 1024) + ' MB',
-          heapTotal: Math.round(memoryStats.heapTotal / 1024 / 1024) + ' MB',
-          external: Math.round(memoryStats.external / 1024 / 1024) + ' MB',
-          rss: Math.round(memoryStats.rss / 1024 / 1024) + ' MB',
-          pressure: Math.round((memoryStats.heapUsed / memoryStats.heapTotal) * 100) + '%'
+          heapUsed: `${Math.round(memoryStats.heapUsed / 1024 / 1024)  } MB`,
+          heapTotal: `${Math.round(memoryStats.heapTotal / 1024 / 1024)  } MB`,
+          external: `${Math.round(memoryStats.external / 1024 / 1024)  } MB`,
+          rss: `${Math.round(memoryStats.rss / 1024 / 1024)  } MB`,
+          pressure: `${Math.round((memoryStats.heapUsed / memoryStats.heapTotal) * 100)  }%`
         },
         pooling: poolingStats,
         monitoring: memoryOptimizer.isMonitoring(),
@@ -441,7 +441,7 @@ export const createMediaRoutes = ({
     } catch (error) {
       console.error('Memory stats failed:', error);
       
-      return createErrorResponse('Memory stats failed: ' + error.message, 500);
+      return createErrorResponse(`Memory stats failed: ${  error.message}`, 500);
     }
   }]);
 

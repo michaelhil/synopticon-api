@@ -43,7 +43,10 @@
  * ```
  */
 
-import { handleError, ErrorCategory, ErrorSeverity } from '../shared/utils/error-handler.js';
+import { handleError, ErrorCategory, ErrorSeverity } from '../../shared/utils/error-handler.js';
+import { createLogger } from '../../shared/utils/logger.js';
+
+const logger = createLogger({ level: 2 });
 
 // Loading state types
 export const LoadingStates = {
@@ -143,7 +146,7 @@ export const createLoadingStateManager = (config = {}) => {
 
   /**
    * Update loading state for a resource
-   * @param {string} identifier - Resource identifier (e.g., pipeline name)
+   * @param {string} identifier - Resource identifier (e.g. pipeline name)
    * @param {string} newState - New loading state
    * @param {Object} metadata - Additional metadata
    */

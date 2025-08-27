@@ -63,10 +63,15 @@ export const createPluginLoader = () => {
 
 // Main pipeline registry
 export const createPipelineRegistry = () => {
-  const pipelines = new Map();
-  const pipelineFactories = new Map();
-  const categories = new Map();
+  const state = {
+    pipelines: new Map(),
+    pipelineFactories: new Map(),
+    categories: new Map()
+  };
+  
   const pluginLoader = createPluginLoader();
+  const operations = createRegistryOperations(state);
+  const queries = createRegistryQueries(state);
   
   // Direct pipeline registration
   const register = (name, pipelineOrFactory, metadata = {}) => {
@@ -95,7 +100,7 @@ export const createPipelineRegistry = () => {
       pipelineFactories.set(name, entry);
       
       // Add to category index
-      const category = entry.metadata.category;
+      const {category} = entry.metadata;
       if (!categories.has(category)) {
         categories.set(category, new Set());
       }
@@ -156,7 +161,7 @@ export const createPipelineRegistry = () => {
   };
   
   // Bulk registration from directory
-  const registerFromDirectory = async (directoryPath, filter = () => true) => {
+  const registerFromDirectory = async (directoryPath) => {
     try {
       // This would use fs.readdir in a real implementation
       // For now, we'll provide the interface
@@ -241,7 +246,7 @@ export const createPipelineRegistry = () => {
     if (!entry) return false;
     
     // Remove from category index
-    const category = entry.metadata.category;
+    const {category} = entry.metadata;
     if (categories.has(category)) {
       categories.get(category).delete(name);
       if (categories.get(category).size === 0) {
@@ -268,7 +273,7 @@ export const createPipelineRegistry = () => {
   const clear = async () => {
     // Cleanup all active instances
     const cleanupPromises = [];
-    for (const [instanceId, instance] of pipelines) {
+    for (const [, instance] of pipelines) {
       if (instance.instance.cleanup) {
         cleanupPromises.push(instance.instance.cleanup());
       }
@@ -308,7 +313,7 @@ export const createPipelineRegistry = () => {
     
     // Capability breakdown
     const capabilityCount = new Map();
-    for (const [name, entry] of pipelineFactories) {
+    for (const [, entry] of pipelineFactories) {
       entry.metadata.capabilities.forEach(cap => {
         capabilityCount.set(cap, (capabilityCount.get(cap) || 0) + 1);
       });
@@ -374,23 +379,130 @@ export const createPipelineRegistry = () => {
   };
 };
 
-// Built-in pipeline auto-registration
+// Lazy pipeline loaders - High performance ML modules
+export const createLazyPipelineLoaders = () => {
+  const loaders = {
+    // MediaPipe pipelines - Heavy ML dependencies
+    'mediapipe-face': null,
+    'mediapipe-mesh': null,
+    'emotion-analysis': null,
+    'eye-tracking': null
+  };
+
+  const getMediaPipeFacePipeline = async () => {
+    if (!loaders['mediapipe-face']) {
+      console.log('🔄 Lazy loading MediaPipe face detection pipeline...');
+      const module = await import('../../features/face-detection/mediapipe-face-pipeline.js');
+      loaders['mediapipe-face'] = module.createMediaPipeFacePipeline;
+      console.log('✅ MediaPipe face detection pipeline loaded');
+    }
+    return loaders['mediapipe-face'];
+  };
+
+  const getMediaPipeMeshPipeline = async () => {
+    if (!loaders['mediapipe-mesh']) {
+      console.log('🔄 Lazy loading MediaPipe mesh pipeline...');
+      const module = await import('../../features/face-detection/mediapipe-pipeline.js');
+      loaders['mediapipe-mesh'] = module.createMediaPipeMeshPipeline;
+      console.log('✅ MediaPipe mesh pipeline loaded');
+    }
+    return loaders['mediapipe-mesh'];
+  };
+
+  const getEmotionAnalysisPipeline = async () => {
+    if (!loaders['emotion-analysis']) {
+      console.log('🔄 Lazy loading emotion analysis pipeline...');
+      const module = await import('../../features/emotion-analysis/emotion-analysis-pipeline.js');
+      loaders['emotion-analysis'] = module.createEmotionAnalysisPipeline;
+      console.log('✅ Emotion analysis pipeline loaded');
+    }
+    return loaders['emotion-analysis'];
+  };
+
+  const getEyeTrackingPipeline = async () => {
+    if (!loaders['eye-tracking']) {
+      console.log('🔄 Lazy loading eye tracking pipeline...');
+      const module = await import('../../features/eye-tracking/devices/webcam/pipeline.js');
+      loaders['eye-tracking'] = module.createEyeTrackingPipeline;
+      console.log('✅ Eye tracking pipeline loaded');
+    }
+    return loaders['eye-tracking'];
+  };
+
+  return {
+    getMediaPipeFacePipeline,
+    getMediaPipeMeshPipeline,
+    getEmotionAnalysisPipeline,
+    getEyeTrackingPipeline
+  };
+};
+
+// Enhanced auto-registration with lazy loading
 export const autoRegisterBuiltins = async (registry) => {
+  const lazyLoaders = createLazyPipelineLoaders();
+  
   try {
-    // Register MediaPipe Face pipeline
-    const { createMediaPipeFacePipeline } = await import('../pipelines/mediapipe-face-pipeline.js');
-    
-    registry.register('mediapipe-face', createMediaPipeFacePipeline, {
+    // Register lazy-loaded MediaPipe Face pipeline
+    registry.register('mediapipe-face', async (config) => {
+      const createPipeline = await lazyLoaders.getMediaPipeFacePipeline();
+      return createPipeline(config);
+    }, {
       category: 'detection',
-      description: 'Fast face detection with MediaPipe',
+      description: 'Fast face detection with MediaPipe (lazy loaded)',
       version: '2.0.0',
       capabilities: ['face_detection', 'pose_estimation_3dof', 'landmark_detection'],
-      tags: ['fast', 'mobile', 'real-time', 'efficient'],
+      tags: ['fast', 'mobile', 'real-time', 'efficient', 'lazy'],
       author: 'Google/MediaPipe',
-      dependencies: ['@mediapipe/face_detection']
+      dependencies: ['@mediapipe/face_detection'],
+      lazy: true
+    });
+
+    // Register lazy-loaded MediaPipe Mesh pipeline
+    registry.register('mediapipe-mesh', async (config) => {
+      const createPipeline = await lazyLoaders.getMediaPipeMeshPipeline();
+      return createPipeline(config);
+    }, {
+      category: 'detection',
+      description: 'High-precision face mesh with 468 landmarks (lazy loaded)',
+      version: '2.0.0',
+      capabilities: ['face_mesh', 'pose_estimation_6dof', 'iris_tracking'],
+      tags: ['high-precision', 'mesh', 'landmarks', 'lazy'],
+      author: 'Google/MediaPipe',
+      dependencies: ['@mediapipe/face_mesh'],
+      lazy: true
+    });
+
+    // Register lazy-loaded Emotion Analysis pipeline
+    registry.register('emotion-analysis', async (config) => {
+      const createPipeline = await lazyLoaders.getEmotionAnalysisPipeline();
+      return createPipeline(config);
+    }, {
+      category: 'analysis',
+      description: 'CNN-based emotion recognition (lazy loaded)',
+      version: '2.0.0',
+      capabilities: ['emotion_detection', 'expression_analysis'],
+      tags: ['cnn', 'emotion', 'analysis', 'lazy'],
+      author: 'Synopticon',
+      dependencies: ['tensorflow', 'onnx'],
+      lazy: true
+    });
+
+    // Register lazy-loaded Eye Tracking pipeline
+    registry.register('eye-tracking', async (config) => {
+      const createPipeline = await lazyLoaders.getEyeTrackingPipeline();
+      return createPipeline(config);
+    }, {
+      category: 'tracking',
+      description: 'Real-time eye tracking and gaze estimation (lazy loaded)',
+      version: '2.0.0',
+      capabilities: ['eye_tracking', 'gaze_estimation', 'pupil_detection'],
+      tags: ['eye', 'gaze', 'tracking', 'lazy'],
+      author: 'Synopticon',
+      dependencies: ['mediapipe', 'opencv'],
+      lazy: true
     });
     
-    console.log('✅ Built-in pipelines registered');
+    console.log('✅ Built-in pipelines registered with lazy loading');
     
   } catch (error) {
     console.warn('⚠️ Some built-in pipelines failed to register:', error.message);

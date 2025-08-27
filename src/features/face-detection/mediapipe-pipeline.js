@@ -3,10 +3,10 @@
  * Provides 468 facial landmarks with 6DOF pose estimation and eye tracking
  */
 
-import { createPipeline } from '../../core/pipeline.js';
-import { createPipelineConfig } from '../../core/pipeline-config.js';
-import { createImageProcessor } from '../../core/image-processor.js';
-import { getGlobalResourcePool } from '../../core/resource-pool.js';
+import { createPipeline } from '../../core/pipeline/pipeline.ts';
+import { createPipelineConfig } from '../../core/pipeline/pipeline-config.js';
+import { createImageProcessor } from '../../core/engine/image-processor.js';
+import { getGlobalResourcePool } from '../../core/performance/resource-pool.js';
 import { 
   createMediaPipeBase,
   createMediaPipeLoader,
@@ -15,7 +15,7 @@ import {
   IRIS_LANDMARKS,
   extractKeyPoints,
   calculateFaceBoundingBox
-} from '../../core/mediapipe-commons.js';
+} from '../../core/integration/mediapipe-commons.js';
 import { 
   Capability,
   createPerformanceProfile,
@@ -23,7 +23,7 @@ import {
   createPose6DOF,
   createEyeResult,
   createAnalysisResult
-} from '../../core/types.js';
+} from '../../core/configuration/types.ts';
 import { handleError, ErrorCategory, ErrorSeverity } from '../../shared/utils/error-handler.js';
 
 // Use MediaPipe commons for shared configuration

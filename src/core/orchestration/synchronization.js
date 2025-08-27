@@ -4,7 +4,7 @@
  * Following functional programming patterns with factory functions
  */
 
-import { createStreamBuffer } from './streams.js';
+import { createStreamBuffer } from '../state/streams.js';
 
 // Synchronization strategy types
 export const SynchronizationStrategy = {
@@ -24,7 +24,7 @@ export const createSyncMetrics = (config = {}) => ({
   lastUpdate: config.lastUpdate || Date.now(),
   
   // Quality scoring based on multiple factors
-  computeOverallQuality: function() {
+  computeOverallQuality() {
     const jitterPenalty = Math.min(this.jitter / 100, 0.3); // Max 30% penalty for jitter
     const dropPenalty = Math.min(this.droppedSamples / 1000, 0.4); // Max 40% penalty for drops
     const latencyPenalty = Math.min(this.latency / 1000, 0.2); // Max 20% penalty for latency
@@ -58,7 +58,7 @@ const createHardwareTimestampAligner = () => {
     driftCompensation: new Map()
   };
 
-  const align = (streamData, tolerance = 1) => {
+  const align = (streamData) => {
     // Use hardware timestamps if available
     const hwTimestamp = streamData.hardwareTimestamp || streamData.timestamp;
     
@@ -70,7 +70,7 @@ const createHardwareTimestampAligner = () => {
     const offset = hwTimestamp - state.referenceTime;
     
     // Track clock drift for this stream
-    const streamId = streamData.streamId;
+    const {streamId} = streamData;
     if (!state.clockOffsets.has(streamId)) {
       state.clockOffsets.set(streamId, []);
     }
@@ -122,7 +122,7 @@ const createSoftwareTimestampAligner = () => {
     }
   };
 
-  const align = (streamData, tolerance = 10) => {
+  const align = (streamData) => {
     const timestamp = streamData.timestamp || Date.now();
     
     if (!state.referenceTime) {

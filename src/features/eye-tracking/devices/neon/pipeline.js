@@ -25,7 +25,7 @@ export const createEyeTrackingPipeline = (userConfig = {}) => {
     imageProcessor: null,
     resourcePool: null,
     isInitialized: false,
-    config: config,
+    config,
     // Pipeline-specific state
     connected: false,
     streaming: false,

@@ -519,4 +519,3 @@ export const createMultiDeviceCoordinator = (config = {}) => {
   };
 };
 
-export default createMultiDeviceCoordinator;

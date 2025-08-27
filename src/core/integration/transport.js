@@ -1,4 +1,7 @@
 /**
+import { createLogger } from '../shared/utils/logger.js';
+
+const logger = createLogger({ level: 2 });
  * Transport Infrastructure for Real-time Data Streaming
  * Using Bun's native capabilities for WebSocket, HTTP/3, and other protocols
  * Following functional programming patterns
@@ -33,7 +36,6 @@ export const createWebSocketTransport = (config = {}) => {
     state.server = Bun.serve({
       port: state.port,
       fetch(req, server) {
-        const url = new URL(req.url);
         
         // Handle WebSocket upgrade
         if (server.upgrade(req, {
@@ -429,7 +431,7 @@ export const createUdpTransport = (config = {}) => {
     throw new Error('UDP transport not yet implemented - waiting for Bun UDP support');
   };
 
-  const send = async (data, host = state.host, port = state.port) => {
+  const send = async () => {
     throw new Error('UDP transport not yet implemented - waiting for Bun UDP support');
   };
 

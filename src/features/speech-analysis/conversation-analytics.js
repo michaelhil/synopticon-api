@@ -7,7 +7,13 @@
 import {
   createSpeechEvent,
   createConversationContext
-} from '../../core/types.js';
+} from '../../core/configuration/types.ts';
+
+// Import modular analytics components
+import { createMetricsCalculator } from './analytics/metrics-calculator.js';
+import { createTopicAnalyzer } from './analytics/topic-analyzer.js';
+import { createInteractionAnalyzer } from './analytics/interaction-analyzer.js';
+import { createQualityAssessor } from './analytics/quality-assessor.js';
 
 // Conversation metrics factory
 export const createConversationMetrics = (config = {}) => ({
@@ -106,6 +112,12 @@ export const createConversationAnalytics = (config = {}) => {
       onError: []
     }
   };
+
+  // Create modular analytics components
+  const metricsCalculator = createMetricsCalculator(state);
+  const topicAnalyzer = createTopicAnalyzer(state);
+  const interactionAnalyzer = createInteractionAnalyzer(state);
+  const qualityAssessor = createQualityAssessor(state);
 
   // Initialize analytics engine
   const initialize = () => {
@@ -215,385 +227,12 @@ export const createConversationAnalytics = (config = {}) => {
   // Process individual chunk
   const processChunk = (chunk) => {
     try {
-      // Update word count metrics
-      updateWordCount(chunk);
+      // Update participant metrics using modular calculator
+      metricsCalculator.updateParticipantMetrics(chunk.participantId, chunk);
       
-      // Update speaking time metrics  
-      updateSpeakingTime(chunk);
-      
-      // Analyze sentiment
-      analyzeSentiment(chunk);
-      
-      // Extract topics
-      extractTopics(chunk);
-      
-      // Analyze interaction patterns
-      analyzeInteractions(chunk);
-
     } catch (error) {
       console.warn('Error processing chunk:', error);
       notifyCallbacks('onError', { error: error.message, chunk });
-    }
-  };
-
-  // Update word count metrics
-  const updateWordCount = (chunk) => {
-    const words = chunk.text.trim().split(/\s+/).filter(word => word.length > 0);
-    const participantId = chunk.participantId;
-
-    // Update total word count
-    state.metrics.wordCount.total += words.length;
-
-    // Update participant word count
-    if (!state.metrics.wordCount.byParticipant.has(participantId)) {
-      state.metrics.wordCount.byParticipant.set(participantId, 0);
-    }
-    state.metrics.wordCount.byParticipant.set(
-      participantId,
-      state.metrics.wordCount.byParticipant.get(participantId) + words.length
-    );
-
-    // Update vocabulary
-    words.forEach(word => {
-      const cleanWord = word.toLowerCase().replace(/[^\w]/g, '');
-      if (cleanWord.length > 2) {
-        if (state.metrics.wordCount.vocabulary.unique.has(cleanWord)) {
-          const count = state.metrics.wordCount.vocabulary.repeated.get(cleanWord) || 0;
-          state.metrics.wordCount.vocabulary.repeated.set(cleanWord, count + 1);
-        } else {
-          state.metrics.wordCount.vocabulary.unique.add(cleanWord);
-        }
-      }
-    });
-
-    // Calculate words per minute
-    const durationMinutes = (Date.now() - state.metrics.startTime) / (1000 * 60);
-    state.metrics.wordCount.averageWordsPerMinute = 
-      Math.round(state.metrics.wordCount.total / Math.max(durationMinutes, 0.1));
-  };
-
-  // Update speaking time metrics
-  const updateSpeakingTime = (chunk) => {
-    const participantId = chunk.participantId;
-    const speakingDuration = chunk.duration || estimateSpeakingDuration(chunk.text);
-
-    // Update total speaking time
-    state.metrics.speakingTime.total += speakingDuration;
-
-    // Update participant speaking time
-    if (!state.metrics.speakingTime.byParticipant.has(participantId)) {
-      state.metrics.speakingTime.byParticipant.set(participantId, 0);
-    }
-    state.metrics.speakingTime.byParticipant.set(
-      participantId,
-      state.metrics.speakingTime.byParticipant.get(participantId) + speakingDuration
-    );
-
-    // Update distribution
-    const totalTime = state.metrics.speakingTime.total;
-    const distribution = {};
-    state.metrics.speakingTime.byParticipant.forEach((time, id) => {
-      distribution[id] = Math.round((time / totalTime) * 100);
-    });
-    state.metrics.speakingTime.distribution = distribution;
-  };
-
-  // Estimate speaking duration from text
-  const estimateSpeakingDuration = (text) => {
-    // Average speaking rate: ~150 words per minute
-    const words = text.trim().split(/\s+/).length;
-    return (words / 150) * 60 * 1000; // Convert to milliseconds
-  };
-
-  // Analyze sentiment from chunk and analysis results
-  const analyzeSentiment = (chunk) => {
-    let sentimentScore = 0;
-    let sentimentLabel = 'neutral';
-
-    // Extract sentiment from analysis results
-    const sentimentAnalysis = chunk.analysisResults?.find(result => 
-      result.prompt.toLowerCase().includes('sentiment')
-    );
-
-    if (sentimentAnalysis && sentimentAnalysis.result) {
-      sentimentScore = extractSentimentScore(sentimentAnalysis.result);
-      sentimentLabel = extractSentimentLabel(sentimentAnalysis.result);
-    } else {
-      // Simple keyword-based sentiment analysis as fallback
-      const sentiment = analyzeTextSentiment(chunk.text);
-      sentimentScore = sentiment.score;
-      sentimentLabel = sentiment.label;
-    }
-
-    const sentimentData = {
-      score: sentimentScore,
-      label: sentimentLabel,
-      text: chunk.text.substring(0, 100),
-      timestamp: chunk.timestamp,
-      participantId: chunk.participantId
-    };
-
-    // Update overall sentiment
-    state.metrics.sentimentTrends.overall.push(sentimentData);
-    
-    // Keep only recent sentiment data
-    if (state.metrics.sentimentTrends.overall.length > state.config.sentimentWindow * 10) {
-      state.metrics.sentimentTrends.overall = state.metrics.sentimentTrends.overall.slice(-state.config.sentimentWindow * 5);
-    }
-
-    // Update participant sentiment
-    const participantId = chunk.participantId;
-    if (!state.metrics.sentimentTrends.byParticipant.has(participantId)) {
-      state.metrics.sentimentTrends.byParticipant.set(participantId, []);
-    }
-    state.metrics.sentimentTrends.byParticipant.get(participantId).push(sentimentData);
-
-    // Update timeline
-    state.metrics.sentimentTrends.timeline.push({
-      timestamp: chunk.timestamp,
-      score: sentimentScore,
-      participantId
-    });
-
-    // Calculate average sentiment
-    const recentSentiments = state.metrics.sentimentTrends.overall.slice(-state.config.sentimentWindow);
-    state.metrics.sentimentTrends.averageSentiment = 
-      recentSentiments.reduce((sum, s) => sum + s.score, 0) / Math.max(recentSentiments.length, 1);
-
-    // Check for significant sentiment changes
-    if (recentSentiments.length >= 3) {
-      const currentAvg = recentSentiments.slice(-3).reduce((sum, s) => sum + s.score, 0) / 3;
-      const previousAvg = recentSentiments.slice(-6, -3).reduce((sum, s) => sum + s.score, 0) / 3;
-      
-      if (Math.abs(currentAvg - previousAvg) > 0.3) {
-        notifyCallbacks('onSentimentChange', {
-          from: previousAvg,
-          to: currentAvg,
-          change: currentAvg - previousAvg,
-          participant: participantId
-        });
-      }
-    }
-  };
-
-  // Extract sentiment score from analysis result
-  const extractSentimentScore = (result) => {
-    const text = result.toLowerCase();
-    
-    // Look for explicit sentiment words and scores
-    const positiveWords = ['positive', 'good', 'great', 'excellent', 'happy', 'joy', 'love', 'wonderful'];
-    const negativeWords = ['negative', 'bad', 'terrible', 'sad', 'angry', 'hate', 'awful', 'horrible'];
-    
-    let score = 0;
-    positiveWords.forEach(word => {
-      if (text.includes(word)) score += 0.2;
-    });
-    negativeWords.forEach(word => {
-      if (text.includes(word)) score -= 0.2;
-    });
-    
-    return Math.max(-1, Math.min(1, score));
-  };
-
-  // Extract sentiment label from analysis result
-  const extractSentimentLabel = (result) => {
-    const text = result.toLowerCase();
-    
-    if (text.includes('positive') || text.includes('good') || text.includes('happy')) {
-      return 'positive';
-    } else if (text.includes('negative') || text.includes('bad') || text.includes('sad')) {
-      return 'negative';
-    } else {
-      return 'neutral';
-    }
-  };
-
-  // Simple text-based sentiment analysis
-  const analyzeTextSentiment = (text) => {
-    const positiveWords = ['good', 'great', 'excellent', 'amazing', 'wonderful', 'love', 'like', 'happy', 'yes'];
-    const negativeWords = ['bad', 'terrible', 'awful', 'hate', 'dislike', 'horrible', 'no', 'wrong', 'problem'];
-    
-    const words = text.toLowerCase().split(/\s+/);
-    let positiveCount = 0;
-    let negativeCount = 0;
-    
-    words.forEach(word => {
-      if (positiveWords.includes(word)) positiveCount++;
-      if (negativeWords.includes(word)) negativeCount++;
-    });
-    
-    const score = (positiveCount - negativeCount) / Math.max(words.length, 1);
-    let label = 'neutral';
-    
-    if (score > 0.1) label = 'positive';
-    else if (score < -0.1) label = 'negative';
-    
-    return { score: Math.max(-1, Math.min(1, score)), label };
-  };
-
-  // Extract topics from chunk
-  const extractTopics = (chunk) => {
-    const topics = extractTopicsFromText(chunk.text);
-    const participantId = chunk.participantId;
-
-    topics.forEach(topic => {
-      // Check if topic already exists
-      const existingTopic = state.metrics.topics.discovered.find(t => t.name === topic.name);
-      
-      if (existingTopic) {
-        existingTopic.mentions++;
-        existingTopic.lastMention = chunk.timestamp;
-        existingTopic.participants.add(participantId);
-      } else {
-        const newTopic = {
-          name: topic.name,
-          confidence: topic.confidence,
-          mentions: 1,
-          firstMention: chunk.timestamp,
-          lastMention: chunk.timestamp,
-          participants: new Set([participantId]),
-          keywords: topic.keywords
-        };
-        
-        state.metrics.topics.discovered.push(newTopic);
-        
-        notifyCallbacks('onTopicDiscovered', {
-          topic: newTopic,
-          chunk: chunk.text.substring(0, 100)
-        });
-      }
-    });
-
-    // Update timeline
-    if (topics.length > 0) {
-      state.metrics.topics.timeline.push({
-        timestamp: chunk.timestamp,
-        topics: topics.map(t => t.name),
-        participantId
-      });
-    }
-
-    // Update dominant topics
-    updateDominantTopics();
-  };
-
-  // Simple topic extraction from text
-  const extractTopicsFromText = (text) => {
-    const topicKeywords = {
-      'business': ['business', 'company', 'revenue', 'profit', 'market', 'sales', 'client', 'customer'],
-      'technology': ['technology', 'software', 'system', 'application', 'code', 'programming', 'computer'],
-      'project': ['project', 'task', 'deadline', 'milestone', 'deliverable', 'requirements'],
-      'meeting': ['meeting', 'agenda', 'discuss', 'presentation', 'decision', 'action'],
-      'team': ['team', 'colleague', 'collaboration', 'together', 'group', 'member'],
-      'problem': ['problem', 'issue', 'bug', 'error', 'fix', 'solution', 'trouble'],
-      'planning': ['plan', 'strategy', 'goal', 'objective', 'future', 'roadmap', 'schedule']
-    };
-
-    const words = text.toLowerCase().split(/\s+/);
-    const topics = [];
-
-    Object.entries(topicKeywords).forEach(([topicName, keywords]) => {
-      const matches = keywords.filter(keyword => 
-        words.some(word => word.includes(keyword))
-      );
-      
-      if (matches.length > 0) {
-        const confidence = matches.length / keywords.length;
-        if (confidence >= state.config.topicThreshold) {
-          topics.push({
-            name: topicName,
-            confidence,
-            keywords: matches
-          });
-        }
-      }
-    });
-
-    return topics;
-  };
-
-  // Update dominant topics based on recent activity
-  const updateDominantTopics = () => {
-    const topicCounts = new Map();
-    
-    // Count recent topic mentions (last hour)
-    const recentTimeline = state.metrics.topics.timeline.filter(
-      entry => Date.now() - entry.timestamp < 3600000 // 1 hour
-    );
-    
-    recentTimeline.forEach(entry => {
-      entry.topics.forEach(topic => {
-        topicCounts.set(topic, (topicCounts.get(topic) || 0) + 1);
-      });
-    });
-
-    // Sort by count and take top 5
-    state.metrics.topics.dominantTopics = Array.from(topicCounts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([name, count]) => ({ name, count }));
-  };
-
-  // Analyze interaction patterns
-  const analyzeInteractions = (chunk) => {
-    const participantId = chunk.participantId;
-    
-    // Track turn taking
-    const lastEntry = state.metrics.interactions.turnTaking[state.metrics.interactions.turnTaking.length - 1];
-    
-    if (lastEntry && lastEntry.participant !== participantId) {
-      // New speaker, calculate response time
-      const responseTime = chunk.timestamp - lastEntry.endTime;
-      state.metrics.interactions.responseTimes.push(responseTime);
-      
-      // Check for interruption (very short response time)
-      if (responseTime < 1000) { // Less than 1 second
-        state.metrics.interactions.interruptions++;
-      }
-    }
-
-    // Add turn taking entry
-    state.metrics.interactions.turnTaking.push({
-      participant: participantId,
-      startTime: chunk.timestamp,
-      endTime: chunk.timestamp + (chunk.duration || estimateSpeakingDuration(chunk.text)),
-      text: chunk.text.substring(0, 50)
-    });
-
-    // Keep turn taking history manageable
-    if (state.metrics.interactions.turnTaking.length > 100) {
-      state.metrics.interactions.turnTaking = state.metrics.interactions.turnTaking.slice(-50);
-    }
-
-    // Calculate engagement
-    updateEngagement();
-  };
-
-  // Update engagement metrics
-  const updateEngagement = () => {
-    const participantCount = state.rawData.participants.size;
-    const totalChunks = state.rawData.chunks.length;
-    
-    if (participantCount === 0 || totalChunks === 0) {
-      state.metrics.interactions.engagement = 'unknown';
-      return;
-    }
-
-    // Calculate participation balance
-    const chunkCounts = Array.from(state.rawData.participants.values())
-      .map(p => p.chunks.length);
-    
-    const avgChunks = chunkCounts.reduce((sum, count) => sum + count, 0) / chunkCounts.length;
-    const variance = chunkCounts.reduce((sum, count) => sum + Math.pow(count - avgChunks, 2), 0) / chunkCounts.length;
-    const balance = 1 - (Math.sqrt(variance) / avgChunks);
-
-    // Determine engagement level
-    if (balance > 0.8 && avgChunks > 5) {
-      state.metrics.interactions.engagement = 'high';
-    } else if (balance > 0.6 && avgChunks > 3) {
-      state.metrics.interactions.engagement = 'medium';
-    } else {
-      state.metrics.interactions.engagement = 'low';
     }
   };
 
@@ -603,44 +242,27 @@ export const createConversationAnalytics = (config = {}) => {
     state.metrics.duration = Date.now() - state.metrics.startTime;
     state.metrics.lastUpdate = Date.now();
 
-    // Calculate conversation quality
-    updateConversationQuality();
+    // Recalculate all metrics using modular components
+    metricsCalculator.calculateSpeakingTimeMetrics();
+    metricsCalculator.calculateWordCountMetrics();
+    metricsCalculator.calculateSentimentTrends();
+    topicAnalyzer.analyzeTopics();
+    interactionAnalyzer.analyzeTurnTaking();
+    
+    // Update interaction engagement
+    state.metrics.interactions.engagement = interactionAnalyzer.calculateEngagement();
+    
+    // Update quality metrics using modular assessor
+    const qualityAssessment = qualityAssessor.getQualityAssessment();
+    state.metrics.quality = {
+      flow: qualityAssessment.flow.score / 100,
+      coherence: qualityAssessment.coherence.score / 100,
+      participation: qualityAssessment.participation.score / 100,
+      overall: qualityAssessment.overall.rating
+    };
 
     // Notify metrics update
     notifyCallbacks('onMetricsUpdate', state.metrics);
-  };
-
-  // Update conversation quality metrics
-  const updateConversationQuality = () => {
-    // Flow: based on turn-taking smoothness
-    const avgResponseTime = state.metrics.interactions.responseTimes.length > 0
-      ? state.metrics.interactions.responseTimes.reduce((sum, time) => sum + time, 0) / state.metrics.interactions.responseTimes.length
-      : 0;
-    
-    const flow = Math.max(0, 1 - (avgResponseTime / 10000)); // Normalize to 0-1
-
-    // Coherence: based on topic consistency
-    const coherence = state.metrics.topics.discovered.length > 0 
-      ? Math.min(1, state.metrics.topics.dominantTopics.reduce((sum, topic) => sum + topic.count, 0) / Math.max(state.rawData.chunks.length, 1))
-      : 0;
-
-    // Participation: based on engagement
-    const participation = state.metrics.interactions.engagement === 'high' ? 0.9 :
-                         state.metrics.interactions.engagement === 'medium' ? 0.6 :
-                         state.metrics.interactions.engagement === 'low' ? 0.3 : 0;
-
-    // Overall quality
-    const overall = (flow + coherence + participation) / 3;
-    const overallLabel = overall > 0.7 ? 'excellent' :
-                        overall > 0.5 ? 'good' :
-                        overall > 0.3 ? 'fair' : 'poor';
-
-    state.metrics.quality = {
-      flow: Math.round(flow * 100) / 100,
-      coherence: Math.round(coherence * 100) / 100,
-      participation: Math.round(participation * 100) / 100,
-      overall: overallLabel
-    };
   };
 
   // Get current analytics data
@@ -655,7 +277,7 @@ export const createConversationAnalytics = (config = {}) => {
       ...state.metrics.wordCount,
       byParticipant: Object.fromEntries(state.metrics.wordCount.byParticipant),
       vocabulary: {
-        unique: state.metrics.wordCount.vocabulary.unique.size,
+        unique: Array.from(state.metrics.wordCount.vocabulary.unique),
         repeated: Object.fromEntries(state.metrics.wordCount.vocabulary.repeated)
       }
     },
@@ -665,114 +287,89 @@ export const createConversationAnalytics = (config = {}) => {
     }
   });
 
-  // Get summary report
-  const getSummary = () => {
-    const metrics = getMetrics();
-    const participants = Array.from(state.rawData.participants.keys());
-    
-    return {
-      overview: {
-        duration: Math.round(metrics.duration / 1000), // seconds
-        participants: participants.length,
-        totalWords: metrics.wordCount.total,
-        averageWPM: metrics.wordCount.averageWordsPerMinute,
-        overallSentiment: metrics.sentimentTrends.averageSentiment,
-        conversationQuality: metrics.quality.overall
-      },
-      
-      participation: {
-        speakingDistribution: metrics.speakingTime.distribution,
-        mostActive: participants.length > 0 ? 
-          Array.from(state.metrics.wordCount.byParticipant.entries())
-            .sort((a, b) => b[1] - a[1])[0]?.[0] : null,
-        engagement: metrics.interactions.engagement
-      },
-      
-      topics: {
-        discovered: metrics.topics.discovered.length,
-        dominant: metrics.topics.dominantTopics.slice(0, 3),
-        topicTransitions: metrics.topics.timeline.length
-      },
-      
-      sentiment: {
-        overall: metrics.sentimentTrends.averageSentiment > 0.1 ? 'positive' :
-                metrics.sentimentTrends.averageSentiment < -0.1 ? 'negative' : 'neutral',
-        stability: calculateSentimentStability()
-      },
-      
-      interactions: {
-        turnChanges: metrics.interactions.turnTaking.length,
-        interruptions: metrics.interactions.interruptions,
-        averageResponseTime: metrics.interactions.responseTimes.length > 0
-          ? Math.round(metrics.interactions.responseTimes.reduce((sum, time) => sum + time, 0) / metrics.interactions.responseTimes.length)
-          : 0
-      }
-    };
+  // Get participant statistics using modular calculator
+  const getParticipantStats = (participantId) => {
+    return metricsCalculator.getParticipantStats(participantId);
   };
 
-  // Calculate sentiment stability
-  const calculateSentimentStability = () => {
-    const sentiments = state.metrics.sentimentTrends.overall.slice(-20).map(s => s.score);
-    if (sentiments.length < 2) return 'unknown';
-    
-    const variance = sentiments.reduce((sum, score, i) => {
-      if (i === 0) return 0;
-      return sum + Math.pow(score - sentiments[i - 1], 2);
-    }, 0) / (sentiments.length - 1);
-    
-    return variance < 0.1 ? 'stable' : variance < 0.3 ? 'moderate' : 'volatile';
+  // Get topic summary using modular analyzer
+  const getTopicSummary = () => {
+    return topicAnalyzer.getTopicSummary();
   };
 
-  // Reset analytics
-  const reset = () => {
-    state.metrics = createConversationMetrics();
-    state.rawData = {
-      chunks: [],
-      participants: new Map(),
-      sessions: new Map()
-    };
-    state.processingQueue = [];
-    state.lastProcessed = 0;
-    
-    console.log('📊 Conversation analytics reset');
+  // Get interaction summary using modular analyzer
+  const getInteractionSummary = () => {
+    return interactionAnalyzer.getInteractionSummary();
   };
 
-  // Cleanup resources
-  const cleanup = () => {
-    stopAnalysis();
-    reset();
-    state.isInitialized = false;
-    console.log('🧹 Conversation analytics cleaned up');
+  // Get quality assessment using modular assessor
+  const getQualityAssessment = () => {
+    return qualityAssessor.getQualityAssessment();
   };
-
-  // Event subscription methods
-  const onMetricsUpdate = (callback) => subscribeCallback('onMetricsUpdate', callback);
-  const onTopicDiscovered = (callback) => subscribeCallback('onTopicDiscovered', callback);
-  const onSentimentChange = (callback) => subscribeCallback('onSentimentChange', callback);
-  const onEngagementChange = (callback) => subscribeCallback('onEngagementChange', callback);
-  const onError = (callback) => subscribeCallback('onError', callback);
 
   // Helper functions
-  const subscribeCallback = (eventType, callback) => {
-    state.callbacks[eventType].push(callback);
-    return () => {
-      const index = state.callbacks[eventType].indexOf(callback);
-      if (index !== -1) state.callbacks[eventType].splice(index, 1);
-    };
-  };
-
-  const notifyCallbacks = (eventType, data) => {
-    state.callbacks[eventType].forEach(callback => {
+  const notifyCallbacks = (event, data) => {
+    const callbacks = state.callbacks[event] || [];
+    callbacks.forEach(callback => {
       try {
-        callback(createSpeechEvent({
-          type: eventType,
-          data,
-          timestamp: Date.now()
-        }));
+        callback(data);
       } catch (error) {
-        console.warn(`Analytics ${eventType} callback error:`, error);
+        console.warn(`Callback error for ${event}:`, error);
       }
     });
+  };
+
+  // Event handlers
+  const onMetricsUpdate = (callback) => {
+    state.callbacks.onMetricsUpdate.push(callback);
+    return () => removeCallback('onMetricsUpdate', callback);
+  };
+
+  const onTopicDiscovered = (callback) => {
+    state.callbacks.onTopicDiscovered.push(callback);
+    return () => removeCallback('onTopicDiscovered', callback);
+  };
+
+  const onSentimentChange = (callback) => {
+    state.callbacks.onSentimentChange.push(callback);
+    return () => removeCallback('onSentimentChange', callback);
+  };
+
+  const onEngagementChange = (callback) => {
+    state.callbacks.onEngagementChange.push(callback);
+    return () => removeCallback('onEngagementChange', callback);
+  };
+
+  const onError = (callback) => {
+    state.callbacks.onError.push(callback);
+    return () => removeCallback('onError', callback);
+  };
+
+  const removeCallback = (event, callback) => {
+    const callbacks = state.callbacks[event];
+    if (callbacks) {
+      const index = callbacks.indexOf(callback);
+      if (index !== -1) callbacks.splice(index, 1);
+    }
+  };
+
+  // Cleanup
+  const cleanup = () => {
+    stopAnalysis();
+    
+    // Clear all data
+    state.rawData.chunks = [];
+    state.rawData.participants.clear();
+    state.rawData.sessions.clear();
+    state.processingQueue = [];
+    
+    // Clear callbacks
+    Object.keys(state.callbacks).forEach(event => {
+      state.callbacks[event] = [];
+    });
+    
+    state.isInitialized = false;
+    console.log('🧹 Conversation analytics cleaned up');
   };
 
   return {
@@ -780,37 +377,28 @@ export const createConversationAnalytics = (config = {}) => {
     initialize,
     startAnalysis,
     stopAnalysis,
-    addChunk,
-    reset,
     cleanup,
-
-    // Status
-    isInitialized: () => state.isInitialized,
-    isAnalyzing: () => state.isAnalyzing,
-
-    // Data access
+    
+    // Data processing
+    addChunk,
+    
+    // Data access - delegated to modular components
     getMetrics,
-    getSummary,
-    getRawData: () => ({
-      chunks: [...state.rawData.chunks],
-      participants: Object.fromEntries(state.rawData.participants),
-      sessions: Object.fromEntries(state.rawData.sessions)
-    }),
-
+    getParticipantStats,
+    getTopicSummary,
+    getInteractionSummary,
+    getQualityAssessment,
+    
     // Event handlers
     onMetricsUpdate,
     onTopicDiscovered,
     onSentimentChange,
     onEngagementChange,
     onError,
-
-    // Configuration
-    updateConfig: (newConfig) => {
-      Object.assign(state.config, newConfig);
-    },
-    getConfig: () => ({ ...state.config })
+    
+    // Status
+    isInitialized: () => state.isInitialized,
+    isAnalyzing: () => state.isAnalyzing
   };
 };
 
-// Export metrics factory for external use
-// Export conversation metrics factory (already exported above as const)

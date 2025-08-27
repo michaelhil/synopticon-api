@@ -31,7 +31,7 @@ export const parseURL = (urlString, baseURL = 'http://localhost') => {
     
     return {
       pathname: url.pathname,
-      query: query,
+      query,
       search: url.search,
       searchParams: url.searchParams,
       hash: url.hash,
@@ -80,7 +80,7 @@ export const parseRequestURL = (reqUrl, parseQuery = false) => {
     }
     
     return result;
-  } catch (error) {
+  } catch {
     // Fallback for malformed URLs
     return {
       pathname: reqUrl.split('?')[0],

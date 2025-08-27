@@ -3,7 +3,7 @@
  * Tracks and analyzes pipeline performance, memory usage, and system health
  */
 
-import { createPerformanceMetrics } from './types.js';
+import { createPerformanceMetrics } from '../configuration/types.ts';
 
 // Global performance monitor instance
 let globalMonitor = null;
@@ -246,7 +246,7 @@ export const createPerformanceMonitor = (config = {}) => {
     const now = Date.now();
     const uptime = now - state.startTime;
     
-    let systemStats = { uptime };
+    const systemStats = { uptime };
     if (typeof process !== 'undefined' && process.memoryUsage) {
       systemStats.memory = process.memoryUsage();
     }
@@ -276,7 +276,7 @@ export const createPerformanceMonitor = (config = {}) => {
   const getHealthScore = () => {
     const stats = getAllStats();
     let score = 100;
-    let factors = [];
+    const factors = [];
     
     // Check pipeline health
     Object.values(stats.pipelines).forEach(pipeline => {

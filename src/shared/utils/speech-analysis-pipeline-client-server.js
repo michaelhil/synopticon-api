@@ -283,7 +283,7 @@ export const createSpeechAnalysisPipeline = (config = {}) => {
   };
 
   // Update session metadata
-  const updateSessionMetadata = async (metadata) => {
+  const updateSessionMetadata = async (meta,data) => {
     if (!state.isInitialized) {
       throw new Error('Pipeline not initialized');
     }
@@ -301,7 +301,7 @@ export const createSpeechAnalysisPipeline = (config = {}) => {
           headers: {
             'Content-Type': 'application/json'
           },
-          body: JSON.stringify(metadata)
+          body: JSON.stringify(meta,data)
         }
       );
       

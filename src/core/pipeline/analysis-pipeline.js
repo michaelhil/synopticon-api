@@ -4,6 +4,9 @@
  */
 
 import { createModuleRegistry } from '../integration/module-interface.js';
+import { createLogger } from '../../shared/utils/logger.js';
+
+const logger = createLogger({ level: 2 });
 
 export const createAnalysisPipeline = (config = {}) => {
   const state = {
@@ -67,10 +70,10 @@ export const createAnalysisPipeline = (config = {}) => {
             moduleConfig.config
           );
           moduleConfig.instance = moduleInstance;
-          console.log(`✅ Loaded ${moduleConfig.category}:${moduleConfig.algorithm}`);
+          logger.info(`✅ Loaded ${moduleConfig.category}:${moduleConfig.algorithm}`);
         } catch (error) {
           if (moduleConfig.optional) {
-            console.warn(`⚠️ Optional module ${moduleConfig.category}:${moduleConfig.algorithm} failed to load:`, error.message);
+            logger.warn(`⚠️ Optional module ${moduleConfig.category}:${moduleConfig.algorithm} failed to load:`, error.message);
             moduleConfig.instance = null;
           } else {
             throw new Error(`Required module ${moduleConfig.category}:${moduleConfig.algorithm} failed to load: ${error.message}`);
@@ -79,7 +82,7 @@ export const createAnalysisPipeline = (config = {}) => {
       }
 
       state.isInitialized = true;
-      console.log(`🚀 Pipeline initialized with ${state.modules.filter(m => m.instance).length} modules`);
+      logger.info(`🚀 Pipeline initialized with ${state.modules.filter(m => m.instance).length} modules`);
       
       return {
         totalModules: state.modules.length,
@@ -158,7 +161,7 @@ export const createAnalysisPipeline = (config = {}) => {
           if (state.config.errorHandling === 'throw') {
             throw stageError;
           } else if (state.config.errorHandling === 'skip') {
-            console.warn(`Skipping failed stage ${moduleConfig.category}:${moduleConfig.algorithm}:`, stageError.message);
+            logger.warn(`Skipping failed stage ${moduleConfig.category}:${moduleConfig.algorithm}:`, stageError.message);
             continue;
           }
           // 'fallback' mode continues with original data

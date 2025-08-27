@@ -27,7 +27,7 @@ const getEmotionAnalysisPipeline = async () => {
 
 const getDistributionModules = async () => {
   if (!distributionModules) {
-    distributionModules = await import('../../core/distribution/index.js');
+    distributionModules = await import('../../core/distribution/index.ts');
   }
   return distributionModules;
 };
@@ -89,12 +89,12 @@ const createRouter = () => {
   };
   
   const route = async (request) => {
-    const method = request.method;
+    const {method} = request;
     const url = parseRequestURL(request.url);
     const path = url.pathname;
     
     for (const [key, { pattern, handler }] of routes.entries()) {
-      if (key.startsWith(method + ':')) {
+      if (key.startsWith(`${method  }:`)) {
         const match = path.match(pattern);
         if (match) {
           const params = match.slice(1);
@@ -345,6 +345,27 @@ export const createFaceAnalysisServer = (config = {}) => {
       // WebSocket upgrade (bypass middleware)
       if (url.pathname === '/ws' && server.upgrade(request)) {
         return;
+      }
+      
+      // Serve static files from examples directory
+      if (url.pathname.startsWith('/examples/')) {
+        try {
+          const filePath = `.${url.pathname}`;
+          const file = Bun.file(filePath);
+          
+          if (await file.exists()) {
+            return new Response(file, {
+              headers: {
+                'Content-Type': getContentType(filePath),
+                'Cache-Control': 'public, max-age=3600'
+              }
+            });
+          }
+        } catch (error) {
+          console.warn(`Static file error: ${error.message}`);
+        }
+        
+        return new Response('File not found', { status: 404 });
       }
       
       // Process all HTTP requests through middleware system

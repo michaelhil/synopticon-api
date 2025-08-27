@@ -7,12 +7,9 @@
 import { createWebGLEngine } from './webgl-engine.js';
 import { createCameraManager } from '../../shared/utils/camera.js';
 import { createErrorHandler, ErrorCategory, ErrorSeverity } from '../../shared/utils/error-handler.js';
-import { createAnalysisPipeline, createPipelineConfigurations } from '../pipeline/analysis-pipeline.js';
-import { createConfigurationManager, createConfig } from '../configuration/configuration.js';
+import { createAnalysisPipeline } from '../pipeline/analysis-pipeline.js';
+import { createConfigurationManager } from '../configuration/configuration.js';
 import { createOrchestrator } from '../orchestration/orchestrator.js';
-
-// Import detection modules
-import { createMediaPipeFaceDetector } from '../../shared/utils/modules/detection/mediapipe/mediapipe-face-detector.js';
 
 // Import pipeline factories
 import { createEyeTrackingPipelineFactory } from '../../features/eye-tracking/devices/neon/pipeline.js';

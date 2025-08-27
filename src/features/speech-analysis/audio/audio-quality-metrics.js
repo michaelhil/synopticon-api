@@ -5,6 +5,9 @@
  */
 
 import { createEnhancedMemoryPool } from '../../shared/utils/enhanced-memory-pool.js';
+import { createQualityAnalyzerConfig, createQualityAnalyzerState } from './quality-analyzer-config.js';
+import { createQualityAnalysisCore } from './quality-analyzer-core.js';
+import { createQualityStatsManager } from './quality-analyzer-stats.js';
 
 // Signal-to-Noise Ratio (SNR) calculator with frequency weighting
 export const createSNRCalculator = (config = {}) => {
@@ -356,43 +359,23 @@ export const createClippingDetector = (config = {}) => {
 
 // Comprehensive audio quality analyzer
 export const createAudioQualityAnalyzer = (config = {}) => {
+  const analyzerConfig = createQualityAnalyzerConfig(config);
   const memoryPool = createEnhancedMemoryPool({
-    maxPoolSize: config.maxPoolSize || 100,
+    maxPoolSize: analyzerConfig.maxPoolSize,
     enableMetrics: true
   });
   memoryPool.initialize();
 
-  const state = {
-    config: {
-      frameSize: config.frameSize || 1024,
-      sampleRate: config.sampleRate || 44100,
-      qualityThresholds: {
-        excellent: config.excellentThreshold || 85,
-        good: config.goodThreshold || 70,
-        fair: config.fairThreshold || 50,
-        poor: config.poorThreshold || 30
-      },
-      ...config
-    },
-    
-    // Individual analyzers
-    snrCalculator: createSNRCalculator(config.snr),
-    thdCalculator: createTHDCalculator(config.thd),
-    clippingDetector: createClippingDetector(config.clipping),
-    
-    // Overall statistics
-    stats: {
-      totalFrames: 0,
-      overallQuality: 0,
-      qualityDistribution: {
-        excellent: 0,
-        good: 0,
-        fair: 0,
-        poor: 0
-      },
-      qualityTrend: []
-    }
-  };
+  const state = createQualityAnalyzerState(
+    analyzerConfig,
+    createSNRCalculator(config.snr),
+    createTHDCalculator(config.thd),
+    createClippingDetector(config.clipping)
+  );
+  
+  // Create modular processors
+  const analysisCore = createQualityAnalysisCore(state);
+  const statsManager = createQualityStatsManager(state);
 
   // Register quality result type
   memoryPool.registerFactory('QualityResult', () => ({
@@ -405,7 +388,7 @@ export const createAudioQualityAnalyzer = (config = {}) => {
     clipping: null,
     metrics: {
       signalStrength: 0,
-      noiseLeve: 0,
+      noiseLevel: 0,
       distortion: 0,
       clarity: 0
     },
@@ -415,60 +398,18 @@ export const createAudioQualityAnalyzer = (config = {}) => {
   // Analyze audio quality comprehensively
   const analyzeQuality = (audioBuffer, fftMagnitudes = null, isQuiet = false, timestamp = Date.now()) => {
     // Run individual analyses
-    const snrResult = state.snrCalculator.calculateSNR(audioBuffer, fftMagnitudes, isQuiet);
-    let thdResult = { thd: 0, quality: 100 };
-    if (fftMagnitudes) {
-      thdResult = state.thdCalculator.calculateTHD(fftMagnitudes);
-    }
-    const clippingResult = state.clippingDetector.detectClipping(audioBuffer);
+    const { snrResult, thdResult, clippingResult } = analysisCore.runAnalyses(audioBuffer, fftMagnitudes, isQuiet);
     
-    // Calculate weighted overall quality
-    const snrWeight = 0.4;
-    const thdWeight = 0.3;
-    const clippingWeight = 0.3;
+    // Calculate overall quality and level
+    const overallQuality = analysisCore.calculateOverallQuality(snrResult, thdResult, clippingResult);
+    const qualityLevel = analysisCore.determineQualityLevel(overallQuality);
     
-    const overallQuality = 
-      (snrResult.quality * snrWeight) +
-      (thdResult.quality * thdWeight) +
-      (clippingResult.quality * clippingWeight);
-    
-    // Determine quality level
-    let qualityLevel;
-    if (overallQuality >= state.config.qualityThresholds.excellent) {
-      qualityLevel = 'excellent';
-    } else if (overallQuality >= state.config.qualityThresholds.good) {
-      qualityLevel = 'good';
-    } else if (overallQuality >= state.config.qualityThresholds.fair) {
-      qualityLevel = 'fair';
-    } else {
-      qualityLevel = 'poor';
-    }
-    
-    // Generate recommendations
-    const recommendations = [];
-    if (snrResult.snr < 10) {
-      recommendations.push('Reduce background noise or increase microphone gain');
-    }
-    if (thdResult.thdPercent > 10) {
-      recommendations.push('Check for audio hardware distortion or overdriving');
-    }
-    if (clippingResult.isClipped) {
-      recommendations.push('Reduce input level to prevent audio clipping');
-    }
-    if (snrResult.snr > 40) {
-      recommendations.push('Excellent audio quality - no changes needed');
-    }
+    // Generate recommendations and metrics
+    const recommendations = analysisCore.generateRecommendations(snrResult, thdResult, clippingResult);
+    const detailedMetrics = analysisCore.calculateDetailedMetrics(snrResult, thdResult, clippingResult, audioBuffer);
     
     // Update statistics
-    state.stats.totalFrames++;
-    state.stats.overallQuality = (state.stats.overallQuality * (state.stats.totalFrames - 1) + overallQuality) / state.stats.totalFrames;
-    state.stats.qualityDistribution[qualityLevel]++;
-    
-    // Maintain quality trend (last 100 measurements)
-    state.stats.qualityTrend.push(overallQuality);
-    if (state.stats.qualityTrend.length > 100) {
-      state.stats.qualityTrend.shift();
-    }
+    statsManager.updateStats(overallQuality, qualityLevel);
     
     // Create pooled result
     const result = memoryPool.acquire('QualityResult');
@@ -479,12 +420,7 @@ export const createAudioQualityAnalyzer = (config = {}) => {
       snr: snrResult,
       thd: thdResult,
       clipping: clippingResult,
-      metrics: {
-        signalStrength: Math.max(0, Math.min(100, snrResult.signalPower + 60)), // Normalize to 0-100
-        noiseLevel: Math.max(0, Math.min(100, 100 - snrResult.snr)), // Lower SNR = higher noise
-        distortion: thdResult.thdPercent,
-        clarity: Math.max(0, 100 - clippingResult.clippingPercentage)
-      },
+      metrics: detailedMetrics,
       recommendations: [...recommendations]
     });
     
@@ -498,15 +434,7 @@ export const createAudioQualityAnalyzer = (config = {}) => {
 
   // Get comprehensive statistics
   const getStats = () => ({
-    ...state.stats,
-    qualityDistributionPercentages: {
-      excellent: (state.stats.qualityDistribution.excellent / state.stats.totalFrames) * 100,
-      good: (state.stats.qualityDistribution.good / state.stats.totalFrames) * 100,
-      fair: (state.stats.qualityDistribution.fair / state.stats.totalFrames) * 100,
-      poor: (state.stats.qualityDistribution.poor / state.stats.totalFrames) * 100
-    },
-    qualityTrendAverage: state.stats.qualityTrend.length > 0 ? 
-      state.stats.qualityTrend.reduce((sum, q) => sum + q, 0) / state.stats.qualityTrend.length : 0,
+    ...statsManager.getComprehensiveStats(),
     individual: {
       snr: state.snrCalculator.getStats(),
       thd: state.thdCalculator.getStats(),

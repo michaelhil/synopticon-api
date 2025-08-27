@@ -58,7 +58,7 @@ export const createUrlValidator = (config = {}) => {
     let url;
     try {
       url = new URL(urlString);
-    } catch (error) {
+    } catch {
       return {
         valid: false,
         error: 'Invalid URL format'
@@ -95,7 +95,7 @@ export const createUrlValidator = (config = {}) => {
         if (host.startsWith('*.')) {
           // Wildcard subdomain matching
           const domain = host.slice(2);
-          return url.hostname === domain || url.hostname.endsWith('.' + domain);
+          return url.hostname === domain || url.hostname.endsWith(`.${  domain}`);
         }
         return url.hostname === host;
       });
@@ -147,7 +147,7 @@ export const createUrlValidator = (config = {}) => {
       url: url.toString(),
       protocol: url.protocol,
       hostname: url.hostname,
-      port: port,
+      port,
       pathname: url.pathname
     };
   };
@@ -171,7 +171,7 @@ export const createUrlValidator = (config = {}) => {
       url.pathname = url.pathname.replace(/\/+/g, '/');
       
       return url.toString();
-    } catch (error) {
+    } catch {
       return null;
     }
   };

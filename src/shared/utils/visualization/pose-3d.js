@@ -3,6 +3,10 @@
  * Real-time 6DOF head pose rendering with face model
  */
 
+import { createLogger } from '../logger.js';
+
+const logger = createLogger({ level: 2 });
+
 // 3D face model configuration
 const FACE_MODEL_CONFIG = {
   scale: 100,
@@ -17,6 +21,149 @@ const FACE_MODEL_CONFIG = {
     yAxis: 0x00ff00,
     zAxis: 0x0000ff
   }
+};
+
+// Helper: Create Three.js scene components
+const initializeThreeJSComponents = (canvas) => {
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x1a1a1a);
+  
+  const camera = new THREE.PerspectiveCamera(
+    45, 
+    canvas.clientWidth / canvas.clientHeight, 
+    0.1, 
+    1000
+  );
+  camera.position.set(0, 0, 400);
+  camera.lookAt(0, 0, 0);
+
+  const renderer = new THREE.WebGLRenderer({ 
+    canvas,
+    antialias: true,
+    alpha: true 
+  });
+  renderer.setSize(canvas.clientWidth, canvas.clientHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  return { scene, camera, renderer };
+};
+
+// Helper: Add lighting to scene
+const addSceneLighting = (scene) => {
+  // Ambient light
+  const ambientLight = new THREE.AmbientLight(0x404040, 0.3);
+  scene.add(ambientLight);
+
+  // Directional light
+  const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+  directionalLight.position.set(50, 50, 100);
+  directionalLight.castShadow = true;
+  scene.add(directionalLight);
+
+  // Point light
+  const pointLight = new THREE.PointLight(0x4080ff, 0.4, 200);
+  pointLight.position.set(-50, 30, 50);
+  scene.add(pointLight);
+};
+
+// Helper: Create main head geometry
+const createHeadGeometry = () => {
+  const headGeometry = new THREE.SphereGeometry(
+    FACE_MODEL_CONFIG.scale * 0.8, 32, 24, 
+    0, Math.PI * 2, 0, Math.PI * 0.7
+  );
+  const headMaterial = new THREE.MeshPhongMaterial({
+    color: FACE_MODEL_CONFIG.colors.face,
+    transparent: true,
+    opacity: FACE_MODEL_CONFIG.opacity,
+    wireframe: FACE_MODEL_CONFIG.wireframe,
+    side: THREE.DoubleSide
+  });
+  const headMesh = new THREE.Mesh(headGeometry, headMaterial);
+  headMesh.castShadow = true;
+  headMesh.receiveShadow = true;
+  return { headMesh, headGeometry };
+};
+
+// Helper: Create facial features
+const createFacialFeatures = () => {
+  const features = [];
+
+  // Nose
+  const noseGeometry = new THREE.ConeGeometry(8, 25, 8);
+  const noseMaterial = new THREE.MeshPhongMaterial({ 
+    color: FACE_MODEL_CONFIG.colors.face,
+    transparent: true,
+    opacity: FACE_MODEL_CONFIG.opacity * 0.9
+  });
+  const noseMesh = new THREE.Mesh(noseGeometry, noseMaterial);
+  noseMesh.position.set(0, -10, 60);
+  noseMesh.rotation.x = Math.PI;
+  noseMesh.castShadow = true;
+  features.push(noseMesh);
+
+  // Eyes
+  const eyeGeometry = new THREE.SphereGeometry(12, 16, 12);
+  const eyeMaterial = new THREE.MeshPhongMaterial({ 
+    color: 0x333333,
+    transparent: true,
+    opacity: 0.8
+  });
+
+  const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+  leftEye.position.set(-25, 15, 50);
+  leftEye.castShadow = true;
+  features.push(leftEye);
+
+  const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
+  rightEye.position.set(25, 15, 50);
+  rightEye.castShadow = true;
+  features.push(rightEye);
+
+  return features;
+};
+
+// Helper: Create wireframe overlay
+const createWireframeOverlay = (headGeometry) => {
+  if (!FACE_MODEL_CONFIG.wireframe) return null;
+
+  const wireframeGeometry = headGeometry.clone();
+  const wireframeMaterial = new THREE.MeshBasicMaterial({
+    color: FACE_MODEL_CONFIG.colors.wireframe,
+    wireframe: true,
+    transparent: true,
+    opacity: 0.3
+  });
+  return new THREE.Mesh(wireframeGeometry, wireframeMaterial);
+};
+
+// Helper: Create detailed 3D face geometry
+const createFaceGeometry = (scene) => {
+  const faceModel = new THREE.Group();
+
+  // Main head
+  const { headMesh, headGeometry } = createHeadGeometry();
+  faceModel.add(headMesh);
+
+  // Facial features
+  const features = createFacialFeatures();
+  features.forEach(feature => faceModel.add(feature));
+
+  // Wireframe overlay
+  const wireframeMesh = createWireframeOverlay(headGeometry);
+  if (wireframeMesh) faceModel.add(wireframeMesh);
+
+  // Axes helper
+  let axesHelper = null;
+  if (FACE_MODEL_CONFIG.showAxes) {
+    axesHelper = new THREE.AxesHelper(FACE_MODEL_CONFIG.axisLength);
+    faceModel.add(axesHelper);
+  }
+
+  scene.add(faceModel);
+  return { faceModel, axesHelper };
 };
 
 // Create 3D pose visualization
@@ -37,153 +184,37 @@ export const createPose3DVisualization = (canvas) => {
   // Initialize Three.js scene
   const initialize = () => {
     try {
-      // Create scene
-      state.scene = new THREE.Scene();
-      state.scene.background = new THREE.Color(0x1a1a1a);
-
-      // Create camera
-      state.camera = new THREE.PerspectiveCamera(
-        45, 
-        canvas.clientWidth / canvas.clientHeight, 
-        0.1, 
-        1000
-      );
-      state.camera.position.set(0, 0, 400);
-      state.camera.lookAt(0, 0, 0);
-
-      // Create renderer
-      state.renderer = new THREE.WebGLRenderer({ 
-        canvas,
-        antialias: true,
-        alpha: true 
-      });
-      state.renderer.setSize(canvas.clientWidth, canvas.clientHeight);
-      state.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      state.renderer.shadowMap.enabled = true;
-      state.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      // Use helper functions to set up components
+      const { scene, camera, renderer } = initializeThreeJSComponents(canvas);
+      state.scene = scene;
+      state.camera = camera;
+      state.renderer = renderer;
 
       // Add lighting
-      addLighting();
+      addSceneLighting(state.scene);
 
       // Create face model
-      createFaceModel();
+      const { faceModel, axesHelper } = createFaceGeometry(state.scene);
+      state.faceModel = faceModel;
+      state.axesHelper = axesHelper;
 
-      // Create coordinate axes
-      createAxesHelper();
 
       // Start render loop
       state.animationId = requestAnimationFrame(render);
       state.isInitialized = true;
 
-      console.log('3D pose visualization initialized');
+      logger.info('3D pose visualization initialized');
 
     } catch (error) {
-      console.error('Failed to initialize 3D visualization:', error);
+      logger.error('Failed to initialize 3D visualization:', error);
       throw error;
     }
   };
 
-  // Add scene lighting
-  const addLighting = () => {
-    // Ambient light
-    const ambientLight = new THREE.AmbientLight(0x404040, 0.6);
-    state.scene.add(ambientLight);
 
-    // Directional light
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    directionalLight.position.set(100, 100, 50);
-    directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
-    state.scene.add(directionalLight);
-
-    // Point light for face illumination
-    const pointLight = new THREE.PointLight(0x667eea, 0.5, 300);
-    pointLight.position.set(0, 50, 100);
-    state.scene.add(pointLight);
-  };
-
-  // Create 3D face model
-  const createFaceModel = () => {
-    const group = new THREE.Group();
-
-    // Main face geometry (simplified head)
-    const headGeometry = new THREE.SphereGeometry(80, 32, 24, 0, Math.PI * 2, 0, Math.PI * 0.7);
-    const headMaterial = new THREE.MeshPhongMaterial({
-      color: FACE_MODEL_CONFIG.colors.face,
-      transparent: true,
-      opacity: FACE_MODEL_CONFIG.opacity,
-      wireframe: FACE_MODEL_CONFIG.wireframe,
-      side: THREE.DoubleSide
-    });
-    const headMesh = new THREE.Mesh(headGeometry, headMaterial);
-    headMesh.castShadow = true;
-    headMesh.receiveShadow = true;
-    group.add(headMesh);
-
-    // Nose (small cone)
-    const noseGeometry = new THREE.ConeGeometry(8, 25, 8);
-    const noseMaterial = new THREE.MeshPhongMaterial({ 
-      color: FACE_MODEL_CONFIG.colors.face,
-      transparent: true,
-      opacity: FACE_MODEL_CONFIG.opacity * 0.9
-    });
-    const noseMesh = new THREE.Mesh(noseGeometry, noseMaterial);
-    noseMesh.position.set(0, -10, 70);
-    noseMesh.rotation.x = Math.PI;
-    noseMesh.castShadow = true;
-    group.add(noseMesh);
-
-    // Eyes
-    const eyeGeometry = new THREE.SphereGeometry(12, 16, 12);
-    const eyeMaterial = new THREE.MeshPhongMaterial({ 
-      color: 0x333333,
-      transparent: true,
-      opacity: 0.8
-    });
-
-    const leftEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-    leftEye.position.set(-25, 15, 60);
-    leftEye.castShadow = true;
-    group.add(leftEye);
-
-    const rightEye = new THREE.Mesh(eyeGeometry, eyeMaterial);
-    rightEye.position.set(25, 15, 60);
-    rightEye.castShadow = true;
-    group.add(rightEye);
-
-    // Mouth (flattened sphere)
-    const mouthGeometry = new THREE.SphereGeometry(15, 16, 8);
-    const mouthMaterial = new THREE.MeshPhongMaterial({ 
-      color: 0x660000,
-      transparent: true,
-      opacity: 0.7
-    });
-    const mouthMesh = new THREE.Mesh(mouthGeometry, mouthMaterial);
-    mouthMesh.position.set(0, -35, 50);
-    mouthMesh.scale.set(1, 0.3, 0.8);
-    mouthMesh.castShadow = true;
-    group.add(mouthMesh);
-
-    // Add wireframe overlay for better visualization
-    if (FACE_MODEL_CONFIG.wireframe) {
-      const wireframeGeometry = headGeometry.clone();
-      const wireframeMaterial = new THREE.MeshBasicMaterial({
-        color: FACE_MODEL_CONFIG.colors.wireframe,
-        wireframe: true,
-        transparent: true,
-        opacity: 0.3
-      });
-      const wireframeMesh = new THREE.Mesh(wireframeGeometry, wireframeMaterial);
-      group.add(wireframeMesh);
-    }
-
-    state.faceModel = group;
-    state.scene.add(group);
-  };
 
   // Create coordinate axes helper
-  const createAxesHelper = () => {
+  const _createAxesHelper = () => {
     if (!FACE_MODEL_CONFIG.showAxes) return;
 
     // Custom axes with labels
@@ -241,16 +272,11 @@ export const createPose3DVisualization = (canvas) => {
     group.add(arrowMesh);
   };
 
-  // Update pose visualization
-  const updatePose = (pose) => {
-    if (!state.isInitialized || !state.faceModel) return;
-
-    state.currentPose = pose;
-
-    // Apply pose smoothing
+  // Helper: Apply pose smoothing
+  const applySmoothingToPose = (pose) => {
     if (state.smoothedPose) {
       const alpha = state.smoothingFactor;
-      state.smoothedPose = {
+      return {
         rotation: {
           yaw: lerp(state.smoothedPose.rotation.yaw, pose.rotation.yaw || 0, alpha),
           pitch: lerp(state.smoothedPose.rotation.pitch, pose.rotation.pitch || 0, alpha),
@@ -262,33 +288,43 @@ export const createPose3DVisualization = (canvas) => {
           z: lerp(state.smoothedPose.translation?.z || 0, pose.translation?.z || 0, alpha)
         }
       };
-    } else {
-      state.smoothedPose = {
-        rotation: { ...pose.rotation },
-        translation: pose.translation ? { ...pose.translation } : { x: 0, y: 0, z: 0 }
-      };
     }
+    return {
+      rotation: { ...pose.rotation },
+      translation: pose.translation ? { ...pose.translation } : { x: 0, y: 0, z: 0 }
+    };
+  };
 
-    // Apply rotation to face model
-    if (state.smoothedPose.rotation) {
-      // Convert from face coordinate system to Three.js coordinate system
-      state.faceModel.rotation.x = -(state.smoothedPose.rotation.pitch || 0);
-      state.faceModel.rotation.y = state.smoothedPose.rotation.yaw || 0;
-      state.faceModel.rotation.z = -(state.smoothedPose.rotation.roll || 0);
+  // Helper: Apply pose to face model
+  const applyPoseToFaceModel = (pose) => {
+    // Apply rotation (convert coordinate systems)
+    if (pose.rotation) {
+      state.faceModel.rotation.x = -(pose.rotation.pitch || 0);
+      state.faceModel.rotation.y = pose.rotation.yaw || 0;
+      state.faceModel.rotation.z = -(pose.rotation.roll || 0);
     }
 
     // Apply translation
-    if (state.smoothedPose.translation) {
-      state.faceModel.position.x = (state.smoothedPose.translation.x || 0) * 0.5;
-      state.faceModel.position.y = -(state.smoothedPose.translation.y || 0) * 0.5;
-      state.faceModel.position.z = (state.smoothedPose.translation.z || 0) * 0.5;
+    if (pose.translation) {
+      state.faceModel.position.x = (pose.translation.x || 0) * 0.5;
+      state.faceModel.position.y = -(pose.translation.y || 0) * 0.5;
+      state.faceModel.position.z = (pose.translation.z || 0) * 0.5;
     }
 
-    // Update axes helper to match face model
+    // Update axes helper to match
     if (state.axesHelper) {
       state.axesHelper.rotation.copy(state.faceModel.rotation);
       state.axesHelper.position.copy(state.faceModel.position);
     }
+  };
+
+  // Update pose visualization
+  const updatePose = (pose) => {
+    if (!state.isInitialized || !state.faceModel) return;
+
+    state.currentPose = pose;
+    state.smoothedPose = applySmoothingToPose(pose);
+    applyPoseToFaceModel(state.smoothedPose);
   };
 
   // Linear interpolation helper
@@ -311,7 +347,7 @@ export const createPose3DVisualization = (canvas) => {
       state.animationId = requestAnimationFrame(render);
 
     } catch (error) {
-      console.error('Render error:', error);
+      logger.error('Render error:', error);
     }
   };
 
@@ -354,7 +390,7 @@ export const createPose3DVisualization = (canvas) => {
     }
 
     state.isInitialized = false;
-    console.log('3D pose visualization cleaned up');
+    logger.info('3D pose visualization cleaned up');
   };
 
   // Set visualization options

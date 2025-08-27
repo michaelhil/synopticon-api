@@ -4,7 +4,7 @@
  */
 
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { createEnhancedMemoryPool, defaultMemoryPool } from '../../src/shared/utils/enhanced-memory-pool.js';
+import { createEnhancedMemoryPool } from '../../src/shared/utils/enhanced-memory-pool.js';
 
 describe('Enhanced Memory Pool', () => {
   let memoryPool;

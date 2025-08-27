@@ -9,13 +9,13 @@
  */
 
 // Import and re-export core orchestrator (always loaded)
-import { createOrchestrator } from './core/orchestrator.js';
+import { createOrchestrator } from './core/orchestration/orchestrator.ts';
 export { createOrchestrator };
 
 // Export lazy loading infrastructure (always loaded)
-export { createLazyPipelineRegistry } from './core/lazy-pipeline-registry.js';
-export { createLoadingStateManager, LoadingStates, ProgressStages } from './core/loading-state-manager.js';
-export { createPipelinePreloader, PreloadingStrategies, UsageContexts } from './core/pipeline-preloader.js';
+export { createLazyPipelineRegistry } from './core/pipeline/lazy-pipeline-registry.ts';
+export { createLoadingStateManager, LoadingStates, ProgressStages } from './core/state/loading-state-manager.js';
+export { createPipelinePreloader, PreloadingStrategies, UsageContexts } from './core/pipeline/pipeline-preloader.js';
 
 // Export UI components for loading states
 export * from './shared/utils/ui/loading-components.js';
@@ -121,15 +121,15 @@ export const createQuickStartOrchestrator = async (requirements = {}) => {
 };
 
 // Export core components
-export { createPipeline } from './core/pipeline.js';
+export { createPipeline } from './core/pipeline/pipeline.ts';
 export { 
-  Capability, 
+  StreamCapability as Capability, 
   createPerformanceProfile, 
   createFaceResult, 
   createAnalysisResult,
   createPose3DOF,
   createPose6DOF 
-} from './core/types.js';
+} from './core/configuration/types.ts';
 
 // Export utilities
 export { 
@@ -139,21 +139,21 @@ export {
   loadMediaPipe,
   imageToMediaPipe,
   getRuntimeInfo
-} from './utils/runtime-detector.js';
+} from './shared/utils/runtime-detector.js';
 
 // Export performance monitoring
 export { 
   createPerformanceMonitor,
   getGlobalMonitor,
   measureAsync 
-} from './core/performance-monitor.js';
+} from './core/performance/performance-monitor.js';
 
 // Export API server
-export { createFaceAnalysisServer } from './api/server.js';
+export { createFaceAnalysisServer } from './services/api/server.ts';
 
 // Export speech analysis components
-export { createSpeechAnalysisAPI, createSpeechRecognition, createLLMClient } from './speech-analysis/index.js';
+export { createSpeechAnalysisAPI, createSpeechRecognition, createLLMClient } from './features/speech-analysis/index.js';
 
 // Version information
-export const VERSION = '0.6.0-beta.1'; // TypeScript migration, breaking changes
-export const BUILD = 'typescript-native';
+export const VERSION = '0.5.6'; // Clean import structure, MQTT builtin implementation
+export const BUILD = 'knip-optimized';

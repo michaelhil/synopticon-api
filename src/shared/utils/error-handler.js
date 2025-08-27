@@ -21,7 +21,8 @@ export const ErrorCategory = {
   MEMORY: 'memory',
   PERFORMANCE: 'performance',
   NETWORK: 'network',
-  VALIDATION: 'validation'
+  VALIDATION: 'validation',
+  PIPELINE_EXECUTION: 'pipeline_execution'
 };
 
 // Global error handling configuration
@@ -459,9 +460,9 @@ export const createErrorHandler = (config = {}) => {
 export const GlobalErrorHandler = createErrorHandler();
 
 // Convenience functions using global handler
-export const handleError = GlobalErrorHandler.handleError;
-export const validateRequired = GlobalErrorHandler.validateRequired;
-export const validateType = GlobalErrorHandler.validateType; 
-export const validateRange = GlobalErrorHandler.validateRange;
-export const wrapFunction = GlobalErrorHandler.wrapFunction;
-export const safeAsync = GlobalErrorHandler.safeAsync;
+export const {handleError} = GlobalErrorHandler;
+export const {validateRequired} = GlobalErrorHandler;
+export const {validateType} = GlobalErrorHandler; 
+export const {validateRange} = GlobalErrorHandler;
+export const {wrapFunction} = GlobalErrorHandler;
+export const {safeAsync} = GlobalErrorHandler;

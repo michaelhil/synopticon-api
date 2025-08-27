@@ -4,10 +4,13 @@
  * Following functional programming patterns with factory functions
  */
 
-import { createDevValidator } from './utils/url-validator.js';
+import { createDevValidator } from './shared/utils/url-validator.js';
+import { createLogger } from './shared/utils/logger.js';
 
 // Create browser speech client factory
 export const createBrowserSpeechClient = (config = {}) => {
+  const logger = createLogger({ level: config.logLevel });
+  
   const state = {
     recognition: null,
     isListening: false,
@@ -71,8 +74,8 @@ export const createBrowserSpeechClient = (config = {}) => {
     // Setup event handlers
     setupRecognitionHandlers();
     
-    console.log('✅ Browser speech client initialized');
-    console.log(`✅ Server URL validated: ${validation.hostname}:${validation.port}`);
+    logger.info('✅ Browser speech client initialized');
+    logger.debug(`✅ Server URL validated: ${validation.hostname}:${validation.port}`);
     return true;
   };
 
@@ -82,7 +85,7 @@ export const createBrowserSpeechClient = (config = {}) => {
     state.recognition.onresult = (event) => {
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const result = event.results[i];
-        const transcript = result[0].transcript;
+        const {transcript} = result[0];
         const confidence = result[0].confidence || 0.95;
         
         const transcriptData = {
@@ -105,7 +108,7 @@ export const createBrowserSpeechClient = (config = {}) => {
 
     // Handle errors
     state.recognition.onerror = (event) => {
-      console.error('Speech recognition error:', event.error);
+      logger.error('Speech recognition error:', event.error);
       
       const errorData = {
         type: 'recognition_error',
@@ -118,7 +121,7 @@ export const createBrowserSpeechClient = (config = {}) => {
       
       // Auto-restart on certain errors
       if (['network', 'audio-capture'].includes(event.error) && state.isListening) {
-        console.log('Attempting to restart recognition...');
+        logger.warn('Attempting to restart recognition...');
         setTimeout(() => {
           if (state.isListening) {
             state.recognition.start();
@@ -129,7 +132,7 @@ export const createBrowserSpeechClient = (config = {}) => {
 
     // Handle end
     state.recognition.onend = () => {
-      console.log('Speech recognition ended');
+      logger.info('Speech recognition ended');
       
       // Send any remaining batch
       if (state.textBatch.length > 0) {
@@ -226,7 +229,7 @@ export const createBrowserSpeechClient = (config = {}) => {
       notifyCallbacks('onAnalysis', analysisResult);
       
     } catch (error) {
-      console.error('Failed to send batch to server:', error);
+      logger.error('Failed to send batch to server:', error);
       
       notifyCallbacks('onError', {
         type: 'server_error',

@@ -4,7 +4,10 @@
  * Following functional programming patterns with factory functions
  */
 
-import { createEnhancedMemoryPool } from '../../shared/utils/enhanced-memory-pool.js';
+import { createEnhancedMemoryPool } from '../../../shared/utils/enhanced-memory-pool.js';
+import { createEmotionConfig, updateEmotionConfig } from './emotion-config.js';
+import { createEmotionProcessor } from './emotion-processor.js';
+import { createEmotionStats } from './emotion-stats.js';
 
 // Prosodic feature extraction for emotion detection
 export const createProsodicAnalyzer = (config = {}) => {
@@ -454,7 +457,7 @@ export const createEmotionClassifier = (config = {}) => {
       // Apply smoothing
       if (state.emotionHistory.length > 0) {
         const prevConfidence = state.currentConfidence;
-        const smoothingFactor = state.config.smoothingFactor;
+        const {smoothingFactor} = state.config;
         
         // If new classification is confident enough, blend with previous
         if (classification.confidence > state.config.confidenceThreshold) {
@@ -541,71 +544,28 @@ export const createEmotionClassifier = (config = {}) => {
 
 // Complete emotion detection system
 export const createEmotionDetection = (config = {}) => {
+  const emotionConfig = createEmotionConfig(config);
+  
   const memoryPool = createEnhancedMemoryPool({
-    maxPoolSize: config.maxPoolSize || 100,
+    maxPoolSize: emotionConfig.maxPoolSize,
     enableMetrics: true
   });
   memoryPool.initialize();
 
+  const processor = createEmotionProcessor(emotionConfig, memoryPool);
+  const stats = createEmotionStats();
+  
   const state = {
-    config: {
-      frameSize: config.frameSize || 1024,
-      sampleRate: config.sampleRate || 44100,
-      
-      // Processing configuration
-      enableProsodics: config.enableProsodics !== false,
-      enableClassification: config.enableClassification !== false,
-      
-      // Update intervals
-      emotionUpdateInterval: config.emotionUpdateInterval || 500, // ms
-      
-      ...config
-    },
-    
-    // Components
-    prosodicAnalyzer: null,
-    emotionClassifier: null,
-    
-    // Processing state
-    lastEmotionUpdate: 0,
-    isInitialized: false,
-    
-    // Statistics
-    stats: {
-      totalFrames: 0,
-      emotionUpdates: 0,
-      processingTime: 0
-    }
+    config: emotionConfig,
+    isInitialized: false
   };
 
   // Initialize components
   const initialize = () => {
-    if (state.config.enableProsodics) {
-      state.prosodicAnalyzer = createProsodicAnalyzer(state.config);
-    }
-    
-    if (state.config.enableClassification) {
-      state.emotionClassifier = createEmotionClassifier(state.config);
-    }
-    
+    processor.registerResultFactory();
+    processor.initialize(createProsodicAnalyzer, createEmotionClassifier);
     state.isInitialized = true;
   };
-
-  // Register emotion result type
-  memoryPool.registerFactory('EmotionResult', () => ({
-    _pooled: true,
-    timestamp: 0,
-    emotion: 'neutral',
-    confidence: 0,
-    arousal: 0,
-    valence: 0,
-    prosodicFeatures: null,
-    processing: {
-      prosodicExtracted: false,
-      emotionClassified: false,
-      processingTime: 0
-    }
-  }));
 
   // Process audio frame for emotion detection
   const processFrame = (audioBuffer, timestamp = Date.now()) => {
@@ -614,116 +574,55 @@ export const createEmotionDetection = (config = {}) => {
     }
     
     const startTime = performance.now();
-    let prosodicFeatures = null;
-    let emotionResult = null;
-    
-    // Extract prosodic features
-    if (state.prosodicAnalyzer) {
-      prosodicFeatures = state.prosodicAnalyzer.processFrame(audioBuffer, timestamp);
-    }
-    
-    // Classify emotion periodically
-    if (state.emotionClassifier && 
-        (timestamp - state.lastEmotionUpdate) >= state.config.emotionUpdateInterval) {
-      
-      if (prosodicFeatures) {
-        emotionResult = state.emotionClassifier.classifyFromFeatures(prosodicFeatures);
-        if (emotionResult) {
-          state.lastEmotionUpdate = timestamp;
-          state.stats.emotionUpdates++;
-        }
-      }
-    }
-    
+    const result = processor.processFrame(audioBuffer, timestamp);
     const processingTime = performance.now() - startTime;
-    state.stats.processingTime += processingTime;
-    state.stats.totalFrames++;
     
-    // Create result if we have emotion data or significant prosodic features
-    if (emotionResult || prosodicFeatures) {
-      const result = memoryPool.acquire('EmotionResult');
-      
-      result.timestamp = timestamp;
-      
-      if (emotionResult) {
-        result.emotion = emotionResult.emotion;
-        result.confidence = emotionResult.confidence;
-        result.arousal = emotionResult.rawClassification.arousal;
-        result.valence = emotionResult.rawClassification.valence;
-      } else if (state.emotionClassifier) {
-        // Use current emotion state
-        const current = state.emotionClassifier.getCurrentEmotion();
-        result.emotion = current.emotion;
-        result.confidence = current.confidence;
-      }
-      
-      result.prosodicFeatures = prosodicFeatures;
-      result.processing = {
-        prosodicExtracted: prosodicFeatures !== null,
-        emotionClassified: emotionResult !== null,
-        processingTime
-      };
-      
-      return result;
-    }
+    // Record statistics
+    stats.recordFrame(result, processingTime);
     
-    return null;
+    return result;
   };
 
   // Release emotion result
   const releaseResult = (result) => {
-    memoryPool.release(result);
+    processor.releaseResult(result);
   };
 
   // Get current emotion state
   const getCurrentEmotion = () => {
-    if (!state.emotionClassifier) {
-      return { emotion: 'neutral', confidence: 0 };
-    }
-    return state.emotionClassifier.getCurrentEmotion();
+    return processor.getCurrentEmotion();
   };
 
   // Get emotion timeline
   const getEmotionTimeline = (timeWindow = 30000) => {
-    if (!state.emotionClassifier) return [];
-    return state.emotionClassifier.getEmotionTimeline(timeWindow);
+    return processor.getEmotionTimeline(timeWindow);
   };
 
   // Get comprehensive statistics
-  const getStats = () => ({
-    ...state.stats,
-    averageProcessingTime: state.stats.totalFrames > 0 ? 
-      state.stats.processingTime / state.stats.totalFrames : 0,
-    components: {
-      prosodics: state.prosodicAnalyzer ? state.prosodicAnalyzer.getStats() : null,
-      classifier: state.emotionClassifier ? state.emotionClassifier.getStats() : null
-    },
-    memoryPool: memoryPool.getStats()
-  });
+  const getStats = () => {
+    const componentStats = processor.getComponentStats();
+    return {
+      ...stats.getStats(componentStats),
+      memoryPool: memoryPool.getStats(),
+      processor: processor.getState()
+    };
+  };
 
   // Update configuration
   const updateConfig = (newConfig) => {
-    Object.assign(state.config, newConfig);
-    
-    if (newConfig.prosodics && state.prosodicAnalyzer) {
-      state.prosodicAnalyzer.updateConfig(newConfig.prosodics);
-    }
-    if (newConfig.classifier && state.emotionClassifier) {
-      state.emotionClassifier.updateConfig(newConfig.classifier);
+    try {
+      state.config = updateEmotionConfig(state.config, newConfig);
+      processor.updateConfig(state.config);
+    } catch (error) {
+      console.warn('Emotion detection configuration update failed:', error.message);
+      throw error;
     }
   };
 
   // Reset system
   const reset = () => {
-    if (state.prosodicAnalyzer) state.prosodicAnalyzer.reset();
-    if (state.emotionClassifier) state.emotionClassifier.reset();
-    
-    state.lastEmotionUpdate = 0;
-    state.stats = {
-      totalFrames: 0,
-      emotionUpdates: 0,
-      processingTime: 0
-    };
+    processor.reset();
+    stats.reset();
   };
 
   // Cleanup

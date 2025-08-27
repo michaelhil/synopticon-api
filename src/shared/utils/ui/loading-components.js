@@ -3,8 +3,7 @@
  * Provides user-friendly loading indicators and progress displays for lazy-loaded pipelines
  */
 
-import { LoadingStates, ProgressStages } from '../../../core/loading-state-manager.js';
-import { escapeHtml, createElement, setTextContent, applyStyles } from '../html-utils.js';
+import { escapeHtml } from '../html-utils.js';
 
 /**
  * Create a loading spinner component

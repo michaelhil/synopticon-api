@@ -401,4 +401,3 @@ export const discoverDevices = async (options = {}) => {
   return result;
 };
 
-export default createDeviceDiscoveryPipeline;

@@ -307,7 +307,7 @@ export const createEyeTrackingFilter = (config = {}) => {
       return eyeResult;
     }
     
-    const alpha = state.alpha;
+    const {alpha} = state;
     
     // Smooth gaze vectors
     const smoothedLeftGaze = state.leftGaze.map((prev, i) => 
@@ -402,7 +402,7 @@ export const createIrisTrackingPipeline = (userConfig = {}) => {
     imageProcessor: null,
     resourcePool: null,
     isInitialized: false,
-    config: config
+    config
   };
 
   const initialize = async (initConfig = {}) => {
@@ -419,7 +419,7 @@ export const createIrisTrackingPipeline = (userConfig = {}) => {
       state.imageProcessor = createImageProcessor({ resourcePool: state.resourcePool });
       
       // Import dependency loader
-      const { createMediaPipeLoader } = await import('../utils/dependency-loader.js');
+      const { createMediaPipeLoader } = await import('../../../../shared/utils/dependency-loader.js');
       state.mediaPipeLoader = createMediaPipeLoader();
 
       // Load Iris with configuration

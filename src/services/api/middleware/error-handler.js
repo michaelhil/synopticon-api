@@ -65,7 +65,7 @@ export const createErrorHandlerMiddleware = (config = {}) => {
     // Truncate error message if too long
     let message = error.message || 'Internal Server Error';
     if (message.length > state.config.maxErrorLength) {
-      message = message.substring(0, state.config.maxErrorLength) + '...';
+      message = `${message.substring(0, state.config.maxErrorLength)  }...`;
     }
 
     // Base response

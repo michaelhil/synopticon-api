@@ -4,7 +4,7 @@
  * Following functional programming patterns with factory functions
  */
 
-import { createCalibrationResult } from '../../core/types.js';
+import { createCalibrationResult } from '../../../core/configuration/types.ts';
 
 // Advanced calibration quality metrics
 export const createCalibrationMetrics = () => {

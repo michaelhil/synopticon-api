@@ -10,53 +10,13 @@ import { measureAsync } from '../core/performance-monitor.js';
 import { 
   Capability, 
   createPerformanceProfile,
-  createSpeechAnalysisResult,
-  createSpeechEvent
+  createSpeechAnalysisResult
 } from '../core/types.js';
 import { createSpeechAnalysisAPI } from '../speech-analysis/index.js';
-
-// Pipeline configuration factory
-const createSpeechAnalysisConfig = (config = {}) => ({
-  // Speech recognition configuration
-  language: config.language || 'en-US',
-  continuous: config.continuous !== false,
-  interimResults: config.interimResults !== false,
-  
-  // Analysis configuration
-  prompts: config.prompts || [
-    'Analyse sentiment, show as 5 keywords, nothing else.',
-    'Identify most controversial statement and respond with a counterargument.',
-    'Extract key themes and topics mentioned.',
-    'Assess emotional tone and intensity level.'
-  ],
-  systemPrompt: config.systemPrompt || 
-    'You are a helpful AI assistant analyzing speech from conversations. Always consider both the provided conversation context AND the current speech segment in your analysis. Keep all responses to 25 words or less.',
-  
-  // LLM backend preferences (JavaScript-only, no Python)
-  preferredBackend: config.preferredBackend || 'webllm',
-  fallbackBackends: config.fallbackBackends || ['transformers_js', 'tfjs_models', 'mock'],
-  
-  // Context management
-  contextStrategy: config.contextStrategy || 'hybrid',
-  maxChunks: config.maxChunks || 10,
-  summaryThreshold: config.summaryThreshold || 20,
-  
-  // Processing options
-  autoStart: config.autoStart === true,
-  autoAnalyze: config.autoAnalyze !== false,
-  enableSync: config.enableSync !== false,
-  
-  // Performance settings
-  maxConcurrency: config.maxConcurrency || 2,
-  requestTimeout: config.requestTimeout || 30000,
-  
-  // Fallback mode
-  useFallback: config.useFallback === true,
-  mockMode: config.mockMode === true,
-  
-  // Additional options
-  ...config
-});
+import { createSpeechAnalysisConfig } from './speech-analysis-config.js';
+import { createSessionManager } from './speech-analysis-session.js';
+import { createMetricsTracker } from './speech-analysis-metrics.js';
+import { createEventManager } from './speech-analysis-events.js';
 
 // Main speech analysis pipeline factory
 export const createSpeechAnalysisPipeline = (config = {}) => {
@@ -67,32 +27,13 @@ export const createSpeechAnalysisPipeline = (config = {}) => {
     features: checkFeatures(),
     speechAPI: null,
     isInitialized: false,
-    isProcessing: false,
-    
-    // Performance tracking
-    metrics: {
-      totalSessions: 0,
-      totalTranscriptions: 0,
-      totalAnalyses: 0,
-      averageLatency: 0,
-      successRate: 0,
-      errorCount: 0,
-      lastProcessingTime: 0
-    },
-    
-    // Current session
-    activeSession: null,
-    sessionData: null,
-    
-    // Event handlers
-    callbacks: {
-      onTranscription: [],
-      onAnalysis: [],
-      onSessionStart: [],
-      onSessionEnd: [],
-      onError: []
-    }
+    isProcessing: false
   };
+
+  // Create components
+  const eventManager = createEventManager();
+  const metricsTracker = createMetricsTracker();
+  let sessionManager = null; // Created after speechAPI is initialized
 
   // Initialize the speech analysis pipeline
   const initialize = async (options = {}) => {
@@ -109,8 +50,11 @@ export const createSpeechAnalysisPipeline = (config = {}) => {
         // Initialize speech analysis API
         state.speechAPI = createSpeechAnalysisAPI(initConfig);
         
+        // Create session manager with speech API
+        sessionManager = createSessionManager(state.speechAPI, eventManager.callbacks);
+        
         // Setup event handlers
-        setupEventHandlers();
+        eventManager.setupEventHandlers(state.speechAPI, sessionManager, metricsTracker);
         
         // Initialize the API
         await state.speechAPI.initialize(initConfig);
@@ -120,7 +64,7 @@ export const createSpeechAnalysisPipeline = (config = {}) => {
         
         // Auto-start if requested
         if (pipelineConfig.autoStart) {
-          await startSession();
+          await sessionManager.startSession();
         }
         
         return true;
@@ -154,8 +98,8 @@ export const createSpeechAnalysisPipeline = (config = {}) => {
           // Handle audio input (future enhancement)
           throw new Error('Audio input processing not yet implemented');
           
-        } else if (input === null && state.activeSession) {
-          // Get current session status/results
+        } else if (input === null && sessionManager?.getActiveSession()) {
+          // Get current session results
           result = await getCurrentSessionResults();
           
         } else {
@@ -164,7 +108,7 @@ export const createSpeechAnalysisPipeline = (config = {}) => {
 
         // Update metrics
         const processingTime = performance.now() - startTime;
-        updateMetrics(processingTime, true);
+        metricsTracker.updateMetrics(processingTime, true);
 
         // Create standardized pipeline result
         const pipelineResult = createSpeechAnalysisResult({
@@ -176,7 +120,7 @@ export const createSpeechAnalysisPipeline = (config = {}) => {
             processingTime,
             pipelineVersion: '1.0.0',
             backend: state.speechAPI?.getStatus()?.configuration?.llmBackend || 'unknown',
-            sessionId: state.activeSession
+            sessionId: sessionManager?.getActiveSession()
           }
         });
 
@@ -184,7 +128,7 @@ export const createSpeechAnalysisPipeline = (config = {}) => {
 
       } catch (error) {
         const processingTime = performance.now() - startTime;
-        updateMetrics(processingTime, false);
+        metricsTracker.updateMetrics(processingTime, false);
         
         console.warn('Speech analysis processing failed:', error);
         
@@ -198,93 +142,18 @@ export const createSpeechAnalysisPipeline = (config = {}) => {
           metadata: {
             processingTime,
             error: true,
-            sessionId: state.activeSession
+            sessionId: sessionManager?.getActiveSession()
           }
         });
       } finally {
         state.isProcessing = false;
-        state.metrics.lastProcessingTime = performance.now() - startTime;
       }
     }, 'speech_analysis_pipeline', 'process');
   };
 
-  // Start a speech analysis session
-  const startSession = async (sessionId = null) => {
-    if (!state.isInitialized) {
-      throw new Error('Pipeline not initialized');
-    }
-
-    try {
-      state.activeSession = await state.speechAPI.startSession(sessionId);
-      state.sessionData = {
-        startTime: Date.now(),
-        transcriptions: [],
-        analyses: []
-      };
-      state.metrics.totalSessions++;
-      
-      // Notify session start callbacks
-      state.callbacks.onSessionStart.forEach(callback => {
-        try {
-          callback(createSpeechEvent({
-            type: 'session_start',
-            data: { sessionId: state.activeSession }
-          }));
-        } catch (error) {
-          console.warn('Session start callback error:', error);
-        }
-      });
-
-      return state.activeSession;
-
-    } catch (error) {
-      console.warn('Failed to start speech session:', error);
-      throw error;
-    }
-  };
-
-  // Stop current session
-  const stopSession = async () => {
-    if (!state.activeSession) {
-      console.warn('No active session to stop');
-      return;
-    }
-
-    try {
-      await state.speechAPI.stopSession();
-      
-      const sessionId = state.activeSession;
-      const sessionDuration = Date.now() - (state.sessionData?.startTime || Date.now());
-      
-      // Notify session end callbacks
-      state.callbacks.onSessionEnd.forEach(callback => {
-        try {
-          callback(createSpeechEvent({
-            type: 'session_end',
-            data: { 
-              sessionId, 
-              duration: sessionDuration,
-              transcriptions: state.sessionData?.transcriptions?.length || 0,
-              analyses: state.sessionData?.analyses?.length || 0
-            }
-          }));
-        } catch (error) {
-          console.warn('Session end callback error:', error);
-        }
-      });
-
-      state.activeSession = null;
-      state.sessionData = null;
-
-    } catch (error) {
-      console.warn('Failed to stop speech session:', error);
-      throw error;
-    }
-  };
-
   // Get current session results
   const getCurrentSessionResults = async () => {
-    if (!state.activeSession) {
+    if (!sessionManager?.getActiveSession()) {
       return createSpeechAnalysisResult({
         timestamp: Date.now(),
         source: 'speech_analysis_pipeline',
@@ -311,79 +180,11 @@ export const createSpeechAnalysisPipeline = (config = {}) => {
         chunkIndex: history?.chunks?.length || 0
       },
       metadata: {
-        sessionId: state.activeSession,
+        sessionId: sessionManager.getActiveSession(),
         sessionActive: status.components?.streaming || false,
         totalWords: history?.totalWords || 0
       }
     });
-  };
-
-  // Setup event handlers for the speech API
-  const setupEventHandlers = () => {
-    if (!state.speechAPI) return;
-
-    // Handle transcriptions
-    state.speechAPI.onTranscription((event) => {
-      if (state.sessionData) {
-        state.sessionData.transcriptions.push(event.data.result);
-      }
-      state.metrics.totalTranscriptions++;
-      
-      // Forward to pipeline callbacks
-      state.callbacks.onTranscription.forEach(callback => {
-        try {
-          callback(event);
-        } catch (error) {
-          console.warn('Transcription callback error:', error);
-        }
-      });
-    });
-
-    // Handle analyses
-    state.speechAPI.onAnalysis((event) => {
-      if (state.sessionData) {
-        state.sessionData.analyses.push(event.data.result);
-      }
-      state.metrics.totalAnalyses++;
-      
-      // Forward to pipeline callbacks
-      state.callbacks.onAnalysis.forEach(callback => {
-        try {
-          callback(event);
-        } catch (error) {
-          console.warn('Analysis callback error:', error);
-        }
-      });
-    });
-
-    // Handle errors
-    state.speechAPI.onError((event) => {
-      state.metrics.errorCount++;
-      
-      // Forward to pipeline callbacks
-      state.callbacks.onError.forEach(callback => {
-        try {
-          callback(event);
-        } catch (error) {
-          console.warn('Error callback error:', error);
-        }
-      });
-    });
-  };
-
-  // Update performance metrics
-  const updateMetrics = (processingTime, success) => {
-    const totalProcessed = state.metrics.totalTranscriptions + state.metrics.totalAnalyses;
-    
-    if (totalProcessed > 0) {
-      state.metrics.averageLatency = 
-        (state.metrics.averageLatency * (totalProcessed - 1) + processingTime) / totalProcessed;
-    }
-    
-    if (success) {
-      const successfulOps = totalProcessed - state.metrics.errorCount;
-      state.metrics.successRate = successfulOps / totalProcessed;
-    }
   };
 
   // Get pipeline health status
@@ -399,10 +200,10 @@ export const createSpeechAnalysisPipeline = (config = {}) => {
       backend: apiStatus?.configuration?.llmBackend || 'unknown',
       modelLoaded: apiStatus?.llm?.modelLoaded !== false,
       speechRecognition: apiStatus?.speechRecognition?.available !== false,
-      activeSession: state.activeSession,
-      lastProcessingTime: state.metrics.lastProcessingTime,
-      errorCount: state.metrics.errorCount,
-      successRate: state.metrics.successRate
+      activeSession: sessionManager?.getActiveSession(),
+      lastProcessingTime: metricsTracker.getMetrics().lastProcessingTime,
+      errorCount: metricsTracker.getMetrics().errorCount,
+      successRate: metricsTracker.getMetrics().successRate
     };
   };
 
@@ -410,23 +211,25 @@ export const createSpeechAnalysisPipeline = (config = {}) => {
   const isInitialized = () => state.isInitialized;
 
   // Get performance metrics
-  const getPerformanceMetrics = () => ({
-    ...state.metrics,
-    isProcessing: state.isProcessing,
-    activeSession: state.activeSession,
-    sessionData: state.sessionData ? {
-      startTime: state.sessionData.startTime,
-      transcriptionCount: state.sessionData.transcriptions.length,
-      analysisCount: state.sessionData.analyses.length
-    } : null
-  });
+  const getPerformanceMetrics = () => {
+    if (!sessionManager) return metricsTracker.getMetrics();
+    
+    // Update metrics with session count
+    metricsTracker.setTotalSessions(sessionManager.getTotalSessions());
+    
+    return metricsTracker.getPerformanceMetrics(
+      state.isProcessing,
+      sessionManager.getActiveSession(),
+      sessionManager.getSessionData()
+    );
+  };
 
   // Cleanup pipeline resources
   const cleanup = async () => {
     try {
       // Stop active session
-      if (state.activeSession) {
-        await stopSession();
+      if (sessionManager?.getActiveSession()) {
+        await sessionManager.stopSession();
       }
 
       // Cleanup speech API
@@ -438,29 +241,13 @@ export const createSpeechAnalysisPipeline = (config = {}) => {
       // Reset state
       state.isInitialized = false;
       state.isProcessing = false;
-      state.activeSession = null;
-      state.sessionData = null;
+      sessionManager = null;
 
       console.log('🧹 Speech analysis pipeline cleaned up');
 
     } catch (error) {
       console.warn('Speech analysis pipeline cleanup error:', error);
     }
-  };
-
-  // Event subscription methods
-  const onTranscription = (callback) => subscribeCallback('onTranscription', callback);
-  const onAnalysis = (callback) => subscribeCallback('onAnalysis', callback);
-  const onSessionStart = (callback) => subscribeCallback('onSessionStart', callback);
-  const onSessionEnd = (callback) => subscribeCallback('onSessionEnd', callback);
-  const onError = (callback) => subscribeCallback('onError', callback);
-
-  const subscribeCallback = (eventType, callback) => {
-    state.callbacks[eventType].push(callback);
-    return () => {
-      const index = state.callbacks[eventType].indexOf(callback);
-      if (index !== -1) state.callbacks[eventType].splice(index, 1);
-    };
   };
 
   // Create standard pipeline interface
@@ -500,16 +287,16 @@ export const createSpeechAnalysisPipeline = (config = {}) => {
     ...basePipeline,
     
     // Speech analysis specific methods
-    startSession,
-    stopSession,
+    startSession: () => sessionManager?.startSession(),
+    stopSession: () => sessionManager?.stopSession(),
     getCurrentSessionResults,
     
     // Event handlers
-    onTranscription,
-    onAnalysis,
-    onSessionStart,
-    onSessionEnd,
-    onError,
+    onTranscription: eventManager.onTranscription,
+    onAnalysis: eventManager.onAnalysis,
+    onSessionStart: eventManager.onSessionStart,
+    onSessionEnd: eventManager.onSessionEnd,
+    onError: eventManager.onError,
 
     // Configuration access
     getConfiguration: () => ({ ...pipelineConfig }),
@@ -520,7 +307,7 @@ export const createSpeechAnalysisPipeline = (config = {}) => {
     getSpeechAPI: () => state.speechAPI,
     
     // Session management
-    getActiveSession: () => state.activeSession,
+    getActiveSession: () => sessionManager?.getActiveSession(),
     getSessionHistory: () => state.speechAPI?.getAnalysisHistory(),
     clearSession: () => state.speechAPI?.clearSession(),
     generateSummary: () => state.speechAPI?.generateSummary(),

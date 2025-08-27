@@ -1,4 +1,7 @@
 /**
+import { createLogger } from '../shared/utils/logger.js';
+
+const logger = createLogger({ level: 2 });
  * Pipeline Events System
  * Event management for pipeline communication
  * Following functional programming patterns with factory functions

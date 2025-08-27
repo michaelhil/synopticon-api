@@ -1,6 +1,6 @@
 {
   "name": "synopticon-api",
-  "version": "0.5.5",
+  "version": "0.5.6",
   "description": "synopticon-api: an open-source platform for real-time multi-modal behavioral analysis and sensor synchronization",
   "main": "src/services/api/server.js",
   "type": "module",
@@ -19,7 +19,11 @@
     "start": "bun run serve",
     "serve": "bun src/services/api/server.js",
     "dev": "bun --watch src/services/api/server.js",
-    "api:test": "curl http://localhost:3000/api/health"
+    "api:test": "curl http://localhost:3000/api/health",
+    "lint": "bunx eslint 'src/**/*.js' 'examples/**/*.js' --ignore-pattern '**/*.backup'",
+    "lint:fix": "bunx eslint 'src/**/*.js' 'examples/**/*.js' --fix --ignore-pattern '**/*.backup'",
+    "lint:check": "bunx eslint 'src/**/*.js' 'examples/**/*.js' --max-warnings 20 --ignore-pattern '**/*.backup'",
+    "quality": "bun run lint:check && bun run typecheck"
   },
   "keywords": [
     "face-detection",
@@ -37,9 +41,9 @@
   "license": "MIT",
   "devDependencies": {
     "@types/bun": "^1.2.20",
-    "esbuild": "^0.25.9",
+    "eslint": "^9.34.0",
+    "knip": "^5.63.0",
     "typescript": "^5.9.2",
-    "vite": "^7.1.3",
     "vitest": "^3.2.4"
   },
   "trustedDependencies": [

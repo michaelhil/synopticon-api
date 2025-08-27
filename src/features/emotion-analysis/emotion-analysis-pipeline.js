@@ -20,7 +20,7 @@ export const createEmotionAnalysisPipeline = (userConfig = {}) => {
   const config = createPipelineConfig('emotion-analysis', userConfig);
   
   let cnnModel = null;
-  let faceDetection = null;
+  const faceDetection = null;
   let isInitialized = false;
 
   return createPipeline({

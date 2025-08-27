@@ -1,4 +1,7 @@
 /**
+import { createLogger } from '../shared/utils/logger.js';
+
+const logger = createLogger({ level: 2 });
  * Memory Optimization Module
  * Enhanced implementation with canvas pooling and buffer management
  */
@@ -43,15 +46,15 @@ export const createMemoryOptimizer = (config = {}) => {
       
       if (pressureRatio > state.thresholds.critical) {
         console.warn('🔴 Critical memory pressure detected:', {
-          heapUsed: Math.round(usage.heapUsed / 1024 / 1024) + 'MB',
-          heapTotal: Math.round(usage.heapTotal / 1024 / 1024) + 'MB',
-          pressure: Math.round(pressureRatio * 100) + '%'
+          heapUsed: `${Math.round(usage.heapUsed / 1024 / 1024)  }MB`,
+          heapTotal: `${Math.round(usage.heapTotal / 1024 / 1024)  }MB`,
+          pressure: `${Math.round(pressureRatio * 100)  }%`
         });
         performAggressiveCleanup();
       } else if (pressureRatio > state.thresholds.warning) {
         console.warn('🟡 Memory pressure warning:', {
-          heapUsed: Math.round(usage.heapUsed / 1024 / 1024) + 'MB',
-          pressure: Math.round(pressureRatio * 100) + '%'
+          heapUsed: `${Math.round(usage.heapUsed / 1024 / 1024)  }MB`,
+          pressure: `${Math.round(pressureRatio * 100)  }%`
         });
         performMildCleanup();
       }
@@ -273,4 +276,3 @@ export const createMemoryOptimizer = (config = {}) => {
   };
 };
 
-export default createMemoryOptimizer;

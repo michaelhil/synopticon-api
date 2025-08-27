@@ -5,9 +5,10 @@
  */
 
 import { createPipeline } from '../../core/pipeline/pipeline.ts';
-import { createAnalysisResult, createErrorResult } from '../../core/configuration/types.ts';
-import { createStreamBuffer } from '../../core/state/streams.js';
 import { createQualityController } from './quality-controller.js';
+import { createPipelineState } from './pipeline-state.js';
+import { createStreamOperations } from './stream-operations.js';
+import { createPipelineInterface } from './pipeline-interface.js';
 
 /**
  * Create media streaming pipeline for a specific device
@@ -16,31 +17,7 @@ import { createQualityController } from './quality-controller.js';
  * @returns {Object} Media streaming pipeline
  */
 export const createMediaStreamingPipeline = (deviceInfo, config = {}) => {
-  const state = {
-    deviceInfo,
-    mediaStream: null,
-    isStreaming: false,
-    encoder: null,
-    quality: config.defaultQuality || 'medium',
-    frameBuffer: createStreamBuffer({
-      maxSize: config.bufferSize || 30, // 1 second at 30fps
-      windowMs: config.windowMs || 2000
-    }),
-    qualityController: null,
-    stats: {
-      framesProcessed: 0,
-      bytesStreamed: 0,
-      droppedFrames: 0,
-      averageFrameSize: 0,
-      currentFPS: 0,
-      lastFrameTime: 0
-    },
-    callbacks: {
-      onFrame: [],
-      onError: [],
-      onQualityChange: []
-    }
-  };
+  const state = createPipelineState(deviceInfo, config);
 
   // Initialize quality controller if enabled
   if (config.enableQualityControl !== false) {
@@ -48,9 +25,41 @@ export const createMediaStreamingPipeline = (deviceInfo, config = {}) => {
       deviceId: deviceInfo.id,
       deviceType: deviceInfo.type,
       initialQuality: state.quality,
-      adaptationEnabled: config.adaptiveQuality !== false,
-      onQualityChange: (qualityInfo) => {
-        // Automatically change quality when controller recommends it
+      adaptationEnabled: config.adaptiveQuality !== false
+    });
+  }
+  
+  // Create modular operations and interface
+  const operations = createStreamOperations(state);
+  const pipeline = createPipelineInterface(state, operations);
+  
+  // Create pipeline process function for compatibility
+  const process = async (input) => {
+    if (!input || !input.action) {
+      throw new Error('Invalid input: action is required');
+    }
+    
+    switch (input.action) {
+      case 'START_STREAM':
+        return operations.startStream();
+      case 'STOP_STREAM':
+        return operations.stopStream();
+      case 'CHANGE_QUALITY':
+        const quality = input.parameters?.quality || 'medium';
+        return operations.changeQuality(quality);
+      default:
+        throw new Error(`Unknown action: ${input.action}`);
+    }
+  };
+  
+  return {
+    ...pipeline,
+    process,
+    initialize: async () => {
+      console.log(`📹 Initializing media streaming pipeline for device: ${deviceInfo.label || deviceInfo.id}`);
+      return true;
+    }
+  };
         if (qualityInfo.recommendedQuality !== state.quality) {
           changeQuality(qualityInfo.recommendedQuality).catch(error => {
             console.warn('Automatic quality change failed:', error);
@@ -585,4 +594,3 @@ export const createMultiDeviceStreaming = (devices, config = {}) => {
   return pipelines;
 };
 
-export default createMediaStreamingPipeline;

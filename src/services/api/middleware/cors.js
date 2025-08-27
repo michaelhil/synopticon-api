@@ -83,7 +83,7 @@ export const createCORSMiddleware = (config = {}) => {
    */
   const createCORSHeaders = (request, overrideOrigin = null) => {
     const origin = overrideOrigin || request.headers.get('origin');
-    const method = request.method;
+    const {method} = request;
     
     // Update statistics
     state.stats.totalRequests++;

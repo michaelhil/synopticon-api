@@ -4,14 +4,14 @@
  * Following functional programming patterns with factory functions
  */
 
-import { createWebSocketTransport, createHttpTransport } from '../../core/transport.js';
-import { createDataStream } from '../../core/streams.js';
-import { createGazeProcessor } from './gaze-processing.js';
+import { createWebSocketTransport, createHttpTransport } from '../../../../core/integration/transport.ts';
+import { createDataStream } from '../../../../core/state/streams.js';
+import { createGazeProcessor } from '../../common/gaze-processing.js';
 import { 
   createDeviceStatus, 
   createCalibrationResult, 
   createEyeTrackingResult 
-} from '../../core/types.js';
+} from '../../../../core/configuration/types.ts';
 
 // Eye tracker device factory with connection management
 export const createEyeTrackerDevice = (config = {}) => {
@@ -221,7 +221,7 @@ export const createEyeTrackerDevice = (config = {}) => {
   const setupMockStreaming = () => {
     let gazeX = 0.5;
     let gazeY = 0.5;
-    let direction = { x: 0.02, y: 0.01 };
+    const direction = { x: 0.02, y: 0.01 };
     
     state.mockStreamingInterval = setInterval(async () => {
       if (state.connectionState !== 'connected') return;

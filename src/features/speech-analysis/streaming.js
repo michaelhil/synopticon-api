@@ -4,8 +4,8 @@
  * Following functional programming patterns with factory functions
  */
 
-import { createDataStream } from '../../core/streams.js';
-import { createSynchronizationEngine } from '../../core/synchronization.js';
+import { createDataStream } from '../../core/state/streams.js';
+import { createSynchronizationEngine } from '../../core/orchestration/synchronization.js';
 import { createSpeechRecognition } from './speech-recognition.js';
 import { createAnalysisEngine } from './analysis-engine.js';
 import { createContextManager } from './context-manager.js';
@@ -13,7 +13,7 @@ import {
   createSpeechAnalysisResult,
   createSpeechEvent,
   createSpeechPipelineStatus
-} from '../../core/types.js';
+} from '../../core/configuration/types.ts';
 
 // Streaming configuration defaults
 const DEFAULT_STREAM_CONFIG = {
@@ -358,7 +358,7 @@ export const createSpeechStreaming = (config = {}) => {
     if (!state.speechRecognition || !state.analysisEngine) return;
 
     // Handle speech recognition results
-    state.speechRecognition.onResult(async (result) => {
+    state.speechRecognition.onResult(async (,result) => {
       state.metrics.totalTranscriptions++;
       state.metrics.lastActivity = Date.now();
 
@@ -376,7 +376,7 @@ export const createSpeechStreaming = (config = {}) => {
       }
     });
 
-    state.speechRecognition.onInterimResult((result) => {
+    state.speechRecognition.onInterimResult((,result) => {
       // Handle interim results - could be used for real-time feedback
       console.log(`🎤 Interim: "${result.transcript}"`);
     });

@@ -154,11 +154,11 @@ export const createPerformanceMetricsCollector = (config = {}) => {
   };
 
   // Record a performance metric
-  const recordMetric = (type, value, timestamp = Date.now(), metadata = {}) => {
+  const recordMetric = (type, value, timestamp = Date.now()) => {
     if (!state.isCollecting) return;
     
     try {
-      const metric = createMetricEntry(type, value, timestamp, metadata);
+      const metric = createMetricEntry(type, value, timestamp);
       
       // Add to appropriate buffer
       if (state.currentMetrics[type]) {
@@ -180,7 +180,7 @@ export const createPerformanceMetricsCollector = (config = {}) => {
       }
       
       // Update aggregated stats
-      updateAggregatedStats(type, value, metadata);
+      updateAggregatedStats(type, value, meta,data);
       
     } catch (error) {
       console.error('Error recording metric:', error);
@@ -224,7 +224,7 @@ export const createPerformanceMetricsCollector = (config = {}) => {
   };
 
   // Update aggregated statistics
-  const updateAggregatedStats = (type, value, metadata) => {
+  const updateAggregatedStats = (type, value) => {
     switch (type) {
       case 'processing_time':
         // Update average processing time

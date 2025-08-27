@@ -4,10 +4,10 @@
  * Works in both browser and Node.js environments
  */
 
-import { createPipeline } from '../../core/pipeline.js';
-import { createPipelineConfig } from '../../core/pipeline-config.js';
-import { createImageProcessor } from '../../core/image-processor.js';
-import { getGlobalResourcePool } from '../../core/resource-pool.js';
+import { createPipeline } from '../../core/pipeline/pipeline.ts';
+import { createPipelineConfig } from '../../core/pipeline/pipeline-config.js';
+import { createImageProcessor } from '../../core/engine/image-processor.js';
+import { getGlobalResourcePool } from '../../core/performance/resource-pool.js';
 import { 
   createMediaPipeBase,
   createMediaPipeLoader,
@@ -15,14 +15,14 @@ import {
   MEDIAPIPE_LANDMARKS,
   extractKeyPoints,
   calculateFaceBoundingBox
-} from '../../core/mediapipe-commons.js';
+} from '../../core/integration/mediapipe-commons.js';
 import { 
   Capability,
   createPerformanceProfile,
   createFaceResult,
   createPose3DOF,
   createAnalysisResult
-} from '../../core/types.js';
+} from '../../core/configuration/types.ts';
 import { handleError, ErrorCategory, ErrorSeverity } from '../../shared/utils/error-handler.js';
 import { 
   detectRuntime, 

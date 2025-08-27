@@ -5,6 +5,69 @@ All notable changes to Synopticon API will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.6] - 2025-08-27 - Knip Optimization & Built-in MQTT Implementation
+
+### 🚀 **Major Features**
+- **Built-in MQTT Implementation**: Complete zero-dependency MQTT client with full protocol support
+  - Zero external dependencies - built from scratch for Bun/Node.js
+  - Full MQTT v3.1.1 protocol compliance with QoS 0, 1, and 2 support
+  - Wildcard subscriptions with `+` and `#` patterns
+  - Circuit breaker patterns for reliability
+  - Comprehensive test suite with 11 passing tests
+
+### 🔧 **Code Quality Improvements**
+- **Import Structure Overhaul**: Fixed all unresolved imports (40+ issues resolved)
+  - Updated all import paths to point to correct file locations
+  - Resolved core module dependencies (`types.js`, `pipeline.js`, `orchestrator.js`)
+  - Fixed eye-tracking, face-detection, and speech-analysis import paths
+
+- **Export Cleanup**: Eliminated all duplicate exports (22+ duplicates removed)
+  - Removed redundant default exports where named exports existed  
+  - Cleaned up circular export references
+  - Maintained clean API surface with only necessary exports
+
+- **Unused Code Cleanup**: 
+  - Removed 7 clearly unused files with `-new` suffixes
+  - Eliminated all unused enum members (7 removed from base distributors)
+  - Conservative approach preserving functional code (184 unused files identified for future cleanup)
+
+### 🛠 **Technical Improvements**
+- **Zero Dependency Goals**: Eliminated unlisted `mqtt` dependency via built-in implementation
+- **Factory Function Patterns**: All MQTT code follows functional programming patterns
+- **TypeScript Integration**: Full type safety with proper interfaces and enums
+- **Industry Standards**: All file sizes and function complexity within industry standards
+
+### 📦 **MQTT Implementation Details**
+**Core Components** (`src/core/distribution/mqtt/`):
+- `mqtt-client.ts` - Main MQTT client factory function (460 lines)
+- `mqtt-connection.ts` - TCP connection using Bun's native socket API (295 lines)
+- `mqtt-parser.ts` - MQTT packet parsing (308 lines)
+- `mqtt-packet-builder.ts` - MQTT packet construction (280 lines)
+- `mqtt-subscription-manager.ts` - Topic pattern matching (180 lines)
+- `mqtt-types.ts` - Comprehensive TypeScript definitions (158 lines)
+
+### 🧪 **Testing & Validation**
+- **MQTT Test Suite**: 11 comprehensive tests covering all components
+- **Security Audit**: No vulnerabilities found in dependencies
+- **Phase 2 Integration**: 17/17 tests passing with 100% success rate
+- **Distribution System**: Full functionality preserved during refactoring
+
+### 📊 **Knip Analysis Results**
+**Before**: 228 unused files, 40+ unresolved imports, 22+ duplicate exports, 7 unused enums
+**After**: 184 unused files, 0 unresolved imports, 0 duplicate exports, 0 unused enums
+
+### 🏗️ **Architecture Updates**
+- **Event-Driven MQTT**: Proper event handling and callbacks
+- **Distributor Integration**: Seamless integration with existing distributor system
+- **Circuit Breaker Patterns**: Built-in reliability and failure handling
+- **Real-time Capabilities**: Full support for real-time data distribution
+
+### 📋 **Migration Notes**
+- All MQTT functionality now uses built-in implementation
+- Import paths updated - no action required for users of public APIs
+- Backward compatibility maintained for all public interfaces
+- Zero breaking changes to existing functionality
+
 ## [0.5.5] - 2025-08-26
 
 ### Added

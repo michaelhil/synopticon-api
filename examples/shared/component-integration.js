@@ -460,9 +460,19 @@ export const createEnhancedComponent = (baseFactory, options = {}) => {
         if (component.isHealthy) {
           return await component.isHealthy();
         }
-        return { status: 'healthy', timestamp: Date.now() };
+        return { 
+          status: 'healthy', 
+          timestamp: Date.now(),
+          retryCount: options.retryCount,
+          healthCheckInterval: options.healthCheckInterval
+        };
       } catch (error) {
-        return { status: 'unhealthy', error: error.message, timestamp: Date.now() };
+        return { 
+          status: 'unhealthy', 
+          error: error.message, 
+          timestamp: Date.now(),
+          retryCount: options.retryCount
+        };
       }
     };
 

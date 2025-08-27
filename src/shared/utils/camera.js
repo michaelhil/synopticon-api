@@ -83,7 +83,7 @@ export const createCameraManager = () => {
     }
 
     if (!state.video || state.video.readyState < 2) {
-      throw new Error('Video not ready - readyState: ' + (state.video ? state.video.readyState : 'null'));
+      throw new Error(`Video not ready - readyState: ${  state.video ? state.video.readyState : 'null'}`);
     }
 
     try {

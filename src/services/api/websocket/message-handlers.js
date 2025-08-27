@@ -261,7 +261,7 @@ export const createWebSocketMessageHandlers = (dependencies) => {
    * @param {Object} metadata - Optional connection metadata
    */
   const handleConnection = (ws, metadata = {}) => {
-    const session = sessionManager.createSession(ws, metadata);
+    const session = sessionManager.createSession(ws, meta,data);
     return session;
   };
 

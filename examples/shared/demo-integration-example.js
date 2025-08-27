@@ -3,32 +3,27 @@
  * Shows how to integrate the new component system with demo pages
  */
 
-import { createComponentIntegrationManager } from './component-integration.js';
 import { createLifecycleManager } from './lifecycle-manager.js';
 import { createStateManager } from './state-manager.js';
 import { createResilientDemo } from './error-boundaries.js';
 
 // Example integration for MediaPipe demo
 export const createIntegratedMediaPipeDemo = (config = {}) => {
-  // Create managers
+  // Create managers with config overrides
   const stateManager = createStateManager({
-    enableHistory: true,
-    enablePersistence: true,
-    persistenceKey: 'mediapipe-demo-state'
+    enableHistory: config.enableHistory ?? true,
+    enablePersistence: config.enablePersistence ?? true,
+    persistenceKey: config.persistenceKey ?? 'mediapipe-demo-state'
   });
 
   const lifecycleManager = createLifecycleManager({
-    enableMetrics: true,
-    timeout: 10000
+    enableMetrics: config.enableMetrics ?? true,
+    timeout: config.timeout ?? 10000
   });
 
-  const componentManager = createComponentIntegrationManager({
-    maxRetries: 3,
-    retryDelay: 1000
-  });
 
   // Define component factories with error handling
-  const createCameraComponent = createResilientDemo(async (config) => {
+  const createCameraComponent = createResilientDemo(async (componentConfig) => {
     const camera = {
       stream: null,
       isActive: false,
@@ -49,7 +44,10 @@ export const createIntegratedMediaPipeDemo = (config = {}) => {
       async start() {
         try {
           this.stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: 640, height: 480 }
+            video: { 
+              width: componentConfig?.video?.width || 640, 
+              height: componentConfig?.video?.height || 480 
+            }
           });
           this.isActive = true;
           stateManager.setState('camera.active', true);
@@ -83,7 +81,7 @@ export const createIntegratedMediaPipeDemo = (config = {}) => {
     severity: 'high'
   });
 
-  const createMediaPipeComponent = createResilientDemo(async (config) => {
+  const createMediaPipeComponent = createResilientDemo(async (componentConfig) => {
     const mediapipe = {
       faceMesh: null,
       isProcessing: false,
@@ -109,10 +107,20 @@ export const createIntegratedMediaPipeDemo = (config = {}) => {
       async process(videoFrame) {
         if (!this.isProcessing) return null;
         
+        // In a real implementation, we would process the videoFrame
+        // For now, we're mocking but could log frame info
+        if (componentConfig?.debug && videoFrame) {
+          console.log('Processing video frame:', { 
+            timestamp: videoFrame.timestamp || Date.now(),
+            width: videoFrame.width,
+            height: videoFrame.height 
+          });
+        }
+        
         // Mock face detection results
         const results = {
-          landmarks: Array(468).fill().map(() => ({ x: Math.random(), y: Math.random(), z: Math.random() })),
-          confidence: 0.95,
+          landmarks: Array(componentConfig?.landmarkCount || 468).fill().map(() => ({ x: Math.random(), y: Math.random(), z: Math.random() })),
+          confidence: componentConfig?.confidence || 0.95,
           timestamp: Date.now()
         };
         
@@ -139,14 +147,21 @@ export const createIntegratedMediaPipeDemo = (config = {}) => {
     severity: 'high'
   });
 
-  const createVisualizationComponent = createResilientDemo(async (config) => {
+  const createVisualizationComponent = createResilientDemo(async (componentConfig) => {
     const visualization = {
       canvas: null,
       ctx: null,
       
       async initialize() {
-        this.canvas = document.getElementById('demo-canvas') || document.createElement('canvas');
+        const canvasId = componentConfig?.canvasId || 'demo-canvas';
+        this.canvas = document.getElementById(canvasId) || document.createElement('canvas');
         this.ctx = this.canvas.getContext('2d');
+        
+        if (componentConfig?.canvasSize) {
+          this.canvas.width = componentConfig.canvasSize.width;
+          this.canvas.height = componentConfig.canvasSize.height;
+        }
+        
         console.log('🎨 Visualization component initialized');
         return true;
       },
@@ -161,8 +176,13 @@ export const createIntegratedMediaPipeDemo = (config = {}) => {
         
         this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
         
+        // Draw video frame if provided
+        if (videoElement && componentConfig?.showVideo) {
+          this.ctx.drawImage(videoElement, 0, 0, this.canvas.width, this.canvas.height);
+        }
+        
         // Draw landmarks
-        this.ctx.fillStyle = 'red';
+        this.ctx.fillStyle = componentConfig?.landmarkColor || 'red';
         landmarks.forEach(point => {
           this.ctx.fillRect(
             point.x * this.canvas.width - 2,
@@ -216,8 +236,8 @@ export const createIntegratedMediaPipeDemo = (config = {}) => {
   });
 
   // Add lifecycle hooks
-  lifecycleManager.addGlobalHook('afterInit', ({ component, state }) => {
-    console.log(`✅ ${component} initialized successfully`);
+  lifecycleManager.addGlobalHook('afterInit', ({ component, state: componentState }) => {
+    console.log(`✅ ${component} initialized successfully`, componentState);
     stateManager.updateState('components.status', status => ({
       ...status,
       [component]: 'initialized'

@@ -497,7 +497,7 @@ Site C ─────────┘         ↓
 **If you use Synopticon API in your research, please cite:**
 ```
 Synopticon API: Open-Source Platform for Real-Time Multi-Modal Behavioral Analysis
-Version X.X.X, Year
+Version 0.5.6, 2025 - Knip Optimized with Built-in MQTT Implementation
 Available at: https://github.com/username/synopticon-api
 ```
 

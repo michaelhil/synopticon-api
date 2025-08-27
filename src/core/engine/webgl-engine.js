@@ -79,7 +79,7 @@ export const createWebGLEngine = (canvas) => {
     state.gl.linkProgram(program);
 
     if (!state.gl.getProgramParameter(program, state.gl.LINK_STATUS)) {
-      throw new Error('Program linking failed: ' + state.gl.getProgramInfoLog(program));
+      throw new Error(`Program linking failed: ${  state.gl.getProgramInfoLog(program)}`);
     }
 
     const uniforms = getUniformLocations(program);
@@ -103,7 +103,7 @@ export const createWebGLEngine = (canvas) => {
   };
 
   const getUniformLocations = (program) => {
-    const gl = state.gl;
+    const {gl} = state;
     const uniforms = {};
     const uniformCount = gl.getProgramParameter(program, gl.ACTIVE_UNIFORMS);
     
@@ -117,7 +117,7 @@ export const createWebGLEngine = (canvas) => {
   };
 
   const getAttributeLocations = (program) => {
-    const gl = state.gl;
+    const {gl} = state;
     const attributes = {};
     const attributeCount = gl.getProgramParameter(program, gl.ACTIVE_ATTRIBUTES);
     
@@ -186,31 +186,13 @@ const createBufferManager = (gl) => {
     buffers: new Map()
   };
 
-  const createBuffer = (name, data, usage = null) => {
-    if (!usage) {
-      usage = gl.STATIC_DRAW;
-    }
-
-    const buffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, data, usage);
-
-    state.buffers.set(name, {
-      buffer,
-      size: data.byteLength,
-      usage
-    });
-
-    return buffer;
-  };
-
   const getBuffer = (name) => {
     const bufferInfo = state.buffers.get(name);
     return bufferInfo ? bufferInfo.buffer : null;
   };
 
   const cleanup = () => {
-    for (const [name, bufferInfo] of state.buffers) {
+    for (const [, bufferInfo] of state.buffers) {
       gl.deleteBuffer(bufferInfo.buffer);
     }
     state.buffers.clear();
@@ -300,7 +282,7 @@ const createTextureManager = (gl) => {
   };
 
   const cleanup = () => {
-    for (const [name, textureInfo] of state.textures) {
+    for (const [, textureInfo] of state.textures) {
       state.gl.deleteTexture(textureInfo.texture);
     }
     state.textures.clear();

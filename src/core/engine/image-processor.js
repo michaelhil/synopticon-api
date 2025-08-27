@@ -4,22 +4,10 @@
  * Eliminates duplicate image processing code and improves performance
  */
 
-import { getGlobalResourcePool } from './resource-pool.js';
-import { handleError, ErrorCategory, ErrorSeverity } from '../shared/utils/error-handler.js';
-
-// Image processing constants
-const IMAGE_FORMATS = {
-  RGB: { channels: 3, bytesPerPixel: 3 },
-  RGBA: { channels: 4, bytesPerPixel: 4 },
-  GRAYSCALE: { channels: 1, bytesPerPixel: 1 },
-  BGR: { channels: 3, bytesPerPixel: 3 }
-};
-
-const INTERPOLATION_METHODS = {
-  NEAREST: 'nearest',
-  BILINEAR: 'bilinear',
-  BICUBIC: 'bicubic'
-};
+import { getGlobalResourcePool } from '../performance/resource-pool.js';
+import { handleError, ErrorCategory, ErrorSeverity } from '../../shared/utils/error-handler.js';
+import { createImageOperations, IMAGE_FORMATS, INTERPOLATION_METHODS } from './image-operations.js';
+import { createProcessingCache } from './image-processing-cache.js';
 
 /**
  * Creates an optimized image processor with shared utilities
@@ -36,15 +24,73 @@ export const createImageProcessor = (config = {}) => {
     ...config
   };
   
+  const cache = createProcessingCache(processorConfig);
+  const operations = createImageOperations(resourcePool);
+  
+  // Processing state and metrics
   const state = {
-    cache: new Map(),
     metrics: {
       processedFrames: 0,
-      cacheHits: 0,
-      cacheMisses: 0,
       totalProcessingTime: 0,
-      averageProcessingTime: 0
+      averageProcessingTime: 0,
+      cacheHits: 0,
+      cacheMisses: 0
     }
+  };
+  
+  // Wrapper functions that integrate caching and metrics
+  const processWithCache = async (operation, params, processFn) => {
+    const startTime = performance.now();
+    
+    // Try cache first
+    const cached = cache.getCached(operation, params);
+    if (cached) {
+      cache.recordProcessingTime(startTime, performance.now());
+      return cached;
+    }
+    
+    // Process and cache result
+    try {
+      const result = await processFn();
+      cache.setCached(operation, params, result);
+      cache.recordProcessingTime(startTime, performance.now());
+      return result;
+    } catch (error) {
+      cache.recordProcessingTime(startTime, performance.now());
+      throw error;
+    }
+  };
+  
+  const resize = async (imageData, targetWidth, targetHeight, method) => {
+    return processWithCache(
+      'resize', 
+      { width: targetWidth, height: targetHeight, method },
+      () => operations.resizeImage(imageData, targetWidth, targetHeight, method || processorConfig.defaultInterpolation)
+    );
+  };
+  
+  const convert = async (imageData, fromFormat, toFormat) => {
+    return processWithCache(
+      'convert',
+      { fromFormat, toFormat },
+      () => operations.convertColorSpace(imageData, fromFormat, toFormat)
+    );
+  };
+  
+  const crop = async (imageData, x, y, width, height) => {
+    return processWithCache(
+      'crop',
+      { x, y, width, height },
+      () => operations.cropImage(imageData, x, y, width, height)
+    );
+  };
+  
+  const filter = async (imageData, filterType, intensity) => {
+    return processWithCache(
+      'filter',
+      { filterType, intensity },
+      () => operations.applyFilter(imageData, filterType, intensity)
+    );
   };
   
   /**
@@ -305,7 +351,6 @@ export const createImageProcessor = (config = {}) => {
    */
   const convertImageFormat = (imageData, targetFormat) => {
     try {
-      const sourceFormat = IMAGE_FORMATS.RGBA;
       const targetFormatInfo = IMAGE_FORMATS[targetFormat];
       
       if (!targetFormatInfo) {
@@ -383,7 +428,7 @@ export const createImageProcessor = (config = {}) => {
    */
   const normalizeImage = (imageData) => {
     try {
-      const data = imageData.data;
+      const {data} = imageData;
       const normalizedData = new Float32Array(data.length);
       
       for (let i = 0; i < data.length; i++) {
@@ -519,12 +564,7 @@ export const createImageProcessor = (config = {}) => {
    * Clears processing cache and resets metrics
    */
   const cleanup = () => {
-    state.cache.clear();
-    Object.keys(state.metrics).forEach(key => {
-      if (typeof state.metrics[key] === 'number') {
-        state.metrics[key] = 0;
-      }
-    });
+    cache.clear();
   };
   
   return {
@@ -555,4 +595,3 @@ export const createImageProcessor = (config = {}) => {
 export { IMAGE_FORMATS, INTERPOLATION_METHODS };
 
 // Export default processor factory for convenience
-export default createImageProcessor;

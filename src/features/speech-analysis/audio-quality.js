@@ -5,7 +5,7 @@
  */
 
 import { detectRuntime, checkFeatures } from '../../shared/utils/runtime-detector.js';
-import { createSpeechEvent } from '../../core/types.js';
+import { createSpeechEvent } from '../../core/configuration/types.ts';
 
 // Audio quality metrics factory
 export const createAudioQualityMetrics = (config = {}) => ({
@@ -286,7 +286,7 @@ export const createAudioQualityAnalyzer = (config = {}) => {
     const { snr, volumeLevel, backgroundNoise, clarity } = metrics;
     
     // Check against thresholds
-    const thresholds = state.thresholds;
+    const {thresholds} = state;
     
     if (snr >= thresholds.excellent.snr && 
         volumeLevel >= thresholds.excellent.volume && 

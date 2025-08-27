@@ -3,8 +3,15 @@
  * Provides comprehensive lifecycle orchestration for demo components
  */
 
-import { ComponentState, ErrorType } from './component-integration.js';
+import { ComponentState } from './component-integration.js';
 import { createErrorBoundary, ErrorSeverity, RecoveryStrategy } from './error-boundaries.js';
+import { calculateExecutionOrder } from './lifecycle-helpers.js';
+import { 
+  createInitializeAllOperation,
+  createStartAllOperation, 
+  createStopAllOperation,
+  createCleanupAllOperation
+} from './lifecycle-bulk-operations.js';
 
 // Lifecycle phases
 export const LifecyclePhase = {
@@ -406,124 +413,25 @@ export const createLifecycleManager = (config = {}) => {
   };
 
   // Initialize all components in dependency order
-  const initializeAll = async () => {
-    console.log('🚀 Starting lifecycle-managed initialization...');
-    
-    const initOrder = calculateExecutionOrder();
-    const results = {};
-    
-    for (const componentName of initOrder) {
-      try {
-        results[componentName] = await initializeComponent(componentName);
-      } catch (error) {
-        const component = state.components.get(componentName);
-        if (component.options.required) {
-          throw new Error(`Required component ${componentName} failed: ${error.message}`);
-        }
-        results[componentName] = null;
-      }
-    }
-
-    updateMetrics();
-    return results;
-  };
+  const initializeAll = createInitializeAllOperation(state, initializeComponent);
 
   // Start all initialized components
-  const startAll = async () => {
-    console.log('🚀 Starting all components...');
-    
-    for (const [name, component] of state.components) {
-      if (component.state === ComponentState.INITIALIZED) {
-        try {
-          await startComponent(name);
-        } catch (error) {
-          if (component.options.required) {
-            throw error;
-          }
-          console.warn(`Optional component ${name} failed to start`);
-        }
-      }
-    }
-  };
+  const startAll = createStartAllOperation(state, startComponent);
 
   // Stop all running components
-  const stopAll = async () => {
-    console.log('⏹️ Stopping all components...');
-    
-    const stopOrder = [...calculateExecutionOrder()].reverse();
-    
-    for (const name of stopOrder) {
-      await stopComponent(name);
-    }
-  };
+  const stopAll = createStopAllOperation(state, stopComponent);
 
   // Cleanup all components
-  const cleanupAll = async () => {
-    console.log('🧹 Cleaning up all components...');
-    
-    const cleanupOrder = [...calculateExecutionOrder()].reverse();
-    
-    for (const name of cleanupOrder) {
-      await cleanupComponent(name);
-    }
-  };
+  const cleanupAll = createCleanupAllOperation(state, cleanupComponent);
 
   // Calculate execution order based on dependencies
-  const calculateExecutionOrder = () => {
+  const getExecutionOrder = () => {
     if (state.executionOrder.length === 0) {
-      const visited = new Set();
-      const visiting = new Set();
-      const order = [];
-
-      const visit = (name) => {
-        if (visiting.has(name)) {
-          throw new Error(`Circular dependency detected: ${name}`);
-        }
-        if (visited.has(name)) return;
-
-        visiting.add(name);
-        
-        const component = state.components.get(name);
-        for (const dep of component.dependencies) {
-          if (state.components.has(dep)) {
-            visit(dep);
-          }
-        }
-        
-        visiting.delete(name);
-        visited.add(name);
-        order.push(name);
-      };
-
-      for (const name of state.components.keys()) {
-        visit(name);
-      }
-
-      state.executionOrder = order;
+      state.executionOrder = calculateExecutionOrder(state.components);
     }
-
     return state.executionOrder;
   };
 
-  // Update metrics
-  const updateMetrics = () => {
-    if (!state.options.enableMetrics) return;
-
-    const initTimes = [];
-    let totalRuntime = 0;
-
-    for (const component of state.components.values()) {
-      if (component.metadata.initTime) {
-        initTimes.push(component.metadata.initTime);
-      }
-      totalRuntime += component.metadata.totalRuntime;
-    }
-
-    state.metrics.averageInitTime = initTimes.length > 0 
-      ? initTimes.reduce((a, b) => a + b, 0) / initTimes.length 
-      : 0;
-    state.metrics.totalRuntime = totalRuntime;
-  };
 
   // Get comprehensive status
   const getStatus = () => ({
@@ -539,7 +447,7 @@ export const createLifecycleManager = (config = {}) => {
       ])
     ),
     metrics: { ...state.metrics },
-    executionOrder: calculateExecutionOrder()
+    executionOrder: getExecutionOrder()
   });
 
   return {

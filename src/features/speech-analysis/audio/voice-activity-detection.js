@@ -4,7 +4,10 @@
  * Following functional programming patterns with factory functions
  */
 
-import { createEnhancedMemoryPool } from '../../shared/utils/enhanced-memory-pool.js';
+import { createEnhancedMemoryPool } from '../../../shared/utils/enhanced-memory-pool.js';
+import { createVADConfig, updateVADConfig } from './vad-config.js';
+import { createVADConsensus } from './vad-consensus.js';
+import { createVADStats } from './vad-stats.js';
 
 // Energy-based VAD using RMS and spectral energy
 export const createEnergyBasedVAD = (config = {}) => {
@@ -315,44 +318,17 @@ export const createAdvancedVAD = (config = {}) => {
   });
   memoryPool.initialize();
 
+  const vadConfig = createVADConfig(config);
+  const consensus = createVADConsensus(vadConfig);
+  const stats = createVADStats();
+  
   const state = {
-    config: {
-      // Algorithm weights
-      energyWeight: config.energyWeight || 0.5,
-      zcrWeight: config.zcrWeight || 0.2,
-      entropyWeight: config.entropyWeight || 0.3,
-      
-      // Consensus threshold
-      consensusThreshold: config.consensusThreshold || 0.6,
-      
-      // Smoothing parameters
-      smoothingWindow: config.smoothingWindow || 5,
-      hangoverFrames: config.hangoverFrames || 3, // Extend speech detection
-      
-      frameSize: config.frameSize || 1024,
-      sampleRate: config.sampleRate || 44100
-    },
+    config: vadConfig,
     
     // Individual VAD algorithms
     energyVAD: createEnergyBasedVAD(config.energy),
     zcrVAD: createZCRBasedVAD(config.zcr),
-    entropyVAD: createSpectralEntropyVAD(config.entropy),
-    
-    // Decision smoothing
-    decisionBuffer: [],
-    hangoverCount: 0,
-    
-    // Statistics
-    stats: {
-      totalFrames: 0,
-      speechFrames: 0,
-      consensusDecisions: 0,
-      algorithmAgreement: {
-        all: 0,
-        majority: 0,
-        minority: 0
-      }
-    }
+    entropyVAD: createSpectralEntropyVAD(config.entropy)
   };
 
   // Process frame with all algorithms
@@ -366,75 +342,15 @@ export const createAdvancedVAD = (config = {}) => {
       entropyResult = state.entropyVAD.processFrame(fftData, timestamp);
     }
 
-    // Calculate weighted consensus
-    const weightedScore = 
-      (energyResult.confidence * state.config.energyWeight) +
-      (zcrResult.confidence * state.config.zcrWeight) +
-      (entropyResult.confidence * state.config.entropyWeight);
-
-    let isVoiceActive = weightedScore > state.config.consensusThreshold;
-
-    // Apply smoothing and hangover
-    state.decisionBuffer.push(isVoiceActive);
-    if (state.decisionBuffer.length > state.config.smoothingWindow) {
-      state.decisionBuffer.shift();
-    }
-
-    // Smoothed decision
-    const speechCount = state.decisionBuffer.filter(d => d).length;
-    const smoothedDecision = speechCount > state.decisionBuffer.length / 2;
-
-    // Apply hangover (extend speech detection)
-    if (smoothedDecision) {
-      state.hangoverCount = state.config.hangoverFrames;
-      isVoiceActive = true;
-    } else if (state.hangoverCount > 0) {
-      state.hangoverCount--;
-      isVoiceActive = true;
-    } else {
-      isVoiceActive = false;
-    }
-
-    // Update statistics
-    state.stats.totalFrames++;
-    if (isVoiceActive) {
-      state.stats.speechFrames++;
-    }
-
-    // Algorithm agreement tracking
-    const decisions = [energyResult.isVoiceActive, zcrResult.isVoiceActive, entropyResult.isVoiceActive];
-    const activeCount = decisions.filter(d => d).length;
+    // Process consensus decision using modular components
+    const consensusResult = consensus.processConsensus(energyResult, zcrResult, entropyResult, timestamp);
     
-    if (activeCount === 3) {
-      state.stats.algorithmAgreement.all++;
-    } else if (activeCount >= 2) {
-      state.stats.algorithmAgreement.majority++;
-    } else {
-      state.stats.algorithmAgreement.minority++;
-    }
-
-    if (smoothedDecision) {
-      state.stats.consensusDecisions++;
-    }
+    // Record statistics
+    stats.recordFrame(consensusResult);
 
     // Create pooled result object
     const result = memoryPool.acquire('VADResult');
-    Object.assign(result, {
-      isVoiceActive,
-      confidence: weightedScore,
-      timestamp,
-      smoothedDecision,
-      algorithms: {
-        energy: energyResult,
-        zcr: zcrResult,
-        entropy: entropyResult
-      },
-      consensus: {
-        score: weightedScore,
-        threshold: state.config.consensusThreshold,
-        agreement: activeCount / 3
-      }
-    });
+    Object.assign(result, consensusResult);
 
     return result;
   };
@@ -458,50 +374,45 @@ export const createAdvancedVAD = (config = {}) => {
   // Reset all VAD algorithms
   const reset = () => {
     state.energyVAD.reset();
-    state.decisionBuffer.length = 0;
-    state.hangoverCount = 0;
-    state.stats = {
-      totalFrames: 0,
-      speechFrames: 0,
-      consensusDecisions: 0,
-      algorithmAgreement: {
-        all: 0,
-        majority: 0,
-        minority: 0
-      }
-    };
+    state.zcrVAD.reset();
+    state.entropyVAD.reset();
+    consensus.reset();
+    stats.reset();
   };
 
   // Get comprehensive statistics
-  const getStats = () => ({
-    ...state.stats,
-    voiceActivityRatio: state.stats.totalFrames > 0 ? state.stats.speechFrames / state.stats.totalFrames : 0,
-    consensusRatio: state.stats.totalFrames > 0 ? state.stats.consensusDecisions / state.stats.totalFrames : 0,
-    algorithmAgreementRatios: {
-      all: state.stats.totalFrames > 0 ? state.stats.algorithmAgreement.all / state.stats.totalFrames : 0,
-      majority: state.stats.totalFrames > 0 ? state.stats.algorithmAgreement.majority / state.stats.totalFrames : 0,
-      minority: state.stats.totalFrames > 0 ? state.stats.algorithmAgreement.minority / state.stats.totalFrames : 0
-    },
-    individual: {
+  const getStats = () => {
+    const individualStats = {
       energy: state.energyVAD.getStats(),
       zcr: state.zcrVAD.getStats(),
       entropy: state.entropyVAD.getStats()
-    },
-    memoryPool: memoryPool.getStats()
-  });
+    };
+
+    return {
+      ...stats.getStats(individualStats),
+      memoryPool: memoryPool.getStats(),
+      consensus: consensus.getState()
+    };
+  };
 
   // Update configuration
   const updateConfig = (newConfig) => {
-    Object.assign(state.config, newConfig);
-    
-    if (newConfig.energy) {
-      state.energyVAD.updateConfig(newConfig.energy);
-    }
-    if (newConfig.zcr) {
-      state.zcrVAD.updateConfig(newConfig.zcr);
-    }
-    if (newConfig.entropy) {
-      state.entropyVAD.updateConfig(newConfig.entropy);
+    try {
+      state.config = updateVADConfig(state.config, newConfig);
+      consensus.updateConfig(state.config);
+      
+      if (newConfig.energy) {
+        state.energyVAD.updateConfig(newConfig.energy);
+      }
+      if (newConfig.zcr) {
+        state.zcrVAD.updateConfig(newConfig.zcr);
+      }
+      if (newConfig.entropy) {
+        state.entropyVAD.updateConfig(newConfig.entropy);
+      }
+    } catch (error) {
+      console.warn('VAD configuration update failed:', error.message);
+      throw error;
     }
   };
 

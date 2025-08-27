@@ -1,172 +1,95 @@
 /**
- * Enhanced Memory Pooling System
- * Optimized for speech analysis and face detection workflows
- * Following functional programming patterns with factory functions
+ * Enhanced Memory Pool Manager
+ * 
+ * Provides intelligent object pooling and reuse for better memory management
+ * and garbage collection performance in intensive applications.
+ * 
+ * Features:
+ * - Typed array pooling (Float32Array, Uint8Array, etc.)
+ * - Canvas and ImageData pooling for graphics operations
+ * - Generic object pooling with custom factories
+ * - Adaptive cleanup based on usage patterns
+ * - Memory pressure monitoring and response
+ * - Comprehensive usage statistics and metrics
+ * 
+ * Performance Benefits:
+ * - Reduces garbage collection pressure by reusing objects
+ * - Eliminates frequent allocations/deallocations
+ * - Adaptive cleanup prevents memory bloat
+ * - Memory pressure monitoring prevents out-of-memory conditions
+ * 
+ * @example
+ * ```javascript
+ * import { createEnhancedMemoryPool } from './enhanced-memory-pool.js';
+ * 
+ * const memoryPool = createEnhancedMemoryPool({
+ *   maxPoolSize: 100,
+ *   adaptiveCleanup: true,
+ *   enableMetrics: true
+ * });
+ * 
+ * memoryPool.initialize();
+ * 
+ * // Use typed arrays
+ * const array = memoryPool.acquireFloat32Array(1024);
+ * // ... use array
+ * memoryPool.releaseArray(array);
+ * 
+ * // Use custom objects
+ * const result = memoryPool.acquire('FaceResult', { faces: [] });
+ * // ... use result
+ * memoryPool.release(result);
+ * ```
  */
+
+import { createMemoryPoolConfig, createMemoryPoolState } from './memory-pool-config.js';
+import { createFactoryManager } from './memory-pool-factories.js';
+import { createArrayManager } from './memory-pool-arrays.js';
+import { createCleanupManager } from './memory-pool-cleanup.js';
 
 // Create enhanced memory pool manager factory
 export const createEnhancedMemoryPool = (config = {}) => {
-  const state = {
-    // Object pools by type and size
-    pools: {
-      arrays: new Map(), // 'Float32Array_1024' -> array[]
-      objects: new Map(), // 'FaceResult' -> object[]
-      buffers: new Map(), // 'ImageData_640_480' -> buffer[]
-      canvases: new Map(), // '640x480' -> canvas[]
-      contexts: new Map() // 'canvas2d' -> context[]
-    },
-    
-    // Active tracking
-    activeObjects: new WeakSet(),
-    objectMetadata: new WeakMap(),
-    
-    // Usage statistics
-    stats: {
-      allocations: 0,
-      deallocations: 0,
-      reuseHits: 0,
-      memoryLeaks: 0,
-      poolSizes: {},
-      created: Date.now(),
-      lastCleanup: Date.now()
-    },
-    
-    // Configuration
-    config: {
-      maxPoolSize: config.maxPoolSize || 50,
-      maxObjectAge: config.maxObjectAge || 60000, // 1 minute
-      baseCleanupInterval: config.cleanupInterval || 10000, // 10 seconds
-      adaptiveCleanup: config.adaptiveCleanup !== false, // Enable adaptive cleanup
-      enableTracking: config.enableTracking !== false,
-      enableMetrics: config.enableMetrics !== false,
-      memoryPressureThreshold: config.memoryPressureThreshold || 100, // MB
-      maxMemoryPressureThreshold: config.maxMemoryPressureThreshold || 150, // MB
-      ...config
-    },
-    
-    // Adaptive cleanup state
-    adaptiveState: {
-      averagePoolUsage: 0,
-      lastUsageCheck: Date.now(),
-      usageHistory: [],
-      currentInterval: config.cleanupInterval || 10000,
-      cleanupEfficiency: 1.0 // ratio of objects cleaned vs total pool size
-    },
-    
-    // Cleanup timer
-    cleanupTimer: null,
-    
-    // Factory functions for different object types
-    factories: new Map()
-  };
+  const poolConfig = createMemoryPoolConfig(config);
+  const state = createMemoryPoolState(poolConfig);
+  
+  // Create managers
+  const factoryManager = createFactoryManager(state);
+  const arrayManager = createArrayManager(state, factoryManager);
+  const cleanupManager = createCleanupManager(state);
 
   // Initialize the memory pool
   const initialize = () => {
     console.log('🔧 Initializing enhanced memory pool...');
     
     // Register default factories
-    registerDefaultFactories();
+    factoryManager.registerDefaultFactories();
     
     // Start adaptive cleanup timer
     if (state.config.baseCleanupInterval > 0) {
-      startAdaptiveCleanup();
+      cleanupManager.startAdaptiveCleanup();
     }
     
     // Monitor memory pressure if available
     if (typeof performance !== 'undefined' && performance.memory) {
-      setInterval(checkMemoryPressure, 5000);
+      setInterval(cleanupManager.checkMemoryPressure, 5000);
     }
     
     console.log('✅ Enhanced memory pool initialized');
     return true;
   };
 
-  // Register default object factories
-  const registerDefaultFactories = () => {
-    // Float32Array factory
-    state.factories.set('Float32Array', (size) => new Float32Array(size));
-    
-    // Uint8Array factory
-    state.factories.set('Uint8Array', (size) => new Uint8Array(size));
-    
-    // Canvas factory
-    state.factories.set('Canvas', (width, height) => {
-      if (typeof document !== 'undefined') {
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-        return canvas;
-      }
-      return null;
-    });
-    
-    // ImageData factory
-    state.factories.set('ImageData', (width, height) => {
-      if (typeof ImageData !== 'undefined') {
-        return new ImageData(width, height);
-      }
-      return null;
-    });
-    
-    // Face result factory
-    state.factories.set('FaceResult', () => ({
-      id: null,
-      bbox: { x: 0, y: 0, width: 0, height: 0 },
-      landmarks: [],
-      confidence: 0,
-      pose3DOF: null,
-      age: { value: null, confidence: 0 },
-      gender: { value: null, confidence: 0 },
-      emotion: { value: null, confidence: 0 },
-      timestamp: 0,
-      _pooled: true
-    }));
-    
-    // Transcript result factory
-    state.factories.set('TranscriptResult', () => ({
-      text: '',
-      confidence: 0,
-      timestamp: 0,
-      isFinal: false,
-      participantId: null,
-      _pooled: true
-    }));
-    
-    // Analysis result factory
-    state.factories.set('AnalysisResult', () => ({
-      prompt: '',
-      result: '',
-      confidence: 0,
-      timestamp: 0,
-      sessionId: null,
-      _pooled: true
-    }));
-  };
-
-  // Register custom factory
-  const registerFactory = (type, factory) => {
-    state.factories.set(type, factory);
-  };
-
   // Acquire object from pool
   const acquire = (type, ...args) => {
-    const key = createPoolKey(type, args);
+    const key = args.length > 0 ? `${type}_${args.join('_')}` : type;
     const pool = state.pools.objects.get(key) || [];
     
     let obj;
     if (pool.length > 0) {
       obj = pool.pop();
       state.stats.reuseHits++;
-      
-      // Reset object to clean state
-      if (typeof obj.reset === 'function') {
-        obj.reset();
-      } else {
-        resetObject(obj, type);
-      }
     } else {
       // Create new object
-      const factory = state.factories.get(type);
+      const factory = factoryManager.getFactory(type);
       if (!factory) {
         throw new Error(`No factory registered for type: ${type}`);
       }
@@ -220,83 +143,7 @@ export const createEnhancedMemoryPool = (config = {}) => {
     }
   };
 
-  // Acquire typed array
-  const acquireArray = (type, size) => {
-    const key = `${type}_${size}`;
-    const pool = state.pools.arrays.get(key) || [];
-    
-    let array;
-    if (pool.length > 0) {
-      array = pool.pop();
-      state.stats.reuseHits++;
-      
-      // Clear array for reuse
-      array.fill(0);
-    } else {
-      // Create new array
-      const factory = state.factories.get(type);
-      if (!factory) {
-        switch (type) {
-          case 'Float32Array':
-            array = new Float32Array(size);
-            break;
-          case 'Uint8Array':
-            array = new Uint8Array(size);
-            break;
-          case 'Uint16Array':
-            array = new Uint16Array(size);
-            break;
-          default:
-            throw new Error(`Unsupported array type: ${type}`);
-        }
-      } else {
-        array = factory(size);
-      }
-      
-      state.stats.allocations++;
-    }
-    
-    // Track array
-    if (state.config.enableTracking) {
-      state.objectMetadata.set(array, {
-        type: 'Array',
-        subtype: type,
-        size,
-        acquiredAt: Date.now(),
-        poolKey: key
-      });
-    }
-    
-    return array;
-  };
-
-  // Release typed array
-  const releaseArray = (array) => {
-    if (!array) return;
-    
-    const metadata = state.objectMetadata.get(array);
-    if (!metadata) {
-      console.warn('Attempting to release untracked array');
-      return;
-    }
-    
-    const { poolKey } = metadata;
-    const pool = state.pools.arrays.get(poolKey) || [];
-    
-    if (pool.length < state.config.maxPoolSize) {
-      pool.push(array);
-      
-      if (!state.pools.arrays.has(poolKey)) {
-        state.pools.arrays.set(poolKey, pool);
-      }
-      
-      state.stats.deallocations++;
-    }
-    
-    state.objectMetadata.delete(array);
-  };
-
-  // Acquire canvas
+  // Acquire canvas element
   const acquireCanvas = (width, height) => {
     const key = `${width}x${height}`;
     const pool = state.pools.canvases.get(key) || [];
@@ -306,306 +153,123 @@ export const createEnhancedMemoryPool = (config = {}) => {
       canvas = pool.pop();
       state.stats.reuseHits++;
       
-      // Clear canvas
+      // Reset canvas
       const ctx = canvas.getContext('2d');
-      ctx.clearRect(0, 0, width, height);
+      if (ctx) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+      }
     } else {
       // Create new canvas
-      const factory = state.factories.get('Canvas');
+      const factory = factoryManager.getFactory('Canvas');
       canvas = factory ? factory(width, height) : null;
       
       if (!canvas) {
-        throw new Error('Canvas factory not available');
+        throw new Error('Canvas not available in this environment');
       }
       
       state.stats.allocations++;
     }
     
+    // Track canvas
+    if (state.config.enableTracking) {
+      state.objectMetadata.set(canvas, {
+        type: 'Canvas',
+        width,
+        height,
+        acquiredAt: Date.now(),
+        poolKey: key
+      });
+    }
+    
     return canvas;
   };
 
-  // Release canvas
+  // Release canvas back to pool
   const releaseCanvas = (canvas) => {
     if (!canvas) return;
     
-    const key = `${canvas.width}x${canvas.height}`;
-    const pool = state.pools.canvases.get(key) || [];
+    const metadata = state.objectMetadata.get(canvas);
+    if (!metadata) {
+      console.warn('Attempting to release untracked canvas');
+      return;
+    }
     
+    const { poolKey } = metadata;
+    const pool = state.pools.canvases.get(poolKey) || [];
+    
+    // Check pool size limit
     if (pool.length < state.config.maxPoolSize) {
       pool.push(canvas);
       
-      if (!state.pools.canvases.has(key)) {
-        state.pools.canvases.set(key, pool);
+      if (!state.pools.canvases.has(poolKey)) {
+        state.pools.canvases.set(poolKey, pool);
       }
       
       state.stats.deallocations++;
     }
-  };
-
-  // Create pool key
-  const createPoolKey = (type, args) => {
-    if (args.length === 0) return type;
-    return `${type}_${args.join('_')}`;
-  };
-
-  // Reset object to initial state
-  const resetObject = (obj, type) => {
-    switch (type) {
-      case 'FaceResult':
-        obj.id = null;
-        obj.bbox = { x: 0, y: 0, width: 0, height: 0 };
-        obj.landmarks = [];
-        obj.confidence = 0;
-        obj.pose3DOF = null;
-        obj.age = { value: null, confidence: 0 };
-        obj.gender = { value: null, confidence: 0 };
-        obj.emotion = { value: null, confidence: 0 };
-        obj.timestamp = 0;
-        break;
-        
-      case 'TranscriptResult':
-        obj.text = '';
-        obj.confidence = 0;
-        obj.timestamp = 0;
-        obj.isFinal = false;
-        obj.participantId = null;
-        break;
-        
-      case 'AnalysisResult':
-        obj.prompt = '';
-        obj.result = '';
-        obj.confidence = 0;
-        obj.timestamp = 0;
-        obj.sessionId = null;
-        break;
-        
-      default:
-        // Generic reset - clear enumerable properties
-        for (const key in obj) {
-          if (obj.hasOwnProperty(key) && !key.startsWith('_')) {
-            if (typeof obj[key] === 'number') {
-              obj[key] = 0;
-            } else if (typeof obj[key] === 'string') {
-              obj[key] = '';
-            } else if (Array.isArray(obj[key])) {
-              obj[key].length = 0;
-            } else if (obj[key] && typeof obj[key] === 'object') {
-              obj[key] = null;
-            }
-          }
-        }
+    
+    // Remove from tracking
+    if (state.config.enableTracking) {
+      state.objectMetadata.delete(canvas);
     }
   };
 
-  // Perform cleanup of old objects
-  // Calculate adaptive cleanup interval based on pool usage
-  const calculateAdaptiveInterval = () => {
-    if (!state.config.adaptiveCleanup) {
-      return state.config.baseCleanupInterval;
-    }
-
-    const totalPoolSize = getTotalPoolSize();
-    const maxPossibleSize = state.config.maxPoolSize * Object.keys(state.pools).length * 5; // Estimate
-    const usageRatio = totalPoolSize / Math.max(maxPossibleSize, 1);
+  // Get comprehensive statistics
+  const getStatistics = () => {
+    // Update pool sizes in stats
+    state.stats.poolSizes = {};
     
-    // Update usage history
-    state.adaptiveState.usageHistory.push(usageRatio);
-    if (state.adaptiveState.usageHistory.length > 10) {
-      state.adaptiveState.usageHistory.shift();
-    }
-    
-    // Calculate average usage
-    state.adaptiveState.averagePoolUsage = 
-      state.adaptiveState.usageHistory.reduce((a, b) => a + b, 0) / 
-      state.adaptiveState.usageHistory.length;
-    
-    // Adaptive interval calculation:
-    // - High usage (>70%) = shorter intervals (more frequent cleanup)
-    // - Low usage (<30%) = longer intervals (less frequent cleanup)
-    // - Medium usage = base interval
-    let intervalMultiplier = 1.0;
-    
-    if (state.adaptiveState.averagePoolUsage > 0.7) {
-      // High usage - cleanup more frequently
-      intervalMultiplier = 0.5 + (0.3 * (1 - state.adaptiveState.averagePoolUsage));
-    } else if (state.adaptiveState.averagePoolUsage < 0.3) {
-      // Low usage - cleanup less frequently 
-      intervalMultiplier = 1.0 + (2.0 * (0.3 - state.adaptiveState.averagePoolUsage));
-    }
-    
-    // Factor in cleanup efficiency
-    intervalMultiplier *= (1 / Math.max(state.adaptiveState.cleanupEfficiency, 0.1));
-    
-    // Clamp between 2 seconds and 60 seconds
-    const newInterval = Math.max(2000, Math.min(60000, 
-      state.config.baseCleanupInterval * intervalMultiplier
-    ));
-    
-    return Math.round(newInterval);
-  };
-
-  // Start adaptive cleanup system
-  const startAdaptiveCleanup = () => {
-    const scheduleNextCleanup = () => {
-      const interval = calculateAdaptiveInterval();
-      state.adaptiveState.currentInterval = interval;
-      
-      state.cleanupTimer = setTimeout(() => {
-        performCleanup();
-        scheduleNextCleanup();
-      }, interval);
-    };
-    
-    scheduleNextCleanup();
-  };
-
-  // Enhanced cleanup with adaptive efficiency tracking
-  const performCleanup = () => {
-    const now = Date.now();
-    const maxAge = state.config.maxObjectAge;
-    let cleanedCount = 0;
-    let totalObjects = 0;
-    
-    // Clean up object pools
-    state.pools.objects.forEach((pool, key) => {
-      const before = pool.length;
-      totalObjects += before;
-      state.pools.objects.set(key, pool.filter(obj => {
-        const metadata = state.objectMetadata.get(obj);
-        return metadata && (now - metadata.acquiredAt) < maxAge;
-      }));
-      cleanedCount += before - state.pools.objects.get(key).length;
-    });
-    
-    // Clean up array pools
-    state.pools.arrays.forEach((pool, key) => {
-      const before = pool.length;
-      totalObjects += before;
-      state.pools.arrays.set(key, pool.filter(array => {
-        const metadata = state.objectMetadata.get(array);
-        return metadata && (now - metadata.acquiredAt) < maxAge;
-      }));
-      cleanedCount += before - state.pools.arrays.get(key).length;
-    });
-    
-    // Clean up canvas pools
-    state.pools.canvases.forEach((pool, key) => {
-      const before = pool.length;
-      totalObjects += before;
-      state.pools.canvases.set(key, pool.filter(canvas => {
-        const metadata = state.objectMetadata.get(canvas);
-        return metadata && (now - metadata.acquiredAt) < maxAge;
-      }));
-      cleanedCount += before - state.pools.canvases.get(key).length;
-    });
-    
-    // Update cleanup efficiency
-    state.adaptiveState.cleanupEfficiency = totalObjects > 0 ? 
-      cleanedCount / totalObjects : 1.0;
-    
-    state.stats.lastCleanup = now;
-    
-    if (cleanedCount > 0) {
-      console.log(`🧹 Memory pool cleanup: removed ${cleanedCount}/${totalObjects} objects (${(state.adaptiveState.cleanupEfficiency * 100).toFixed(1)}% efficiency)`);
-      console.log(`📊 Next cleanup in ${state.adaptiveState.currentInterval}ms (usage: ${(state.adaptiveState.averagePoolUsage * 100).toFixed(1)}%)`);
-    }
-  };
-
-  // Check memory pressure
-  const checkMemoryPressure = () => {
-    if (typeof performance === 'undefined' || !performance.memory) return;
-    
-    const memoryMB = performance.memory.usedJSHeapSize / 1024 / 1024;
-    
-    if (memoryMB > state.config.memoryPressureThreshold) {
-      console.warn(`⚠️ High memory usage detected: ${memoryMB.toFixed(1)}MB`);
-      
-      // Aggressive cleanup
-      const beforeCleanup = getTotalPoolSize();
-      performCleanup();
-      
-      // If still high, clear half of each pool
-      if (memoryMB > state.config.memoryPressureThreshold * 1.2) {
-        clearPools(0.5);
-        console.warn(`🧹 Emergency pool clearing performed`);
+    for (const [type, pools] of Object.entries(state.pools)) {
+      state.stats.poolSizes[type] = {};
+      for (const [key, pool] of pools.entries()) {
+        state.stats.poolSizes[type][key] = pool.length;
       }
-      
-      const afterCleanup = getTotalPoolSize();
-      console.log(`📊 Pool size reduced from ${beforeCleanup} to ${afterCleanup} objects`);
     }
-  };
-
-  // Clear pools (percentage to clear)
-  const clearPools = (percentage = 1.0) => {
-    const clearCount = Math.ceil;
-    
-    state.pools.objects.forEach((pool, key) => {
-      const toClear = clearCount(pool.length * percentage);
-      pool.splice(0, toClear);
-    });
-    
-    state.pools.arrays.forEach((pool, key) => {
-      const toClear = clearCount(pool.length * percentage);
-      pool.splice(0, toClear);
-    });
-    
-    state.pools.canvases.forEach((pool, key) => {
-      const toClear = clearCount(pool.length * percentage);
-      pool.splice(0, toClear);
-    });
-  };
-
-  // Get total pool size
-  const getTotalPoolSize = () => {
-    let total = 0;
-    
-    state.pools.objects.forEach(pool => total += pool.length);
-    state.pools.arrays.forEach(pool => total += pool.length);
-    state.pools.canvases.forEach(pool => total += pool.length);
-    
-    return total;
-  };
-
-  // Get detailed statistics
-  const getStats = () => {
-    const poolSizes = {};
-    
-    state.pools.objects.forEach((pool, key) => {
-      poolSizes[key] = { type: 'object', size: pool.length };
-    });
-    
-    state.pools.arrays.forEach((pool, key) => {
-      poolSizes[key] = { type: 'array', size: pool.length };
-    });
-    
-    state.pools.canvases.forEach((pool, key) => {
-      poolSizes[key] = { type: 'canvas', size: pool.length };
-    });
-    
-    const efficiency = state.stats.allocations > 0 
-      ? (state.stats.reuseHits / state.stats.allocations * 100).toFixed(1)
-      : '0.0';
     
     return {
       ...state.stats,
-      poolSizes,
-      totalPoolSize: getTotalPoolSize(),
-      efficiency: `${efficiency}%`,
-      activeObjects: state.activeObjects ? 'tracked' : 'not tracked',
-      memoryUsage: typeof performance !== 'undefined' && performance.memory
-        ? `${(performance.memory.usedJSHeapSize / 1024 / 1024).toFixed(1)}MB`
-        : 'not available'
+      pools: { ...state.stats.poolSizes },
+      cleanup: cleanupManager.getCleanupStats(),
+      configuration: state.config,
+      runtime: Date.now() - state.stats.created
     };
   };
 
-  // Cleanup function
-  const cleanup = () => {
-    if (state.cleanupTimer) {
-      clearInterval(state.cleanupTimer);
-      state.cleanupTimer = null;
+  // Update pool configuration
+  const updateConfiguration = (newConfig) => {
+    Object.assign(state.config, newConfig);
+    console.log('🔧 Memory pool configuration updated');
+  };
+
+  // Reset all pools and statistics
+  const reset = () => {
+    // Clear all pools
+    for (const pools of Object.values(state.pools)) {
+      pools.clear();
     }
     
-    clearPools(1.0); // Clear all pools
+    // Reset statistics
+    state.stats.allocations = 0;
+    state.stats.deallocations = 0;
+    state.stats.reuseHits = 0;
+    state.stats.memoryLeaks = 0;
+    state.stats.poolSizes = {};
+    state.stats.lastCleanup = Date.now();
+    
+    console.log('🧹 Memory pool reset completed');
+  };
+
+  // Cleanup and destroy pool
+  const cleanup = () => {
+    cleanupManager.stopCleanup();
+    
+    // Clear all pools
+    for (const pools of Object.values(state.pools)) {
+      pools.clear();
+    }
+    
+    // Clear factories
+    state.factories.clear();
     
     console.log('🧹 Enhanced memory pool cleaned up');
   };
@@ -613,32 +277,37 @@ export const createEnhancedMemoryPool = (config = {}) => {
   return {
     // Core functionality
     initialize,
-    cleanup,
-    
-    // Object management
     acquire,
     release,
-    acquireArray,
-    releaseArray,
+    
+    // Typed arrays
+    acquireArray: arrayManager.acquireArray,
+    releaseArray: arrayManager.releaseArray,
+    acquireFloat32Array: arrayManager.acquireFloat32Array,
+    acquireUint8Array: arrayManager.acquireUint8Array,
+    
+    // Canvas management
     acquireCanvas,
     releaseCanvas,
     
-    // Configuration
-    registerFactory,
-    updateConfig: (newConfig) => {
-      Object.assign(state.config, newConfig);
-    },
+    // Factory management
+    registerFactory: factoryManager.registerFactory,
+    getRegisteredTypes: factoryManager.getRegisteredTypes,
     
-    // Monitoring
-    getStats,
-    performCleanup,
-    clearPools,
+    // Cleanup management
+    cleanup: cleanupManager.cleanup,
+    forceCleanup: cleanupManager.forceCleanup,
     
-    // Utilities
-    createPoolKey,
-    getTotalPoolSize
+    // Information and statistics
+    getStatistics,
+    getArrayPoolStats: arrayManager.getArrayPoolStats,
+    
+    // Configuration and maintenance
+    updateConfiguration,
+    getConfiguration: () => ({ ...state.config }),
+    reset,
+    
+    // Lifecycle
+    cleanup
   };
 };
-
-// Create default memory pool instance
-export const defaultMemoryPool = createEnhancedMemoryPool();

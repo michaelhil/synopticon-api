@@ -298,7 +298,7 @@ export const createMemoryOptimizer = (config = {}) => {
   // Memory monitoring and optimization
   const monitorMemoryUsage = () => {
     if (typeof performance !== 'undefined' && performance.memory) {
-      const memory = performance.memory;
+      const {memory} = performance;
       const usedRatio = memory.usedJSHeapSize / memory.jsHeapSizeLimit;
       
       state.stats.memoryPressure = usedRatio;
@@ -382,7 +382,7 @@ export const createMemoryOptimizer = (config = {}) => {
   // Clean up weak references and null pointers
   const cleanupReferences = () => {
     // Clean up empty buffers
-    for (const [id, buffer] of state.buffers.entries()) {
+    for (const [, buffer] of state.buffers.entries()) {
       if (buffer.isEmpty()) {
         buffer.clear();
       }
@@ -537,7 +537,7 @@ export const createMemoryOptimizedStream = (config = {}) => {
   const getData = () => {
     const entry = buffer.pop();
     if (entry) {
-      const data = entry.data;
+      const {data} = entry;
       // Release the buffer entry back to pool
       memoryOptimizer.releaseObject(entry);
       return data;

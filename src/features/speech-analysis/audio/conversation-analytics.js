@@ -3,7 +3,7 @@
  * Analyzes conversation patterns including turn-taking, interruptions, silence patterns, and interaction quality
  */
 
-import { createObjectPool } from '../../shared/utils/object-pool.js';
+import { createObjectPool } from '../../../shared/utils/object-pool.js';
 
 /**
  * Creates conversation analytics analyzer for dialog flow analysis
@@ -59,7 +59,7 @@ export const createConversationAnalytics = (config = {}) => {
   let currentTurn = null;
   let silenceStartTime = null;
   let lastAnalysisTime = 0;
-  let speakingStates = new Map(); // speakerId -> boolean
+  const speakingStates = new Map(); // speakerId -> boolean
   let turnMetrics = [];
 
   /**
@@ -401,4 +401,3 @@ export const createConversationAnalytics = (config = {}) => {
 };
 
 // Export factory function following functional programming patterns
-export default createConversationAnalytics;

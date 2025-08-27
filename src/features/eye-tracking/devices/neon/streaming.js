@@ -4,11 +4,11 @@
  * Following functional programming patterns with factory functions
  */
 
-import { createDataStream, streamFactory } from '../../../../core/streams.js';
-import { createSynchronizationEngine } from '../../../../core/synchronization.js';
+import { createDataStream, streamFactory } from '../../../../core/state/streams.js';
+import { createSynchronizationEngine } from '../../../../core/orchestration/synchronization.js';
 import { createEyeTrackerDevice } from './device.js';
 import { createDeviceDiscovery } from './discovery.js';
-import { createEyeTrackingResult, createGazeData } from '../../../../core/types.js';
+import { createEyeTrackingResult, createGazeData } from '../../../../core/configuration/types.ts';
 
 // Eye tracking stream orchestrator factory
 export const createEyeTrackingStreaming = (config = {}) => {

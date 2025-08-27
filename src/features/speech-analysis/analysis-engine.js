@@ -9,7 +9,7 @@ import {
   createSpeechAnalysisResult,
   createAnalysisPromptResult,
   createSpeechEvent
-} from '../../core/types.js';
+} from '../../core/configuration/types.ts';
 
 // Default analysis prompts
 const DEFAULT_PROMPTS = [

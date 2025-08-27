@@ -8,7 +8,7 @@ import {
   createEyeState, 
   createGazeSemantics, 
   createEyeTrackingResult 
-} from '../../core/types.js';
+} from '../../../core/configuration/types.ts';
 
 // Gaze data validation and normalization
 export const createGazeProcessor = (config = {}) => {
@@ -92,7 +92,7 @@ export const createGazeProcessor = (config = {}) => {
   // Generate semantic description
   const generateSemantics = (gazeData, velocity = 0) => {
     const region = getScreenRegion(gazeData);
-    const confidence = gazeData.confidence;
+    const {confidence} = gazeData;
     
     let quality = 'low';
     if (confidence > 0.8) quality = 'high_confidence';

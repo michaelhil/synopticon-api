@@ -456,7 +456,7 @@ export const createPerformanceTester = (config = {}) => {
 export const GlobalPerformanceTester = createPerformanceTester();
 
 // Convenience functions
-export const recordFrameTime = GlobalPerformanceTester.recordFrameTime;
-export const recordDetectionTime = GlobalPerformanceTester.recordDetectionTime;
-export const recordLandmarkTime = GlobalPerformanceTester.recordLandmarkTime;
-export const getRealtimeStats = GlobalPerformanceTester.getRealtimeStats;
+export const {recordFrameTime} = GlobalPerformanceTester;
+export const {recordDetectionTime} = GlobalPerformanceTester;
+export const {recordLandmarkTime} = GlobalPerformanceTester;
+export const {getRealtimeStats} = GlobalPerformanceTester;

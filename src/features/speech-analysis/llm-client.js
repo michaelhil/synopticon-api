@@ -1,204 +1,209 @@
 /**
- * JavaScript-Only LLM Client
- * Supports multiple backends without Python dependencies
- * Following functional programming patterns with factory functions
+ * LLM Client for Speech Analysis
+ * 
+ * Provides a unified interface for various LLM backends with automatic fallback,
+ * intelligent caching, and comprehensive error handling for speech analysis tasks.
+ * 
+ * Features:
+ * - Multiple backend support (WebLLM, Transformers.js, Mock)
+ * - Automatic backend detection and fallback
+ * - Intelligent response caching
+ * - Performance metrics and monitoring
+ * - Concurrent request management
+ * - Graceful error handling and retry logic
+ * 
+ * @example
+ * ```javascript
+ * import { createLLMClient } from './llm-client.js';
+ * 
+ * const llmClient = createLLMClient({
+ *   preferredBackend: 'webllm',
+ *   fallbackBackends: ['transformers_js', 'mock'],
+ *   enableCache: true
+ * });
+ * 
+ * await llmClient.initialize();
+ * const result = await llmClient.generate('Analyze sentiment', 'Hello world');
+ * ```
  */
 
 import { detectRuntime, checkFeatures } from '../../shared/utils/runtime-detector.js';
-import { 
-  createLLMConfig, 
-  createAnalysisPromptResult,
-  createSpeechEvent 
-} from '../../core/types.js';
-
-// LLM Backend priority order (avoiding Python dependencies)
-const LLM_BACKENDS = {
-  webllm: {
-    name: 'WebLLM',
-    description: 'Browser-native LLM inference using WebGPU',
-    requirements: ['browser', 'webgpu'],
-    pythonFree: true
-  },
-  transformers_js: {
-    name: '@xenova/transformers',
-    description: 'JavaScript port of Hugging Face transformers',
-    requirements: ['browser', 'node'],
-    pythonFree: true
-  },
-  mock: {
-    name: 'Mock LLM',
-    description: 'Mock LLM for testing and development',
-    requirements: ['browser', 'node', 'bun'],
-    pythonFree: true
-  }
-};
+import { createAnalysisPromptResult } from '../../core/configuration/types.ts';
+import { createLLMConfig, createLLMState } from './llm-config.js';
+import { createBackendManager } from './llm-backends.js';
+import { createLLMCache } from './llm-cache.js';
+import { createMetricsTracker } from './llm-metrics.js';
 
 // Create LLM client factory
 export const createLLMClient = (config = {}) => {
-  const state = {
-    runtime: detectRuntime(),
-    features: checkFeatures(),
-    config: createLLMConfig(config),
-    activeBackend: null,
-    loadedModel: null,
-    isReady: false,
-    requestQueue: [],
-    isProcessing: false,
-    cache: new Map(),
-    
-    // Performance optimizations
-    enableQuantization: config.enableQuantization !== false,
-    maxCacheSize: config.maxCacheSize || 100,
-    compressionEnabled: config.compressionEnabled !== false,
-    modelCacheEnabled: config.modelCacheEnabled !== false,
-    metrics: {
-      totalRequests: 0,
-      successfulRequests: 0,
-      failedRequests: 0,
-      averageLatency: 0,
-      cacheHits: 0
-    },
-    callbacks: {
-      onReady: [],
-      onError: [],
-      onProgress: []
-    }
+  const llmConfig = createLLMConfig(config);
+  const state = createLLMState(llmConfig);
+  
+  // Initialize runtime detection
+  state.runtime = detectRuntime();
+  state.features = checkFeatures();
+  
+  // Create components
+  const backendManager = createBackendManager();
+  const cache = createLLMCache(llmConfig.cacheSize, llmConfig.compressionEnabled);
+  const metricsTracker = createMetricsTracker(state.callbacks);
+  
+  // Notify error callbacks
+  const notifyError = (error) => {
+    state.callbacks.onError.forEach(callback => {
+      try {
+        callback(error);
+      } catch (callbackError) {
+        console.warn('LLM error callback failed:', callbackError);
+      }
+    });
   };
-
-  // Backend implementations
-  const backends = {
-    webllm: createWebLLMBackend(),
-    transformers_js: createTransformersJSBackend(),
-    mock: createMockBackend()
+  
+  // Notify progress callbacks
+  const notifyProgress = (progress) => {
+    state.callbacks.onProgress.forEach(callback => {
+      try {
+        callback(progress);
+      } catch (callbackError) {
+        console.warn('LLM progress callback failed:', callbackError);
+      }
+    });
   };
 
   // Initialize the best available backend
   const initialize = async () => {
+    const bestBackend = await backendManager.findBestBackend(
+      llmConfig.preferredBackend,
+      llmConfig.fallbackBackends
+    );
     
-    const backendPriority = [
-      state.config.preferredBackend,
-      ...state.config.fallbackBackends
-    ].filter(Boolean);
-
-    for (const backendName of backendPriority) {
-      if (!backends[backendName]) {
-        console.warn(`Unknown LLM backend: ${backendName}`);
-        continue;
-      }
-
-      try {
-        console.log(`🔄 Attempting to initialize ${LLM_BACKENDS[backendName]?.name}...`);
-        const backend = backends[backendName];
-        const isAvailable = await backend.checkAvailability();
-
-        if (isAvailable) {
-          state.activeBackend = backendName;
-          await backend.initialize(state.config);
-          state.isReady = true;
-          
-          console.log(`✅ ${LLM_BACKENDS[backendName]?.name} initialized successfully`);
-          
-          // Notify ready callbacks
-          state.callbacks.onReady.forEach(callback => {
-            try {
-              callback({ backend: backendName, model: state.config.model });
-            } catch (error) {
-              console.warn('LLM ready callback error:', error);
-            }
-          });
-
-          return true;
-        }
-      } catch (error) {
-        console.warn(`Failed to initialize ${backendName}:`, error.message);
-        notifyError(new Error(`${backendName} initialization failed: ${error.message}`));
-        continue;
-      }
+    if (!bestBackend) {
+      throw new Error('No LLM backends available. All backends failed to initialize.');
     }
-
-    throw new Error('No LLM backends available. All backends failed to initialize.');
+    
+    try {
+      const backend = backendManager.getBackend(bestBackend);
+      const backendInfo = backendManager.getBackendInfo(bestBackend);
+      
+      console.log(`🔄 Initializing ${backendInfo?.name || bestBackend}...`);
+      
+      await backend.initialize(llmConfig);
+      
+      state.activeBackend = bestBackend;
+      state.isReady = true;
+      
+      console.log(`✅ ${backendInfo?.name || bestBackend} initialized successfully`);
+      
+      // Notify ready callbacks
+      state.callbacks.onReady.forEach(callback => {
+        try {
+          callback({ backend: bestBackend, model: llmConfig.model });
+        } catch (error) {
+          console.warn('LLM ready callback error:', error);
+        }
+      });
+      
+      return true;
+    } catch (error) {
+      console.error(`Failed to initialize ${bestBackend}:`, error);
+      notifyError(new Error(`${bestBackend} initialization failed: ${error.message}`));
+      throw error;
+    }
   };
 
   // Generate analysis using active backend
-  const generateAnalysis = async (prompt, text, systemPrompt = null) => {
+  const generate = async (prompt, text = '', systemPrompt = null) => {
     if (!state.isReady || !state.activeBackend) {
       throw new Error('LLM client not initialized');
     }
 
     const startTime = performance.now();
-    state.metrics.totalRequests++;
-
-    // Check cache first with optimizations
-    const cacheKey = generateCacheKey(prompt, text, systemPrompt);
-    if (state.config.enableCache && state.cache.has(cacheKey)) {
-      state.metrics.cacheHits++;
-      
-      const cached = state.cache.get(cacheKey);
-      cached.accessCount++; // Track access for LRU
-      cached.lastAccess = Date.now();
-      
-      // Decompress if needed
-      const result = cached.compressed ? 
-        decompressResult(cached.data) : cached.data;
-        
-      return result;
-    }
-
+    
     try {
-      const backend = backends[state.activeBackend];
-      const result = await backend.generate({
-        prompt,
-        text,
-        systemPrompt: systemPrompt || state.config.defaultSystemPrompt,
-        temperature: state.config.temperature,
-        maxTokens: state.config.maxTokens,
-        topP: state.config.topP,
-        topK: state.config.topK
-      });
-
-      // Update metrics
-      const latency = performance.now() - startTime;
-      state.metrics.successfulRequests++;
-      state.metrics.averageLatency = 
-        (state.metrics.averageLatency * (state.metrics.totalRequests - 1) + latency) / 
-        state.metrics.totalRequests;
-
-      // Cache result with optimizations
-      if (state.config.enableCache) {
-        manageCacheSize();
-        
-        // Compress result if enabled
-        const cacheData = state.compressionEnabled ? 
-          compressResult(result) : result;
-          
-        state.cache.set(cacheKey, {
-          data: cacheData,
-          timestamp: Date.now(),
-          compressed: state.compressionEnabled,
-          accessCount: 1
-        });
+      // Check cache first
+      if (llmConfig.enableCache && cache.has(prompt, text, systemPrompt)) {
+        metricsTracker.recordCacheHit();
+        const cachedResult = cache.get(prompt, text, systemPrompt);
+        console.log('💾 Using cached response');
+        return cachedResult;
       }
 
-      return result;
+      // Get active backend
+      const backend = backendManager.getBackend(state.activeBackend);
+      if (!backend) {
+        throw new Error(`Backend ${state.activeBackend} not available`);
+      }
 
+      // Generate response
+      const response = await backend.generate(prompt, systemPrompt);
+      const processingTime = performance.now() - startTime;
+      
+      // Cache the response
+      if (llmConfig.enableCache) {
+        cache.set(prompt, text, systemPrompt, response);
+      }
+      
+      // Record success metrics
+      metricsTracker.recordSuccess(processingTime);
+      
+      return response;
     } catch (error) {
-      state.metrics.failedRequests++;
-      const analysisError = new Error(`Analysis failed: ${error.message}`);
-      notifyError(analysisError);
-      throw analysisError;
+      const processingTime = performance.now() - startTime;
+      metricsTracker.recordFailure(processingTime);
+      
+      console.warn('LLM generation failed:', error.message);
+      notifyError(error);
+      
+      // Try fallback if graceful degradation is enabled
+      if (llmConfig.gracefulDegradation) {
+        return await attemptFallback(prompt, text, systemPrompt);
+      }
+      
+      throw error;
     }
   };
 
-  // Process multiple prompts concurrently
+  // Attempt fallback to other backends
+  const attemptFallback = async (prompt, text, systemPrompt) => {
+    const fallbackBackends = llmConfig.fallbackBackends.filter(b => b !== state.activeBackend);
+    
+    for (const backendName of fallbackBackends) {
+      try {
+        const backend = backendManager.getBackend(backendName);
+        if (!backend) continue;
+        
+        const isAvailable = await backend.checkAvailability();
+        if (!isAvailable) continue;
+        
+        console.log(`🔄 Switching to fallback backend: ${backendName}`);
+        
+        await backend.initialize(llmConfig);
+        const response = await backend.generate(prompt, systemPrompt);
+        
+        // Record backend switch
+        metricsTracker.recordBackendSwitch(state.activeBackend, backendName, 'fallback');
+        state.activeBackend = backendName;
+        
+        return response;
+      } catch (error) {
+        console.warn(`Fallback to ${backendName} failed:`, error.message);
+        continue;
+      }
+    }
+    
+    throw new Error('All fallback backends failed');
+  };
+
+  // Generate multiple analyses with concurrency control
   const generateMultipleAnalyses = async (prompts, text, systemPrompt = null) => {
     if (!Array.isArray(prompts) || prompts.length === 0) {
-      throw new Error('No prompts provided for analysis');
+      return [];
     }
 
-    console.log(`🔄 Processing ${prompts.length} analysis prompts...`);
+    notifyProgress({ stage: 'starting', total: prompts.length, completed: 0 });
 
     const results = [];
-    const maxConcurrent = Math.min(prompts.length, state.config.maxConcurrentRequests);
+    const maxConcurrent = Math.min(prompts.length, llmConfig.maxConcurrentRequests);
     
     // Process prompts in batches to respect concurrency limits
     for (let i = 0; i < prompts.length; i += maxConcurrent) {
@@ -207,8 +212,14 @@ export const createLLMClient = (config = {}) => {
         const globalIndex = i + index;
         try {
           const startTime = performance.now();
-          const result = await generateAnalysis(prompt, text, systemPrompt);
+          const result = await generate(prompt, text, systemPrompt);
           const processingTime = performance.now() - startTime;
+          
+          notifyProgress({ 
+            stage: 'processing', 
+            total: prompts.length, 
+            completed: globalIndex + 1 
+          });
           
           return createAnalysisPromptResult({
             prompt,
@@ -231,6 +242,7 @@ export const createLLMClient = (config = {}) => {
       results.push(...batchResults);
     }
 
+    notifyProgress({ stage: 'completed', total: prompts.length, completed: results.length });
     console.log(`✅ Completed ${results.length} analyses`);
     return results;
   };
@@ -247,7 +259,7 @@ export const createLLMClient = (config = {}) => {
       : `Create a concise summary of the following conversation chunks:\n${chunksText}\n\nSummary:`;
 
     try {
-      return await generateAnalysis(summaryPrompt, '', 'You are a helpful assistant that creates conversation summaries. Keep summaries concise and informative.');
+      return await generate(summaryPrompt, '', 'You are a helpful assistant that creates conversation summaries. Keep summaries concise and informative.');
     } catch (error) {
       console.warn('Summary generation failed:', error.message);
       return existingSummary || 'Summary generation failed.';
@@ -258,24 +270,28 @@ export const createLLMClient = (config = {}) => {
   const getStatus = () => ({
     isReady: state.isReady,
     activeBackend: state.activeBackend,
-    backendInfo: state.activeBackend ? LLM_BACKENDS[state.activeBackend] : null,
-    model: state.config.model,
-    metrics: { ...state.metrics },
-    cacheSize: state.cache.size,
+    backendInfo: backendManager.getBackendInfo(state.activeBackend),
+    model: llmConfig.model,
+    metrics: metricsTracker.getMetrics(),
+    performance: metricsTracker.getPerformanceStats(),
+    cache: cache.getStats(),
     queueLength: state.requestQueue.length
   });
 
   // Cleanup resources
   const cleanup = async () => {
-    if (state.activeBackend && backends[state.activeBackend]) {
-      try {
-        await backends[state.activeBackend].cleanup();
-      } catch (error) {
-        console.warn('LLM backend cleanup error:', error);
+    if (state.activeBackend) {
+      const backend = backendManager.getBackend(state.activeBackend);
+      if (backend) {
+        try {
+          await backend.cleanup();
+        } catch (error) {
+          console.warn('LLM backend cleanup error:', error);
+        }
       }
     }
     
-    state.cache.clear();
+    cache.clear();
     state.requestQueue.length = 0;
     state.isReady = false;
     state.activeBackend = null;
@@ -306,326 +322,31 @@ export const createLLMClient = (config = {}) => {
     };
   };
 
-  // Utility functions
-  const generateCacheKey = (prompt, text, systemPrompt) => {
-    const content = `${systemPrompt || ''}|${prompt}|${text}`;
-    // Simple hash function for cache key
-    let hash = 0;
-    for (let i = 0; i < content.length; i++) {
-      const char = content.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32-bit integer
-    }
-    return hash.toString(36);
-  };
-
-  const notifyError = (error) => {
-    state.callbacks.onError.forEach(callback => {
-      try {
-        callback(error);
-      } catch (cbError) {
-        console.warn('LLM error callback failed:', cbError);
-      }
-    });
-  };
-
-  // Performance optimization helper functions
-  const manageCacheSize = () => {
-    if (state.cache.size < state.maxCacheSize) return;
-    
-    // LRU eviction based on access count and recency
-    const entries = Array.from(state.cache.entries());
-    entries.sort((a, b) => {
-      const [, dataA] = a;
-      const [, dataB] = b;
-      
-      // Score based on access count and recency (higher = keep)
-      const scoreA = dataA.accessCount + (Date.now() - dataA.lastAccess) / (1000 * 60 * 60); // Hours
-      const scoreB = dataB.accessCount + (Date.now() - dataB.lastAccess) / (1000 * 60 * 60);
-      
-      return scoreA - scoreB; // Lower score gets evicted first
-    });
-    
-    // Remove least valuable entries until we're under the limit
-    const toRemove = state.cache.size - Math.floor(state.maxCacheSize * 0.8); // Remove 20% buffer
-    for (let i = 0; i < toRemove && i < entries.length; i++) {
-      state.cache.delete(entries[i][0]);
-    }
-  };
-
-  const compressResult = (result) => {
-    // Simple compression: remove extra whitespace and compress repetitive content
-    if (typeof result === 'string') {
-      return result
-        .replace(/\s+/g, ' ')
-        .trim();
-    } else if (result && typeof result === 'object') {
-      const compressed = { ...result };
-      if (compressed.response) {
-        compressed.response = compressed.response.replace(/\s+/g, ' ').trim();
-      }
-      if (compressed.reasoning) {
-        compressed.reasoning = compressed.reasoning.replace(/\s+/g, ' ').trim();
-      }
-      return compressed;
-    }
-    return result;
-  };
-
-  const decompressResult = (compressedResult) => {
-    // For simple compression, we just return as-is since we only removed whitespace
-    return compressedResult;
-  };
-
   return {
     // Core functionality
     initialize,
-    generateAnalysis,
+    generate,
     generateMultipleAnalyses,
     generateSummary,
-    cleanup,
-
-    // Status and configuration
+    
+    // Information and status
     getStatus,
     isReady: () => state.isReady,
-    getActiveBackend: () => state.activeBackend,
-    getConfig: () => ({ ...state.config }),
-
-    // Event handlers
+    getAvailableBackends: backendManager.getAvailableBackends,
+    
+    // Event handling
     onReady,
     onError,
     onProgress,
-
-    // Advanced features
-    clearCache: () => state.cache.clear(),
-    getMetrics: () => ({ ...state.metrics }),
     
-    // Backend information
-    getSupportedBackends: () => Object.keys(LLM_BACKENDS),
-    getBackendInfo: (backendName) => LLM_BACKENDS[backendName] || null
-  };
-};
-
-// WebLLM Backend (Browser-native with WebGPU)
-const createWebLLMBackend = () => {
-  let webllm = null;
-  let engine = null;
-
-  const checkAvailability = async () => {
-    const runtime = detectRuntime();
-    const features = checkFeatures();
-
-    if (!runtime.isBrowser) {
-      console.log('⚠️ WebLLM requires browser environment');
-      return false;
-    }
-
-    // Check for WebGPU support
-    if (!features.webgpu) {
-      console.log('⚠️ WebLLM requires WebGPU support');
-      return false;
-    }
-
-    try {
-      // Try to dynamically import WebLLM
-      webllm = await import('https://esm.run/@mlc-ai/web-llm');
-      return true;
-    } catch (error) {
-      console.log('⚠️ WebLLM not available:', error.message);
-      return false;
-    }
-  };
-
-  const initialize = async (config) => {
-    if (!webllm) {
-      throw new Error('WebLLM not loaded');
-    }
-
-    console.log('🔄 Initializing WebLLM engine...');
+    // Configuration and maintenance
+    getConfiguration: () => ({ ...llmConfig }),
+    updateConfiguration: (updates) => Object.assign(llmConfig, updates),
+    clearCache: cache.clear,
+    getMetrics: metricsTracker.getMetrics,
+    getPerformanceStats: metricsTracker.getPerformanceStats,
     
-    engine = new webllm.MLCEngine();
-    await engine.reload(config.model, {
-      temperature: config.temperature,
-      top_p: config.topP,
-    });
-
-    console.log('✅ WebLLM engine ready');
-  };
-
-  const generate = async ({ prompt, text, systemPrompt, temperature, maxTokens }) => {
-    if (!engine) {
-      throw new Error('WebLLM engine not initialized');
-    }
-
-    const fullPrompt = systemPrompt 
-      ? `${systemPrompt}\n\n${prompt}\n\nText to analyze: "${text}"\n\nAnalysis:`
-      : `${prompt}\n\nText to analyze: "${text}"\n\nAnalysis:`;
-
-    const response = await engine.chat.completions.create({
-      messages: [{ role: 'user', content: fullPrompt }],
-      temperature,
-      max_tokens: maxTokens
-    });
-
-    return response.choices[0]?.message?.content || 'No response generated';
-  };
-
-  const cleanup = async () => {
-    if (engine) {
-      // WebLLM cleanup if available
-      engine = null;
-    }
-    webllm = null;
-  };
-
-  return {
-    checkAvailability,
-    initialize,
-    generate,
+    // Lifecycle
     cleanup
   };
 };
-
-// Transformers.js Backend
-const createTransformersJSBackend = () => {
-  let transformers = null;
-  let pipeline = null;
-
-  const checkAvailability = async () => {
-    try {
-      transformers = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js');
-      return true;
-    } catch (error) {
-      console.log('⚠️ @xenova/transformers not available:', error.message);
-      return false;
-    }
-  };
-
-  const initialize = async (config) => {
-    if (!transformers) {
-      throw new Error('Transformers.js not loaded');
-    }
-
-    console.log('🔄 Initializing Transformers.js pipeline...');
-    
-    // Use text-generation pipeline with a small model
-    pipeline = await transformers.pipeline('text-generation', 'Xenova/gpt2', {
-      device: 'webgpu', // Use WebGPU if available, fallback to CPU
-    });
-
-    console.log('✅ Transformers.js pipeline ready');
-  };
-
-  const generate = async ({ prompt, text, systemPrompt, temperature, maxTokens }) => {
-    if (!pipeline) {
-      throw new Error('Transformers.js pipeline not initialized');
-    }
-
-    const fullPrompt = systemPrompt 
-      ? `${systemPrompt}\n\n${prompt}\n\nText: "${text}"\n\nAnalysis:`
-      : `${prompt}\n\nText: "${text}"\n\nAnalysis:`;
-
-    const result = await pipeline(fullPrompt, {
-      max_new_tokens: maxTokens || 50,
-      temperature: temperature || 0.7,
-      do_sample: true,
-    });
-
-    // Extract generated text (remove input prompt)
-    const generated = result[0].generated_text;
-    const analysis = generated.substring(fullPrompt.length).trim();
-    
-    return analysis || 'No analysis generated';
-  };
-
-  const cleanup = async () => {
-    pipeline = null;
-    transformers = null;
-  };
-
-  return {
-    checkAvailability,
-    initialize,
-    generate,
-    cleanup
-  };
-};
-
-// Mock Backend for Testing and Development
-const createMockBackend = () => {
-  const checkAvailability = async () => {
-    return true; // Mock backend is always available
-  };
-
-  const initialize = async (config) => {
-    console.log('✅ Mock LLM backend initialized for development/testing');
-  };
-
-  const generate = async ({ prompt, text, systemPrompt, temperature, maxTokens }) => {
-    // Simple rule-based analysis for development/testing
-    const lowerText = text.toLowerCase();
-    const lowerPrompt = prompt.toLowerCase();
-
-    if (lowerPrompt.includes('sentiment')) {
-      // Simple sentiment analysis
-      const positive = ['good', 'great', 'excellent', 'amazing', 'wonderful', 'love', 'like'];
-      const negative = ['bad', 'terrible', 'awful', 'hate', 'dislike', 'horrible'];
-      
-      const positiveCount = positive.reduce((count, word) => 
-        count + (lowerText.split(word).length - 1), 0);
-      const negativeCount = negative.reduce((count, word) => 
-        count + (lowerText.split(word).length - 1), 0);
-      
-      if (positiveCount > negativeCount) {
-        return 'positive, optimistic, favorable, upbeat, encouraging';
-      } else if (negativeCount > positiveCount) {
-        return 'negative, critical, unfavorable, pessimistic, concerning';
-      } else {
-        return 'neutral, balanced, measured, moderate, impartial';
-      }
-    }
-
-    if (lowerPrompt.includes('controversial')) {
-      // Simple controversial topic detection
-      const controversial = ['politics', 'religion', 'money', 'controversial', 'debate', 'argue'];
-      const hasControversial = controversial.some(word => lowerText.includes(word));
-      
-      if (hasControversial) {
-        return 'Topic appears controversial. Consider multiple perspectives and seek common ground.';
-      } else {
-        return 'No obviously controversial statements detected.';
-      }
-    }
-
-    if (lowerPrompt.includes('confidence')) {
-      // Mock confidence analysis
-      const wordCount = text.split(' ').length;
-      const confidence = wordCount > 10 ? Math.min(8, wordCount / 5) : Math.max(3, wordCount);
-      return `Speaker confidence: ${confidence.toFixed(1)}/10 - Based on speech length and vocabulary`;
-    }
-
-    if (lowerPrompt.includes('stress') || lowerPrompt.includes('indicator')) {
-      // Mock stress detection
-      const stressWords = ['uh', 'um', 'like', 'you know', 'basically'];
-      const hasStress = stressWords.some(word => lowerText.includes(word));
-      return hasStress ? 'Mild stress indicators detected' : 'No obvious stress indicators';
-    }
-
-    // Generic analysis
-    return `Mock analysis: "${text.substring(0, 30)}..." contains ${text.split(' ').length} words`;
-  };
-
-  const cleanup = async () => {
-    // Mock cleanup - nothing to clean
-  };
-
-  return {
-    checkAvailability,
-    initialize,
-    generate,
-    cleanup
-  };
-};
-
-
-// Export default factory (already exported above as const)

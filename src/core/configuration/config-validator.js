@@ -4,29 +4,16 @@
  */
 
 import { handleError, ErrorCategory, ErrorSeverity } from '../../shared/utils/error-handler.js';
-
-// Validation rule types
-const ValidationTypes = {
-  STRING: 'string',
-  NUMBER: 'number',
-  BOOLEAN: 'boolean',
-  ARRAY: 'array',
-  OBJECT: 'object',
-  FUNCTION: 'function',
-  ENUM: 'enum',
-  RANGE: 'range',
-  REGEX: 'regex',
-  CUSTOM: 'custom'
-};
-
-// Security-focused validation rules
-const SecurityRules = {
-  NO_EVAL: 'no_eval',
-  NO_PROTO_POLLUTION: 'no_proto_pollution', 
-  SAFE_PATH: 'safe_path',
-  SANITIZED_STRING: 'sanitized_string',
-  TRUSTED_URL: 'trusted_url'
-};
+import {
+  ValidationTypes,
+  SecurityRules,
+  PROTECTED_KEYS,
+  validateRequired,
+  validateType,
+  validateConstraints,
+  validateSecurity
+} from './validation-helpers.js';
+import { sanitizeConfig, validateAndThrow } from './validation-utilities.js';
 
 /**
  * Create configuration validator
@@ -40,28 +27,6 @@ export const createConfigValidator = (schema = {}) => {
     warnings: [],
     securityViolations: []
   };
-
-  // Protected keys that should never be set directly
-  const PROTECTED_KEYS = [
-    '__proto__',
-    'constructor', 
-    'prototype',
-    'hasOwnProperty',
-    'valueOf',
-    'toString'
-  ];
-
-  // Dangerous patterns to detect
-  const DANGEROUS_PATTERNS = [
-    /eval\s*\(/,
-    /Function\s*\(/,
-    /process\.exit/,
-    /require\s*\(/,
-    /import\s*\(/,
-    /<script/i,
-    /javascript:/i,
-    /on\w+\s*=/i // Event handlers
-  ];
 
   /**
    * Validate a single value against a rule
@@ -78,53 +43,28 @@ export const createConfigValidator = (schema = {}) => {
       securityViolations: []
     };
 
-    // Required field check
-    if (rule.required && (value === undefined || value === null)) {
-      result.valid = false;
-      result.errors.push(`${path}: Required field is missing`);
-      return result;
-    }
+    // Check required field first
+    const requiredError = validateRequired(value, rule, path);
+    if (requiredError) return requiredError;
 
     // Skip validation if value is undefined and not required
     if (value === undefined || value === null) {
       return result;
     }
 
-    // Type validation
-    if (rule.type) {
-      const actualType = Array.isArray(value) ? 'array' : typeof value;
-      
-      if (rule.type === ValidationTypes.ENUM) {
-        if (!rule.values || !rule.values.includes(value)) {
-          result.valid = false;
-          result.errors.push(`${path}: Must be one of: ${rule.values.join(', ')}`);
-        }
-      } else if (actualType !== rule.type) {
-        result.valid = false;
-        result.errors.push(`${path}: Expected ${rule.type}, got ${actualType}`);
-        return result;
-      }
+    // Validate type
+    const typeError = validateType(value, rule, path);
+    if (typeError) {
+      result.valid = false;
+      result.errors.push(...typeError.errors);
+      return result;
     }
 
-    // Range validation for numbers
-    if (rule.type === ValidationTypes.NUMBER && rule.range) {
-      const [min, max] = rule.range;
-      if (value < min || value > max) {
-        result.valid = false;
-        result.errors.push(`${path}: Must be between ${min} and ${max}`);
-      }
-    }
-
-    // String length validation
-    if (rule.type === ValidationTypes.STRING && rule.length) {
-      if (rule.length.min && value.length < rule.length.min) {
-        result.valid = false;
-        result.errors.push(`${path}: Must be at least ${rule.length.min} characters`);
-      }
-      if (rule.length.max && value.length > rule.length.max) {
-        result.valid = false;
-        result.errors.push(`${path}: Must be no more than ${rule.length.max} characters`);
-      }
+    // Validate constraints (range, length, etc.)
+    const constraintError = validateConstraints(value, rule, path);
+    if (constraintError) {
+      result.valid = false;
+      result.errors.push(...constraintError.errors);
     }
 
     // Regex validation
@@ -158,83 +98,6 @@ export const createConfigValidator = (schema = {}) => {
     }
 
     return result;
-  };
-
-  /**
-   * Validate security aspects of a value
-   * @param {*} value - Value to validate
-   * @param {Array} securityRules - Security rules to apply
-   * @param {string} path - Property path
-   * @returns {Object} - Security validation result
-   */
-  const validateSecurity = (value, securityRules, path) => {
-    const violations = [];
-
-    for (const rule of securityRules) {
-      switch (rule) {
-        case SecurityRules.NO_EVAL:
-          if (typeof value === 'string' && DANGEROUS_PATTERNS.some(pattern => pattern.test(value))) {
-            violations.push('Contains potentially dangerous code patterns');
-          }
-          break;
-
-        case SecurityRules.NO_PROTO_POLLUTION:
-          if (typeof value === 'object' && value !== null) {
-            for (const key of Object.keys(value)) {
-              if (PROTECTED_KEYS.includes(key)) {
-                violations.push(`Attempted to set protected property: ${key}`);
-              }
-            }
-          }
-          break;
-
-        case SecurityRules.SAFE_PATH:
-          if (typeof value === 'string') {
-            // Check for directory traversal
-            if (value.includes('..') || value.includes('~')) {
-              violations.push('Path contains directory traversal sequences');
-            }
-            // Check for absolute paths (might be unintended)
-            if (value.startsWith('/') && !value.startsWith('/assets/') && !value.startsWith('/api/')) {
-              violations.push('Absolute path outside allowed directories');
-            }
-          }
-          break;
-
-        case SecurityRules.SANITIZED_STRING:
-          if (typeof value === 'string') {
-            const unsafeChars = /<|>|"|'|&/;
-            if (unsafeChars.test(value)) {
-              violations.push('Contains unsanitized characters that could cause XSS');
-            }
-          }
-          break;
-
-        case SecurityRules.TRUSTED_URL:
-          if (typeof value === 'string' && (value.startsWith('http://') || value.startsWith('https://'))) {
-            try {
-              const url = new URL(value);
-              // Only allow specific trusted domains
-              const trustedDomains = [
-                'cdn.jsdelivr.net',
-                'unpkg.com',
-                'cdnjs.cloudflare.com',
-                'localhost',
-                '127.0.0.1'
-              ];
-              
-              if (!trustedDomains.some(domain => url.hostname === domain || url.hostname.endsWith('.' + domain))) {
-                violations.push(`Untrusted domain: ${url.hostname}`);
-              }
-            } catch {
-              violations.push('Invalid URL format');
-            }
-          }
-          break;
-      }
-    }
-
-    return { violations };
   };
 
   /**
@@ -295,7 +158,7 @@ export const createConfigValidator = (schema = {}) => {
     if (state.schema._strictMode !== false) {
       for (const key of Object.keys(config)) {
         if (!state.schema[key] && !PROTECTED_KEYS.includes(key)) {
-          state.warnings.push(`Unknown property: ${basePath ? basePath + '.' : ''}${key}`);
+          state.warnings.push(`Unknown property: ${basePath ? `${basePath  }.` : ''}${key}`);
         }
       }
     }
@@ -308,67 +171,15 @@ export const createConfigValidator = (schema = {}) => {
     };
   };
 
-  /**
-   * Create a safe copy of config object, filtering out dangerous properties
-   * @param {Object} config - Configuration object
-   * @returns {Object} - Sanitized configuration object
-   */
-  const sanitizeConfig = (config) => {
-    if (!config || typeof config !== 'object') {
-      return config;
-    }
-
-    const sanitized = {};
-    
-    for (const [key, value] of Object.entries(config)) {
-      // Skip protected keys
-      if (PROTECTED_KEYS.includes(key)) {
-        continue;
-      }
-      
-      // Recursively sanitize nested objects
-      if (value && typeof value === 'object' && !Array.isArray(value)) {
-        sanitized[key] = sanitizeConfig(value);
-      } else if (typeof value === 'string') {
-        // Basic string sanitization
-        sanitized[key] = value.replace(/[<>]/g, '');
-      } else {
-        sanitized[key] = value;
-      }
-    }
-
-    // Freeze the object to prevent modification
-    return Object.freeze(sanitized);
-  };
-
-  /**
-   * Validate and throw on critical errors
-   * @param {Object} config - Configuration to validate
-   * @param {boolean} throwOnWarnings - Whether to throw on warnings
-   */
-  const validateAndThrow = (config, throwOnWarnings = false) => {
-    const result = validateObject(config);
-    
-    if (result.securityViolations.length > 0) {
-      throw new Error(`Security violations detected: ${result.securityViolations.join('; ')}`);
-    }
-    
-    if (result.errors.length > 0) {
-      throw new Error(`Configuration validation failed: ${result.errors.join('; ')}`);
-    }
-    
-    if (throwOnWarnings && result.warnings.length > 0) {
-      throw new Error(`Configuration warnings: ${result.warnings.join('; ')}`);
-    }
-    
-    return result;
-  };
+  // Create utility functions with access to validateObject
+  const sanitizeConfigWrapper = (config) => sanitizeConfig(config);
+  const validateAndThrowWrapper = validateAndThrow(validateObject);
 
   return {
     validate: validateObject,
     validateValue,
-    sanitizeConfig,
-    validateAndThrow,
+    sanitizeConfig: sanitizeConfigWrapper,
+    validateAndThrow: validateAndThrowWrapper,
     getSchema: () => ({ ...state.schema }),
     updateSchema: (updates) => {
       state.schema = { ...state.schema, ...updates };

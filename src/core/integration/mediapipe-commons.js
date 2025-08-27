@@ -4,8 +4,7 @@
  * Eliminates code duplication across MediaPipe Face Mesh, Face Detection, and Iris Tracking
  */
 
-import { createPipelineConfig } from './pipeline-config.js';
-import { handleError, ErrorCategory, ErrorSeverity } from '../shared/utils/error-handler.js';
+import { handleError, ErrorCategory, ErrorSeverity } from '../../shared/utils/error-handler.js';
 
 // Shared MediaPipe landmark definitions
 export const MEDIAPIPE_LANDMARKS = {

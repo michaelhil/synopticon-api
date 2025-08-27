@@ -482,7 +482,7 @@ export const createQualityController = (config = {}) => {
     return {
       bandwidth: baseBandwidth,
       latency: baseLatency,
-      packetLoss: packetLoss,
+      packetLoss,
       jitter: Math.random() * 20 // 0-20ms jitter
     };
   };
@@ -558,4 +558,3 @@ export const createQualityController = (config = {}) => {
   };
 };
 
-export default createQualityController;
