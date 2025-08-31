@@ -169,21 +169,51 @@ describe('X-Plane Connector', () => {
 
 describe('VATSIM Connector', () => {
   test('creates network data stream', async () => {
-    const connector = createVATSIMConnector({ callsign: 'TEST123', updateRate: 10 }); // 10 Hz for testing
-    
-    await connector.connect();
+    // Use mock mode for testing to avoid depending on real VATSIM API
+    const connector = createVATSIMConnector({ 
+      callsign: 'TEST123', 
+      enableRealConnection: false, 
+      fallbackToMock: true 
+    });
     
     let networkData = false;
+    
+    // Set up subscriber first
     connector.subscribe((data: TelemetryFrame) => {
       expect(data.simulator).toBe('vatsim');
-      expect(data.environment?.weather).toBeDefined();
+      expect(data.sourceType).toBe('telemetry');
+      expect(data.vehicle).toBeDefined();
+      expect(data.vehicle.position).toHaveLength(3);
+      expect(data.vehicle.velocity).toHaveLength(3);
+      expect(data.metadata?.callsign).toBeDefined();
       networkData = true;
     });
 
-    await new Promise(resolve => setTimeout(resolve, 150)); // Wait longer
+    await connector.connect();
+
+    // Wait for the initial data call from stream processor
+    await new Promise(resolve => setTimeout(resolve, 10));
     expect(networkData).toBe(true);
     
     await connector.disconnect();
+  });
+
+  test('handles real VATSIM API connection', async () => {
+    const connector = createVATSIMConnector({ 
+      enableRealConnection: true, 
+      fallbackToMock: true 
+    });
+    
+    const connected = await connector.connect();
+    expect(connected).toBe(true);
+    
+    const status = connector.getStatus();
+    expect(status.connected).toBe(true);
+    expect(typeof status.clientsOnline).toBe('number');
+    expect(status.dataMode).toBe('real');
+    
+    await connector.disconnect();
+    expect(connector.isConnected()).toBe(false);
   });
 });
 

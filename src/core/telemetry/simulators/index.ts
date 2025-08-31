@@ -7,6 +7,9 @@ export * from './msfs-connector';
 export * from './beamng-connector';
 export * from './xplane-connector';
 export * from './vatsim-connector';
+export * from '../commands/command-system';
+
+import type { SimulatorCommand, CommandResult, CommandCapabilities, SimulatorEvent } from '../commands/command-system';
 
 // Base simulator connector interface
 export interface SimulatorConnector {
@@ -22,6 +25,16 @@ export interface SimulatorConnector {
     reliability: number;
     errors: number;
   };
+  
+  // Command and control capabilities (bi-directional)
+  sendCommand?(command: SimulatorCommand): Promise<CommandResult>;
+  getCapabilities?(): CommandCapabilities;
+  subscribeToEvents?(callback: (event: SimulatorEvent) => void): () => void;
+  
+  // Batch operations
+  sendCommands?(commands: SimulatorCommand[]): Promise<CommandResult[]>;
+  queueCommand?(command: SimulatorCommand): boolean;
+  clearCommandQueue?(): void;
 }
 
 // Factory for creating simulator connectors

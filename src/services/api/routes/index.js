@@ -7,6 +7,7 @@ import { createMediaRoutes } from './media.js';
 import { createEmotionRoutes } from './emotion.js';
 import { createDistributionRoutes } from './distribution.js';
 import { createSystemRoutes } from './system.js';
+import { createTelemetryRoutes } from './telemetry.js';
 
 /**
  * Create unified route registry
@@ -61,6 +62,16 @@ export const createRouteRegistry = (dependencies) => {
     createErrorResponse: dependencies.createErrorResponse
   });
   routes.push(...systemRoutes);
+
+  // Telemetry and simulator control routes
+  const telemetryRoutes = createTelemetryRoutes({
+    middlewareSystem: dependencies.middlewareSystem,
+    createJSONResponse: dependencies.createJSONResponse,
+    createErrorResponse: dependencies.createErrorResponse,
+    distributionStreams: dependencies.distributionStreams,
+    createDistributionStream: dependencies.createDistributionStream
+  });
+  routes.push(...telemetryRoutes);
 
   console.log(`📝 Route registry created with ${routes.length} routes`);
   

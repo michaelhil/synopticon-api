@@ -1,16 +1,24 @@
 /**
  * Microsoft Flight Simulator Telemetry Connector
- * Real-time flight data collection from MSFS via SimConnect
+ * Real-time flight data collection from MSFS via native SimConnect protocol
  */
 
 import type { TelemetryFrame, VehicleState } from '../../common/types';
-import type { SimulatorConnector } from './index';
+import type { SimulatorConnector, SimulatorCommand, CommandResult, CommandCapabilities, SimulatorEvent } from './index';
+import { createMSFSClient, type SimConnectClientConfig, type FlightData } from './simconnect-client';
+import { createMSFSCommandProcessor } from './msfs-commands';
+import { createCommandQueue, createEventEmitter } from '../commands/command-system';
 
 export interface MSFSConfig {
   endpoint?: string;
   port?: number;
   updateRate?: number;
   dataFields?: string[];
+  useNativeProtocol?: boolean;
+  useNamedPipes?: boolean;
+  autoReconnect?: boolean;
+  fallbackToMock?: boolean;
+  remoteHosts?: string[]; // Array of remote MSFS server IPs to try
 }
 
 // MSFS-specific data structures
@@ -65,6 +73,10 @@ export const createMSFSConnector = (config: MSFSConfig = {}): SimulatorConnector
     port: 500,
     updateRate: 30,
     dataFields: ['latitude', 'longitude', 'altitude', 'heading', 'airspeed'],
+    useNativeProtocol: false, // Disabled by default until transport is stable
+    useNamedPipes: process.platform === 'win32',
+    autoReconnect: true,
+    fallbackToMock: true,
     ...config
   };
 
@@ -76,33 +88,126 @@ export const createMSFSConnector = (config: MSFSConfig = {}): SimulatorConnector
     reliability: 1.0,
     errors: 0
   };
+  let nativeClient: ReturnType<typeof createMSFSClient> | null = null;
+  let mockInterval: Timer | null = null;
+  let commandProcessor: ReturnType<typeof createMSFSCommandProcessor> | null = null;
+  let commandQueue = createCommandQueue();
+  let eventEmitter = createEventEmitter();
 
-  // Simulate connection to MSFS SimConnect
+  // Connect to MSFS using native SimConnect or fallback to mock
   const connect = async (): Promise<boolean> => {
     try {
       console.log(`Connecting to MSFS on ${settings.endpoint}:${settings.port}`);
-      // In real implementation, this would establish SimConnect connection
-      isConnected = true;
-      startDataStream();
-      return true;
+      
+      if (settings.useNativeProtocol) {
+        nativeClient = createMSFSClient({
+          endpoint: settings.endpoint,
+          port: settings.port,
+          useNamedPipes: settings.useNamedPipes,
+          autoReconnect: settings.autoReconnect,
+          dataUpdateRate: settings.updateRate,
+          remoteHosts: settings.remoteHosts || [],
+        });
+        
+        const connected = await nativeClient.connect();
+        if (connected) {
+          console.log('MSFS connected via native SimConnect protocol');
+          setupNativeDataStream();
+          setupCommandProcessor();
+          isConnected = true;
+          return true;
+        } else if (settings.fallbackToMock) {
+          console.warn('Native SimConnect failed, falling back to mock data');
+          nativeClient = null;
+          isConnected = true;
+          startMockDataStream();
+          return true;
+        }
+        return false;
+      } else {
+        // Direct mock mode
+        isConnected = true;
+        startMockDataStream();
+        return true;
+      }
     } catch (error) {
       console.error('MSFS connection failed:', error);
       connectionStats.errors++;
+      
+      if (settings.fallbackToMock) {
+        console.warn('Connection error, falling back to mock data');
+        isConnected = true;
+        startMockDataStream();
+        return true;
+      }
       return false;
     }
   };
 
   const disconnect = async (): Promise<void> => {
     isConnected = false;
+    
+    if (nativeClient) {
+      await nativeClient.disconnect();
+      nativeClient = null;
+    }
+    
+    if (mockInterval) {
+      clearInterval(mockInterval);
+      mockInterval = null;
+    }
+    
     subscribers = [];
     console.log('MSFS connection closed');
   };
 
-  // Simulate MSFS data stream
-  const startDataStream = () => {
-    const interval = setInterval(() => {
+  // Set up native SimConnect data streaming
+  const setupNativeDataStream = () => {
+    if (!nativeClient) return;
+    
+    nativeClient.subscribeToData((flightData: FlightData) => {
+      const telemetryFrame = convertNativeToTelemetry(flightData);
+      connectionStats.lastData = Date.now();
+      
+      subscribers.forEach(callback => {
+        try {
+          callback(telemetryFrame);
+        } catch (error) {
+          console.error('MSFS native data subscriber error:', error);
+          connectionStats.errors++;
+        }
+      });
+    });
+    
+    nativeClient.subscribeToErrors((error) => {
+      console.error('MSFS SimConnect error:', error);
+      connectionStats.errors++;
+    });
+  };
+  
+  // Set up command processor
+  const setupCommandProcessor = () => {
+    if (!nativeClient) return;
+    
+    commandProcessor = createMSFSCommandProcessor(async (message: Uint8Array) => {
+      // Send message through the native client's transport
+      const transport = (nativeClient as any)?.state?.transport;
+      if (transport) {
+        return await transport.send(message);
+      }
+      return false;
+    });
+    
+    commandProcessor.subscribeToEvents((event: SimulatorEvent) => {
+      eventEmitter.emit(event);
+    });
+  };
+  
+  // Fallback mock data stream
+  const startMockDataStream = () => {
+    mockInterval = setInterval(() => {
       if (!isConnected) {
-        clearInterval(interval);
+        if (mockInterval) clearInterval(mockInterval);
         return;
       }
 
@@ -131,7 +236,7 @@ export const createMSFSConnector = (config: MSFSConfig = {}): SimulatorConnector
         try {
           callback(telemetryFrame);
         } catch (error) {
-          console.error('MSFS subscriber error:', error);
+          console.error('MSFS mock subscriber error:', error);
           connectionStats.errors++;
         }
       });
@@ -145,12 +250,98 @@ export const createMSFSConnector = (config: MSFSConfig = {}): SimulatorConnector
     };
   };
 
-  const getStatus = () => ({
-    connected: isConnected,
-    lastData: connectionStats.lastData,
-    reliability: Math.max(0, 1.0 - (connectionStats.errors * 0.1)),
-    errors: connectionStats.errors
+  const getStatus = () => {
+    const baseStatus = {
+      connected: isConnected,
+      lastData: connectionStats.lastData,
+      reliability: Math.max(0, 1.0 - (connectionStats.errors * 0.1)),
+      errors: connectionStats.errors,
+      dataMode: nativeClient ? 'native' : 'mock',
+    };
+    
+    if (nativeClient) {
+      const nativeStatus = nativeClient.getStatus();
+      return {
+        ...baseStatus,
+        transport: nativeStatus.transport,
+        protocolVersion: nativeStatus.protocolVersion,
+        lastHeartbeat: nativeStatus.lastHeartbeat,
+      };
+    }
+    
+    return baseStatus;
+  };
+
+  // Convert native SimConnect data to telemetry frame
+  const convertNativeToTelemetry = (flightData: FlightData): TelemetryFrame => ({
+    timestamp: BigInt(flightData.timestamp * 1000),
+    sequenceNumber: flightData.sequenceNumber,
+    sourceId: 'msfs-native-simconnect',
+    sourceType: 'telemetry',
+    simulator: 'msfs',
+    vehicle: {
+      position: [flightData.longitude, flightData.latitude, flightData.altitude * 0.3048], // Convert feet to meters
+      velocity: [flightData.airspeed * 0.514444, 0, flightData.verticalSpeed * 0.00508], // Convert knots and fpm to m/s
+      rotation: [0, 0, flightData.heading * Math.PI / 180, 1],
+      heading: flightData.heading
+    },
+    performance: {
+      speed: flightData.airspeed,
+      fuel: flightData.fuelQuantity,
+      engineRpm: flightData.engineRpm
+    },
+    metadata: {
+      aircraft: 'Unknown',
+      dataSource: 'Native SimConnect'
+    }
   });
+  
+  // Command and control implementation
+  const sendCommand = async (command: SimulatorCommand): Promise<CommandResult> => {
+    if (!commandProcessor) {
+      return {
+        commandId: command.id,
+        success: false,
+        executedAt: Date.now(),
+        error: {
+          code: 'NOT_CONNECTED',
+          message: 'MSFS native client not connected'
+        }
+      };
+    }
+    
+    return await commandProcessor.processCommand(command);
+  };
+  
+  const sendCommands = async (commands: SimulatorCommand[]): Promise<CommandResult[]> => {
+    const results: CommandResult[] = [];
+    for (const command of commands) {
+      results.push(await sendCommand(command));
+    }
+    return results;
+  };
+  
+  const queueCommand = (command: SimulatorCommand): boolean => {
+    return commandQueue.add(command);
+  };
+  
+  const clearCommandQueue = (): void => {
+    commandQueue.clear();
+  };
+  
+  const getCapabilities = (): CommandCapabilities => {
+    return commandProcessor?.getCapabilities() || {
+      supportedTypes: [],
+      supportedActions: {},
+      maxConcurrentCommands: 0,
+      supportsQueuing: false,
+      supportsUndo: false
+    };
+  };
+  
+  const subscribeToEvents = (callback: (event: SimulatorEvent) => void): (() => void) => {
+    return eventEmitter.on('*', callback);
+  };
 
   return {
     id: 'msfs-connector',
@@ -159,6 +350,12 @@ export const createMSFSConnector = (config: MSFSConfig = {}): SimulatorConnector
     disconnect,
     isConnected: () => isConnected,
     subscribe,
-    getStatus
+    getStatus,
+    sendCommand,
+    sendCommands,
+    queueCommand,
+    clearCommandQueue,
+    getCapabilities,
+    subscribeToEvents
   };
 };

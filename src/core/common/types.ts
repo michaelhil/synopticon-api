@@ -30,6 +30,15 @@ export interface TelemetryFrame extends BaseDataFrame {
   controls?: ControlState;
   performance?: PerformanceMetrics;
   events?: TelemetryEvent[];
+  metadata?: {
+    callsign?: string;
+    pilotName?: string;
+    aircraft?: string;
+    departure?: string;
+    arrival?: string;
+    route?: string;
+    custom?: Record<string, unknown>;
+  };
 }
 
 // Vehicle state for simulators
@@ -52,6 +61,11 @@ export interface EnvironmentState {
   visibility?: number;
   timeOfDay?: string; // ISO 8601
   traffic?: unknown[];
+  network?: {
+    server: string;
+    transponder: string;
+    lastUpdate: string;
+  };
 }
 
 // Control inputs

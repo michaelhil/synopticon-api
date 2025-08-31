@@ -102,6 +102,29 @@ interface WebRTCMessage {
   targetSession?: string;
 }
 
+// Telemetry message types
+interface TelemetrySubscribeMessage {
+  type: 'telemetry_subscribe';
+  simulatorType: 'msfs' | 'xplane' | 'beamng' | 'vatsim';
+  streamId?: string;
+  config?: {
+    updateInterval?: number;
+    dataTypes?: string[];
+  };
+}
+
+interface TelemetryUnsubscribeMessage {
+  type: 'telemetry_unsubscribe';
+  streamId: string;
+}
+
+interface TelemetryCommandMessage {
+  type: 'telemetry_command';
+  simulatorType: 'msfs' | 'xplane' | 'beamng' | 'vatsim';
+  action: string;
+  parameters?: Record<string, unknown>;
+}
+
 // Union of all message types
 export type WebSocketMessage = 
   | FrameMessage 
@@ -111,7 +134,10 @@ export type WebSocketMessage =
   | SubscriptionMessage
   | WebRTCMessage
   | MediaPipeAnalysisMessage
-  | MediaPipeConfigMessage;
+  | MediaPipeConfigMessage
+  | TelemetrySubscribeMessage
+  | TelemetryUnsubscribeMessage
+  | TelemetryCommandMessage;
 
 // Session interface
 interface WebSocketSession {
@@ -323,6 +349,123 @@ export const createWebSocketMessageHandlers = (dependencies: MessageHandlerDepen
   };
 
   /**
+   * Handle telemetry subscription
+   */
+  const handleTelemetrySubscribe = async (session: WebSocketSession, data: TelemetrySubscribeMessage): Promise<void> => {
+    try {
+      sessionManager.updateSessionActivity(session.id);
+
+      // Store telemetry subscription in session metadata
+      if (!session.metadata.settings) {
+        session.metadata.settings = {};
+      }
+      
+      if (!session.metadata.settings.telemetryStreams) {
+        session.metadata.settings.telemetryStreams = [];
+      }
+
+      const streamId = data.streamId || `telemetry_${data.simulatorType}_${Date.now()}`;
+      
+      session.metadata.settings.telemetryStreams.push({
+        streamId,
+        simulatorType: data.simulatorType,
+        config: data.config,
+        subscribedAt: Date.now()
+      });
+
+      // Send subscription confirmation
+      session.ws.send(JSON.stringify({
+        type: 'telemetry_subscribed',
+        sessionId: session.id,
+        streamId,
+        simulatorType: data.simulatorType,
+        timestamp: Date.now()
+      }));
+      
+    } catch (error) {
+      console.error('Telemetry subscription error:', error);
+      sessionManager.incrementSessionError(session.id);
+      
+      session.ws.send(JSON.stringify({
+        type: 'error',
+        sessionId: session.id,
+        error: (error as Error).message,
+        errorCode: 'TELEMETRY_SUBSCRIBE_ERROR',
+        timestamp: Date.now()
+      }));
+    }
+  };
+
+  /**
+   * Handle telemetry unsubscription
+   */
+  const handleTelemetryUnsubscribe = async (session: WebSocketSession, data: TelemetryUnsubscribeMessage): Promise<void> => {
+    try {
+      sessionManager.updateSessionActivity(session.id);
+
+      if (session.metadata.settings?.telemetryStreams) {
+        session.metadata.settings.telemetryStreams = 
+          session.metadata.settings.telemetryStreams.filter(
+            (stream: any) => stream.streamId !== data.streamId
+          );
+      }
+
+      // Send unsubscription confirmation
+      session.ws.send(JSON.stringify({
+        type: 'telemetry_unsubscribed',
+        sessionId: session.id,
+        streamId: data.streamId,
+        timestamp: Date.now()
+      }));
+      
+    } catch (error) {
+      console.error('Telemetry unsubscription error:', error);
+      sessionManager.incrementSessionError(session.id);
+      
+      session.ws.send(JSON.stringify({
+        type: 'error',
+        sessionId: session.id,
+        error: (error as Error).message,
+        errorCode: 'TELEMETRY_UNSUBSCRIBE_ERROR',
+        timestamp: Date.now()
+      }));
+    }
+  };
+
+  /**
+   * Handle telemetry command
+   */
+  const handleTelemetryCommand = async (session: WebSocketSession, data: TelemetryCommandMessage): Promise<void> => {
+    try {
+      sessionManager.updateSessionActivity(session.id);
+
+      // TODO: Forward command to telemetry system via HTTP API or direct connection
+      // For now, acknowledge the command
+      
+      session.ws.send(JSON.stringify({
+        type: 'telemetry_command_ack',
+        sessionId: session.id,
+        simulatorType: data.simulatorType,
+        action: data.action,
+        status: 'queued',
+        timestamp: Date.now()
+      }));
+      
+    } catch (error) {
+      console.error('Telemetry command error:', error);
+      sessionManager.incrementSessionError(session.id);
+      
+      session.ws.send(JSON.stringify({
+        type: 'error',
+        sessionId: session.id,
+        error: (error as Error).message,
+        errorCode: 'TELEMETRY_COMMAND_ERROR',
+        timestamp: Date.now()
+      }));
+    }
+  };
+
+  /**
    * Process configuration message
    */
   const handleConfiguration = async (session: WebSocketSession, data: ConfigureMessage): Promise<void> => {
@@ -492,6 +635,18 @@ export const createWebSocketMessageHandlers = (dependencies: MessageHandlerDepen
 
         case 'mediapipe_config':
           await handleMediaPipeConfig(session, data);
+          break;
+
+        case 'telemetry_subscribe':
+          await handleTelemetrySubscribe(session, data);
+          break;
+
+        case 'telemetry_unsubscribe':
+          await handleTelemetryUnsubscribe(session, data);
+          break;
+
+        case 'telemetry_command':
+          await handleTelemetryCommand(session, data);
           break;
           
         default:

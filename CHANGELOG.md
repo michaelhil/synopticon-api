@@ -5,6 +5,70 @@ All notable changes to Synopticon API will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.1] - 2025-08-31 - Complete Simulator Integration & Pipeline Architecture
+
+### 🚀 New Features
+
+#### Full Simulator System Integration
+- **REST API Endpoints**: 11 new telemetry endpoints for complete simulator control
+  - Connection management (`/api/telemetry/connect`, `/api/telemetry/disconnect`)
+  - Real-time status monitoring (`/api/telemetry/status/{type}`)
+  - Telemetry streaming (`/api/telemetry/stream/*`)
+  - Command execution (`/api/telemetry/command`, `/api/telemetry/commands/batch`)
+  - Distribution integration (`/api/telemetry/distribution/create`)
+
+#### MCP Server Simulator Tools
+- **10 New MCP Tools** for LLM-based simulator interaction:
+  - `list_simulators` - Discover available simulators
+  - `connect_simulator` - Establish simulator connections
+  - `start_telemetry_stream` - Begin data collection
+  - `send_simulator_command` - Execute simulator commands
+  - `send_batch_commands` - Batch command execution
+  - Complete telemetry lifecycle management
+
+#### Telemetry Analysis Pipeline
+- **Real-time Analysis**: Process simulator data through analysis pipelines
+- **Anomaly Detection**: Automatic detection of unusual flight/vehicle patterns
+- **Threshold Monitoring**: Configurable limits for altitude, speed, g-forces
+- **Multi-Simulator Support**: Unified analysis for MSFS, X-Plane, BeamNG, VATSIM
+- **Historical Tracking**: Maintain telemetry history for pattern analysis
+
+#### WebSocket Telemetry Support
+- **New Message Types**:
+  - `telemetry_subscribe` - Subscribe to simulator streams
+  - `telemetry_unsubscribe` - Unsubscribe from streams
+  - `telemetry_command` - Send commands via WebSocket
+- **Real-time Streaming**: Bidirectional telemetry data over WebSocket
+- **Session Management**: Per-session telemetry configuration
+
+### 📚 Documentation
+
+#### Pipeline Architecture Documentation
+- **Comprehensive Guide**: New `docs/PIPELINES.md` covering:
+  - Conceptual overview and architecture
+  - Real-world examples with input/output
+  - Current pipeline implementations
+  - Flexibility and composition patterns
+  - Future enhancement roadmap
+  - Developer guide and best practices
+
+### 🔧 Technical Improvements
+
+#### API Route Corrections
+- Fixed route pattern matching for parameterized endpoints
+- Corrected regex patterns from Express-style to proper regex format
+- Improved route registration and matching consistency
+
+#### Distribution System Integration
+- Telemetry streams now integrate with distribution system
+- Support for UDP, WebSocket, MQTT, SSE, HTTP distribution
+- Event-driven telemetry data forwarding
+
+### 🐛 Bug Fixes
+- Fixed VATSIM connector URL validation issues
+- Corrected route patterns for GET endpoints with parameters
+- Resolved memory pressure warnings in telemetry streaming
+
 ## [0.6.0] - 2025-08-31 - Multi-Modal Telemetry & Development Guardrails
 
 ### 🚀 Major Features
