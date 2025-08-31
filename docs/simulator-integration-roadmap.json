@@ -1,0 +1,663 @@
+{
+  "project": "Synopticon Simulator Integration",
+  "version": "1.0.0",
+  "created": "2025-01-31",
+  "status": "planning",
+  "overview": {
+    "description": "Integration of flight and driving simulators as first-class data providers in Synopticon ecosystem",
+    "objectives": [
+      "Enable real-time telemetry extraction from simulators",
+      "Correlate simulator data with biometric sensors",
+      "Create unified analysis platform for virtual environment behavior",
+      "Support training, research, and assessment applications"
+    ],
+    "targetSimulators": [
+      "Microsoft Flight Simulator 2020/2024",
+      "BeamNG.drive",
+      "X-Plane 12",
+      "DCS World",
+      "Assetto Corsa Competizione"
+    ]
+  },
+  
+  "architecture": {
+    "pattern": "hybrid",
+    "components": {
+      "extractors": {
+        "description": "Simulator-specific data extraction modules",
+        "technology": ["C++", "Python", "Lua"],
+        "responsibilities": ["Connect to simulator APIs", "Extract telemetry", "Handle simulator events"]
+      },
+      "universalTelemetryService": {
+        "description": "Central service for telemetry normalization and routing",
+        "technology": ["Bun", "TypeScript"],
+        "responsibilities": ["Data normalization", "Time synchronization", "Protocol translation", "Buffer management"]
+      },
+      "correlationEngine": {
+        "description": "Multi-stream data correlation and analysis",
+        "technology": ["JavaScript", "WebAssembly"],
+        "responsibilities": ["Time alignment", "Event detection", "Cross-modal analysis", "Metrics calculation"]
+      },
+      "distribution": {
+        "description": "Real-time data distribution to clients",
+        "technology": ["WebSocket", "gRPC", "HTTP/2"],
+        "responsibilities": ["Stream management", "Client subscription", "Load balancing", "Compression"]
+      }
+    }
+  },
+  
+  "dataModel": {
+    "telemetryFrame": {
+      "timestamp": "number (microseconds)",
+      "source": {
+        "type": "enum: msfs|beamng|xplane|dcs|custom",
+        "version": "string",
+        "sessionId": "uuid"
+      },
+      "vehicle": {
+        "position": "Vector3D (meters)",
+        "rotation": "Quaternion",
+        "velocity": "Vector3D (m/s)",
+        "acceleration": "Vector3D (m/s²)",
+        "heading": "number (degrees)"
+      },
+      "controls": {
+        "throttle": "0-1",
+        "brake": "0-1",
+        "steering": "-1 to 1",
+        "gear": "integer",
+        "custom": "object"
+      },
+      "environment": {
+        "weather": "WeatherData",
+        "traffic": "TrafficData",
+        "timeOfDay": "ISO8601"
+      },
+      "performance": {
+        "lapTime": "milliseconds",
+        "fuelRemaining": "percentage",
+        "damage": "DamageModel"
+      }
+    }
+  },
+  
+  "phases": [
+    {
+      "id": "phase1",
+      "name": "Foundation",
+      "duration": "3 weeks",
+      "startDate": "2025-02-01",
+      "endDate": "2025-02-21",
+      "deliverables": [
+        {
+          "name": "Universal Telemetry Service",
+          "description": "Core service for telemetry processing",
+          "status": "planned",
+          "tasks": [
+            "Define telemetry data model",
+            "Implement time synchronization",
+            "Create plugin interface",
+            "Set up WebSocket streaming"
+          ]
+        },
+        {
+          "name": "BeamNG Proof of Concept",
+          "description": "Basic integration with BeamNG.drive",
+          "status": "planned",
+          "tasks": [
+            "Implement Lua telemetry extractor",
+            "Create Python bridge service",
+            "Test WebSocket streaming",
+            "Validate data normalization"
+          ]
+        }
+      ],
+      "successCriteria": [
+        "Successfully extract telemetry from BeamNG",
+        "Stream data to Synopticon at 30+ Hz",
+        "Display telemetry in web interface"
+      ]
+    },
+    
+    {
+      "id": "phase2",
+      "name": "MSFS Integration",
+      "duration": "3 weeks",
+      "startDate": "2025-02-22",
+      "endDate": "2025-03-14",
+      "deliverables": [
+        {
+          "name": "SimConnect Bridge",
+          "description": "C++ service for MSFS data extraction",
+          "status": "planned",
+          "tasks": [
+            "Implement SimConnect client",
+            "Map flight parameters",
+            "Create event detection",
+            "Optimize data transmission"
+          ]
+        },
+        {
+          "name": "Flight Data Normalization",
+          "description": "Convert aviation units to standard metrics",
+          "status": "planned",
+          "tasks": [
+            "Unit conversion system",
+            "Coordinate system alignment",
+            "Update rate harmonization",
+            "Data validation"
+          ]
+        }
+      ],
+      "successCriteria": [
+        "Extract 100+ parameters from MSFS",
+        "Maintain < 50ms latency",
+        "Support multiple aircraft types"
+      ]
+    },
+    
+    {
+      "id": "phase3",
+      "name": "Correlation Engine",
+      "duration": "4 weeks",
+      "startDate": "2025-03-15",
+      "endDate": "2025-04-11",
+      "deliverables": [
+        {
+          "name": "Time Synchronization System",
+          "description": "Multi-stream temporal alignment",
+          "status": "planned",
+          "tasks": [
+            "Implement NTP-style sync",
+            "Handle variable latencies",
+            "Create unified timeline",
+            "Develop interpolation algorithms"
+          ]
+        },
+        {
+          "name": "Event Correlation",
+          "description": "Cross-modal event detection and analysis",
+          "status": "planned",
+          "tasks": [
+            "Define event taxonomy",
+            "Implement event detectors",
+            "Create correlation algorithms",
+            "Build event notification system"
+          ]
+        },
+        {
+          "name": "Analysis Pipelines",
+          "description": "Real-time analysis of correlated data",
+          "status": "planned",
+          "tasks": [
+            "Stress detection pipeline",
+            "Attention analysis pipeline",
+            "Performance metrics pipeline",
+            "Workload assessment pipeline"
+          ]
+        }
+      ],
+      "successCriteria": [
+        "< 10ms synchronization accuracy",
+        "Detect 95% of defined events",
+        "Real-time correlation at 30+ Hz"
+      ]
+    },
+    
+    {
+      "id": "phase4",
+      "name": "Production Deployment",
+      "duration": "3 weeks",
+      "startDate": "2025-04-12",
+      "endDate": "2025-05-02",
+      "deliverables": [
+        {
+          "name": "API Integration",
+          "description": "REST and WebSocket APIs for simulator data",
+          "status": "planned",
+          "tasks": [
+            "Implement REST endpoints",
+            "Create WebSocket streams",
+            "Add authentication",
+            "Document APIs"
+          ]
+        },
+        {
+          "name": "MCP Tools",
+          "description": "Model Context Protocol tools for LLM integration",
+          "status": "planned",
+          "tasks": [
+            "Create simulator control tools",
+            "Implement telemetry query tools",
+            "Add correlation analysis tools",
+            "Test with Claude Desktop"
+          ]
+        },
+        {
+          "name": "Performance Optimization",
+          "description": "Optimize for production workloads",
+          "status": "planned",
+          "tasks": [
+            "Implement data compression",
+            "Add caching layers",
+            "Optimize database queries",
+            "Load testing"
+          ]
+        }
+      ],
+      "successCriteria": [
+        "Support 10+ concurrent simulators",
+        "< 100ms API response time",
+        "99% uptime"
+      ]
+    },
+    
+    {
+      "id": "phase5",
+      "name": "Advanced Features",
+      "duration": "4 weeks",
+      "startDate": "2025-05-03",
+      "endDate": "2025-05-30",
+      "deliverables": [
+        {
+          "name": "Machine Learning Integration",
+          "description": "ML models for behavior prediction",
+          "status": "planned",
+          "tasks": [
+            "Fatigue detection model",
+            "Skill assessment model",
+            "Anomaly detection",
+            "Performance prediction"
+          ]
+        },
+        {
+          "name": "Multi-Simulator Support",
+          "description": "Support for additional simulators",
+          "status": "planned",
+          "tasks": [
+            "X-Plane 12 integration",
+            "DCS World integration",
+            "Racing sim support",
+            "Universal plugin system"
+          ]
+        },
+        {
+          "name": "Research Tools",
+          "description": "Tools for research applications",
+          "status": "planned",
+          "tasks": [
+            "Experiment designer",
+            "Statistical analysis tools",
+            "Report generation",
+            "Data export formats"
+          ]
+        }
+      ],
+      "successCriteria": [
+        "ML model accuracy > 85%",
+        "Support 5+ simulator types",
+        "Generate research-grade data"
+      ]
+    }
+  ],
+  
+  "milestones": [
+    {
+      "id": "m1",
+      "name": "First Telemetry Stream",
+      "date": "2025-02-14",
+      "description": "Successfully stream telemetry from BeamNG to Synopticon",
+      "dependencies": []
+    },
+    {
+      "id": "m2",
+      "name": "Dual Simulator Support",
+      "date": "2025-03-14",
+      "description": "Both BeamNG and MSFS integrated",
+      "dependencies": ["m1"]
+    },
+    {
+      "id": "m3",
+      "name": "Correlation Working",
+      "date": "2025-04-11",
+      "description": "Successfully correlate simulator with biometric data",
+      "dependencies": ["m2"]
+    },
+    {
+      "id": "m4",
+      "name": "Production Ready",
+      "date": "2025-05-02",
+      "description": "System deployed and stable in production",
+      "dependencies": ["m3"]
+    },
+    {
+      "id": "m5",
+      "name": "Research Platform",
+      "date": "2025-05-30",
+      "description": "Platform ready for research applications",
+      "dependencies": ["m4"]
+    }
+  ],
+  
+  "risks": [
+    {
+      "id": "r1",
+      "category": "technical",
+      "description": "Simulator API changes break integration",
+      "probability": "high",
+      "impact": "medium",
+      "mitigation": "Version locking, abstraction layers, regular testing"
+    },
+    {
+      "id": "r2",
+      "category": "performance",
+      "description": "Cannot achieve real-time correlation",
+      "probability": "medium",
+      "impact": "high",
+      "mitigation": "Optimize algorithms, use edge computing, reduce data resolution"
+    },
+    {
+      "id": "r3",
+      "category": "adoption",
+      "description": "Researchers don't adopt platform",
+      "probability": "medium",
+      "impact": "high",
+      "mitigation": "User research, ease of use focus, academic partnerships"
+    },
+    {
+      "id": "r4",
+      "category": "legal",
+      "description": "Licensing issues with simulator APIs",
+      "probability": "low",
+      "impact": "high",
+      "mitigation": "Legal review, alternative implementations, user-provided plugins"
+    }
+  ],
+  
+  "resources": {
+    "team": [
+      {
+        "role": "Technical Lead",
+        "count": 1,
+        "skills": ["System architecture", "Real-time systems", "API design"],
+        "allocation": "100%"
+      },
+      {
+        "role": "Simulator Integration Engineer",
+        "count": 2,
+        "skills": ["C++", "Python", "Simulator APIs", "Game engines"],
+        "allocation": "100%"
+      },
+      {
+        "role": "Backend Developer",
+        "count": 2,
+        "skills": ["Bun", "TypeScript", "WebSocket", "Real-time data"],
+        "allocation": "100%"
+      },
+      {
+        "role": "Data Scientist",
+        "count": 1,
+        "skills": ["Time-series analysis", "Machine learning", "Statistics"],
+        "allocation": "50%"
+      },
+      {
+        "role": "DevOps Engineer",
+        "count": 1,
+        "skills": ["Docker", "Kubernetes", "CI/CD", "Monitoring"],
+        "allocation": "50%"
+      }
+    ],
+    
+    "infrastructure": {
+      "development": {
+        "workstations": "High-end PCs with RTX 4090 GPUs",
+        "simulators": "MSFS, BeamNG, X-Plane licenses",
+        "tools": "Visual Studio, JetBrains IDEs"
+      },
+      "testing": {
+        "servers": "4x high-performance servers",
+        "storage": "10TB SSD array",
+        "network": "10Gbps internal network"
+      },
+      "production": {
+        "cloud": "AWS/GCP with auto-scaling",
+        "database": "TimescaleDB for time-series",
+        "cdn": "CloudFlare for global distribution"
+      }
+    },
+    
+    "budget": {
+      "development": 350000,
+      "infrastructure": 75000,
+      "licenses": 30000,
+      "contingency": 45000,
+      "total": 500000,
+      "currency": "USD"
+    }
+  },
+  
+  "success_metrics": {
+    "technical": [
+      "Telemetry extraction rate > 95%",
+      "Synchronization accuracy < 10ms",
+      "System uptime > 99%",
+      "API response time < 100ms",
+      "Support 10+ concurrent simulators"
+    ],
+    "user": [
+      "Setup time < 30 minutes",
+      "Time to first insight < 5 minutes",
+      "User satisfaction > 4.5/5",
+      "Feature adoption > 60%",
+      "Active users > 100 in first year"
+    ],
+    "business": [
+      "3+ research partnerships",
+      "5+ published papers using platform",
+      "2+ commercial pilot programs",
+      "ROI positive within 18 months"
+    ]
+  },
+  
+  "future_expansion": {
+    "simulators": [
+      "Euro Truck Simulator 2",
+      "Ship Simulator",
+      "Train Simulator",
+      "Surgical simulators",
+      "Military training simulators"
+    ],
+    "features": [
+      "VR/AR integration",
+      "Multi-user scenarios",
+      "AI opponents/traffic",
+      "Predictive analytics",
+      "Automated coaching",
+      "Scenario generation"
+    ],
+    "markets": [
+      "Commercial pilot training",
+      "Driver education",
+      "Military training",
+      "Medical simulation",
+      "Esports analytics",
+      "Insurance risk assessment"
+    ]
+  },
+  
+  "api_endpoints": {
+    "rest": [
+      {
+        "method": "GET",
+        "path": "/api/simulators",
+        "description": "List connected simulators"
+      },
+      {
+        "method": "GET",
+        "path": "/api/simulators/{id}/status",
+        "description": "Get simulator connection status"
+      },
+      {
+        "method": "GET",
+        "path": "/api/simulators/{id}/telemetry",
+        "description": "Get current telemetry snapshot"
+      },
+      {
+        "method": "POST",
+        "path": "/api/simulators/{id}/scenario",
+        "description": "Load scenario into simulator"
+      },
+      {
+        "method": "POST",
+        "path": "/api/simulators/{id}/control",
+        "description": "Send control commands to simulator"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions",
+        "description": "List recording sessions"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/start",
+        "description": "Start synchronized recording"
+      },
+      {
+        "method": "POST",
+        "path": "/api/sessions/stop",
+        "description": "Stop recording session"
+      },
+      {
+        "method": "GET",
+        "path": "/api/sessions/{id}/replay",
+        "description": "Replay recorded session"
+      },
+      {
+        "method": "GET",
+        "path": "/api/correlation/{sessionId}",
+        "description": "Get correlated data for session"
+      }
+    ],
+    
+    "websocket": [
+      {
+        "path": "ws://api/simulators/{id}/stream",
+        "description": "Real-time telemetry stream"
+      },
+      {
+        "path": "ws://api/correlation/stream",
+        "description": "Correlated multi-modal data stream"
+      },
+      {
+        "path": "ws://api/events/stream",
+        "description": "Event notification stream"
+      },
+      {
+        "path": "ws://api/control/{id}",
+        "description": "Bidirectional control channel"
+      }
+    ],
+    
+    "mcp_tools": [
+      {
+        "name": "simulator_list",
+        "description": "List available simulators"
+      },
+      {
+        "name": "simulator_connect",
+        "description": "Connect to a simulator"
+      },
+      {
+        "name": "simulator_status",
+        "description": "Check simulator connection status"
+      },
+      {
+        "name": "simulator_telemetry",
+        "description": "Get current telemetry data"
+      },
+      {
+        "name": "simulator_scenario",
+        "description": "Load a training scenario"
+      },
+      {
+        "name": "simulator_record",
+        "description": "Start/stop recording session"
+      },
+      {
+        "name": "correlation_analyze",
+        "description": "Analyze correlation between streams"
+      },
+      {
+        "name": "performance_metrics",
+        "description": "Calculate performance metrics"
+      }
+    ]
+  },
+  
+  "testing_strategy": {
+    "unit_tests": {
+      "coverage_target": "80%",
+      "frameworks": ["Jest", "Vitest"],
+      "focus_areas": ["Data normalization", "Time sync", "Event detection"]
+    },
+    "integration_tests": {
+      "simulators": ["BeamNG", "MSFS", "X-Plane"],
+      "scenarios": ["Normal operation", "Network issues", "Simulator crash", "High load"],
+      "frequency": "Daily CI/CD runs"
+    },
+    "performance_tests": {
+      "latency": "< 100ms end-to-end",
+      "throughput": "50,000 values/second",
+      "concurrent_users": "100+",
+      "tools": ["K6", "JMeter"]
+    },
+    "user_acceptance": {
+      "participants": "10+ researchers/trainers",
+      "duration": "2 weeks",
+      "success_criteria": "80% task completion rate"
+    }
+  },
+  
+  "documentation": {
+    "technical": [
+      "Architecture overview",
+      "API reference",
+      "Integration guides per simulator",
+      "Data model specification",
+      "Deployment guide"
+    ],
+    "user": [
+      "Quick start guide",
+      "Simulator setup tutorials",
+      "Analysis pipeline examples",
+      "Troubleshooting guide",
+      "Best practices"
+    ],
+    "research": [
+      "Methodology papers",
+      "Validation studies",
+      "Use case examples",
+      "Citation guidelines"
+    ]
+  },
+  
+  "partnerships": {
+    "academic": [
+      "MIT Human Systems Lab",
+      "Stanford Virtual Human Interaction Lab",
+      "TU Delft Aerospace Human-Machine Systems"
+    ],
+    "commercial": [
+      "Flight training organizations",
+      "Driving schools",
+      "Insurance companies",
+      "Simulator manufacturers"
+    ],
+    "technology": [
+      "Microsoft (MSFS)",
+      "BeamNG GmbH",
+      "Laminar Research (X-Plane)",
+      "Eagle Dynamics (DCS)"
+    ]
+  }
+}

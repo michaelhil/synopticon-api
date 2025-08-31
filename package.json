@@ -1,6 +1,6 @@
 {
   "name": "synopticon-api",
-  "version": "0.5.9",
+  "version": "0.6.0",
   "description": "synopticon-api: an open-source platform for real-time multi-modal behavioral analysis and sensor synchronization",
   "main": "src/services/api/server.js",
   "type": "module",
@@ -56,7 +56,16 @@
     "mcp",
     "model-context-protocol",
     "llm-integration",
-    "claude-desktop"
+    "claude-desktop",
+    "telemetry",
+    "simulator-integration",
+    "msfs",
+    "x-plane",
+    "beamng",
+    "vatsim",
+    "multi-modal",
+    "behavioral-analysis",
+    "real-time-streaming"
   ],
   "author": "Synopticon API Team",
   "license": "MIT",

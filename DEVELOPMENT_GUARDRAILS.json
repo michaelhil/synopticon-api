@@ -1,0 +1,434 @@
+{
+  "title": "Synopticon Development Guardrails System (DGS)",
+  "version": "1.0.0",
+  "created": "2025-01-31",
+  "purpose": "Mandatory consultation document for all coding tasks to ensure architectural consistency and prevent quality regressions",
+  "enforcement": "MANDATORY - Must be consulted before any coding task begins",
+  
+  "consultation_workflow": {
+    "pre_coding_checklist": [
+      "✅ Read relevant sections of this guardrail document",
+      "✅ Verify task aligns with architectural principles", 
+      "✅ Identify performance requirements and constraints",
+      "✅ Plan error handling and edge case strategy",
+      "✅ Determine test strategy and success criteria"
+    ],
+    
+    "during_coding_validation": [
+      "Every 50 lines: Check file length against 300 line limit",
+      "Every function: Verify < 50 lines and single responsibility",
+      "Every import: Validate architectural pattern compliance",
+      "Every dependency: Evaluate against zero-dependency principle"
+    ],
+    
+    "pre_commit_validation": [
+      "Run automated guardrail validation script",
+      "Verify all tests pass locally",
+      "Check performance impact if applicable",
+      "Validate error handling completeness"
+    ]
+  },
+  
+  "core_architectural_principles": {
+    "runtime_environment": {
+      "mandatory": "Bun 1.0+ as primary runtime",
+      "forbidden": [
+        "Direct Node.js-only implementations",
+        "Node.js-specific APIs without Bun compatibility layer",
+        "NPM scripts that don't work with Bun"
+      ],
+      "exceptions": [
+        "Compatibility layers for external libraries",
+        "Build tools that require Node.js (with clear documentation)"
+      ],
+      "validation": "All code must run on Bun without modification"
+    },
+    
+    "programming_paradigm": {
+      "mandatory": "Functional programming with factory functions",
+      "pattern": "const createService = (config) => ({ method1, method2, cleanup })",
+      "forbidden": [
+        "ES6 classes (class keyword)",
+        "Constructor functions (function MyConstructor())",
+        "Prototype-based inheritance",
+        "this keyword in object methods"
+      ],
+      "benefits": [
+        "Easier testing through dependency injection",
+        "Better memory management",
+        "Clearer data flow",
+        "Composition over inheritance"
+      ],
+      "example": {
+        "good": "const createTelemetryAdapter = (config) => ({ connect, disconnect, subscribe })",
+        "bad": "class TelemetryAdapter { constructor(config) {...} }"
+      }
+    },
+    
+    "code_organization": {
+      "file_length": {
+        "maximum": 300,
+        "reasoning": "Maintainability, easier code review, reduced cognitive load",
+        "exceptions": [
+          "Auto-generated files (must be clearly marked)",
+          "Configuration files with extensive options",
+          "Type definition files"
+        ],
+        "action_when_exceeded": "Split into multiple files with clear interface boundaries"
+      },
+      
+      "function_length": {
+        "maximum": 50,
+        "reasoning": "Single responsibility, easier testing, reduced complexity",
+        "exceptions": [
+          "Factory functions returning multiple methods (when cohesive)",
+          "Configuration object definitions",
+          "Complex but linear algorithms (rare, requires justification)"
+        ],
+        "action_when_exceeded": "Extract helper functions or decompose logic"
+      },
+      
+      "module_structure": {
+        "pattern": "index.ts exports public API, implementation in separate files",
+        "naming_convention": "kebab-case for files, camelCase for functions/variables",
+        "organization": "Feature-based folders, not type-based folders",
+        "example": {
+          "good": "src/telemetry/adapters/msfs-adapter.ts",
+          "bad": "src/adapters/telemetry/msfs.ts"
+        }
+      }
+    },
+    
+    "performance_requirements": {
+      "loading_strategy": {
+        "default": "Lazy loading for all non-critical components",
+        "critical_path": "Only essential bootstrapping components loaded immediately",
+        "pattern": "Dynamic imports with proper error handling",
+        "target": "< 200ms initial application load time"
+      },
+      
+      "memory_management": {
+        "object_pooling": "Required for high-frequency operations (> 100/sec)",
+        "cleanup_pattern": "All factory functions must return cleanup method",
+        "monitoring": "Memory usage must not grow > 10MB/hour under normal load"
+      },
+      
+      "cpu_efficiency": {
+        "async_pattern": "Use async/await for I/O operations",
+        "worker_threads": "CPU-intensive tasks > 100ms should use workers",
+        "target": "< 80% CPU usage under normal load"
+      }
+    },
+    
+    "data_architecture": {
+      "sensor_processing": {
+        "pattern": "Pipeline-based: Input → Processing → Analysis → Output",
+        "characteristics": "Frame-based, CPU/GPU intensive, quality-focused",
+        "optimization": "Resource pooling, batch processing"
+      },
+      
+      "telemetry_processing": {
+        "pattern": "Stream-based: Connect → Normalize → Correlate → Distribute",
+        "characteristics": "Continuous flow, lightweight transforms, precision-focused",
+        "optimization": "Real-time processing, low-latency buffers"
+      },
+      
+      "correlation_processing": {
+        "pattern": "Timeline-based: Align → Detect → Analyze → Insights",
+        "characteristics": "Cross-modal, event-driven, time-sensitive",
+        "optimization": "Microsecond precision, statistical analysis"
+      }
+    }
+  },
+  
+  "code_quality_standards": {
+    "placeholder_code": {
+      "status": "ABSOLUTELY FORBIDDEN",
+      "forbidden_patterns": [
+        "// TODO: Implement this",
+        "throw new Error('Not implemented')",
+        "// Placeholder for ...",
+        "const mockData = { /* ... */ }",
+        "return null; // temporary"
+      ],
+      "alternatives": [
+        "Implement minimal viable functionality",
+        "Create stub functions that work but return simple responses", 
+        "Use feature flags for incomplete features",
+        "Implement progressive enhancement"
+      ],
+      "enforcement": "Pre-commit hooks block any commits containing placeholder patterns"
+    },
+    
+    "error_handling": {
+      "pattern": "Explicit error types, no silent failures",
+      "return_style": "Result<T, Error> pattern or Promise rejection",
+      "logging": "Structured logging with context and correlation IDs",
+      "forbidden": [
+        "Empty catch blocks",
+        "Generic Error types without context",
+        "Silent error swallowing"
+      ],
+      "example": {
+        "good": "const result = await adapter.connect().catch(err => ({ error: err, data: null }))",
+        "bad": "try { await adapter.connect() } catch (e) { /* ignore */ }"
+      }
+    },
+    
+    "type_safety": {
+      "requirement": "TypeScript with strict mode enabled",
+      "style": "Explicit interfaces over 'any' types",
+      "documentation": "JSDoc for all public APIs",
+      "validation": "Runtime type checking for external data",
+      "forbidden": [
+        "'any' type without strong justification",
+        "Type assertions without runtime validation", 
+        "Implicit any through configuration"
+      ]
+    },
+    
+    "dependency_management": {
+      "philosophy": "Zero-dependency approach where possible",
+      "evaluation_criteria": [
+        "Does this solve a problem we cannot reasonably solve ourselves?",
+        "Is the maintenance burden justified by the benefit?",
+        "Does it align with Bun native capabilities?",
+        "Will this create vendor lock-in or update dependencies?"
+      ],
+      "preference_order": [
+        "Bun built-in modules (preferred)",
+        "Web platform APIs",
+        "Small, focused libraries with clear purpose",
+        "Large frameworks (requires strong justification)"
+      ],
+      "forbidden": [
+        "Dependencies that duplicate Bun functionality",
+        "Unmaintained or deprecated packages",
+        "Libraries with known security vulnerabilities"
+      ]
+    }
+  },
+  
+  "interface_design_patterns": {
+    "factory_function_signature": {
+      "pattern": "const createX = (config: XConfig) => XInstance",
+      "config_parameter": "Single configuration object (not multiple parameters)",
+      "return_type": "Object with methods (not class instance)",
+      "lifecycle": "Include connect/disconnect, start/stop, cleanup as appropriate"
+    },
+    
+    "configuration_objects": {
+      "structure": "Flat structure with nested objects for grouping",
+      "validation": "Runtime validation with clear error messages",
+      "defaults": "Provide sensible defaults for all optional parameters",
+      "documentation": "JSDoc with examples for complex configurations"
+    },
+    
+    "async_patterns": {
+      "promises": "Use async/await syntax consistently",
+      "error_handling": "Proper error propagation and handling",
+      "cancellation": "Support for operation cancellation where appropriate",
+      "timeouts": "Reasonable timeouts for all network operations"
+    }
+  },
+  
+  "testing_requirements": {
+    "test_driven_development": {
+      "approach": "Write tests before implementation",
+      "coverage": "Aim for 90% coverage, 100% for critical paths",
+      "types": [
+        "Unit tests for individual functions",
+        "Integration tests for component interactions",
+        "System tests for end-to-end workflows"
+      ]
+    },
+    
+    "test_structure": {
+      "naming": "Descriptive test names explaining behavior",
+      "organization": "Mirror source structure in test directories",
+      "data": "Use synthetic data generators, not hardcoded values",
+      "isolation": "Each test should be independent and idempotent"
+    },
+    
+    "performance_testing": {
+      "benchmarks": "Required for performance-critical components",
+      "load_testing": "Required for high-throughput components",
+      "memory_testing": "Required for long-running processes",
+      "regression_detection": "Automated comparison with baseline performance"
+    }
+  },
+  
+  "domain_specific_guidelines": {
+    "sensor_pipelines": {
+      "data_flow": "Frame → Processing → Analysis → Results",
+      "optimization": "Use resource pools for frames and processing contexts",
+      "error_handling": "Graceful degradation when processing fails",
+      "performance": "Maintain 30+ FPS processing capability"
+    },
+    
+    "telemetry_adapters": {
+      "interface": "Common adapter interface for all simulators",
+      "connection": "Robust connection handling with automatic reconnection",
+      "normalization": "Convert all data to universal telemetry model",
+      "timing": "Microsecond precision for correlation accuracy"
+    },
+    
+    "distribution_system": {
+      "protocols": "Support multiple transport protocols (WebSocket, HTTP, MQTT)",
+      "compression": "Automatic compression for high-volume data",
+      "reliability": "Delivery guarantees appropriate to use case",
+      "monitoring": "Health checks and performance metrics"
+    },
+    
+    "correlation_engine": {
+      "synchronization": "Sub-millisecond time alignment",
+      "event_detection": "Configurable thresholds and patterns",
+      "analysis": "Statistical and ML-based insights",
+      "real_time": "Streaming analysis with bounded latency"
+    }
+  },
+  
+  "enforcement_mechanisms": {
+    "automated_validation": {
+      "pre_commit_hooks": [
+        "File length validation (< 300 lines)",
+        "Function length validation (< 50 lines)",
+        "Placeholder code detection",
+        "Import pattern compliance",
+        "Type checking with strict mode"
+      ],
+      
+      "ci_pipeline_gates": [
+        "Architectural compliance audit",
+        "Performance regression detection", 
+        "Test coverage validation",
+        "Dependency security scanning"
+      ],
+      
+      "development_tools": [
+        "VS Code extension for real-time feedback",
+        "CLI tool for manual validation",
+        "Automated documentation generation",
+        "Performance profiling integration"
+      ]
+    },
+    
+    "manual_validation": {
+      "code_review_checklist": [
+        "Architectural principles followed",
+        "Error handling comprehensive",
+        "Performance considerations addressed",
+        "Tests cover critical paths"
+      ],
+      
+      "design_review_process": [
+        "Architectural impact assessment",
+        "Performance requirement validation",
+        "Security consideration review",
+        "Maintenance burden evaluation"
+      ]
+    }
+  },
+  
+  "common_anti_patterns": {
+    "avoid_these_patterns": [
+      {
+        "pattern": "Large monolithic files",
+        "why_bad": "Difficult to maintain, review, and test",
+        "instead": "Break into focused, single-responsibility modules"
+      },
+      {
+        "pattern": "Deep inheritance hierarchies", 
+        "why_bad": "Complex dependencies, hard to understand",
+        "instead": "Composition with factory functions"
+      },
+      {
+        "pattern": "Global state modifications",
+        "why_bad": "Hard to test, unpredictable behavior",
+        "instead": "Explicit state management with immutable updates"
+      },
+      {
+        "pattern": "Magic numbers and strings",
+        "why_bad": "Unclear intent, hard to maintain",
+        "instead": "Named constants with clear meaning"
+      },
+      {
+        "pattern": "Silent error handling",
+        "why_bad": "Masks problems, hard to debug",
+        "instead": "Explicit error propagation and logging"
+      }
+    ]
+  },
+  
+  "quality_metrics": {
+    "file_metrics": [
+      "Average file length < 200 lines",
+      "Maximum file length < 300 lines",
+      "Files with >300 lines: 0%"
+    ],
+    
+    "function_metrics": [
+      "Average function length < 25 lines",
+      "Maximum function length < 50 lines", 
+      "Functions with >50 lines: < 5%"
+    ],
+    
+    "architectural_metrics": [
+      "Dependency count growth < 5% per month",
+      "Circular dependency count: 0",
+      "Architecture compliance score > 95%"
+    ],
+    
+    "performance_metrics": [
+      "Initial load time < 200ms",
+      "Memory growth < 10MB/hour",
+      "CPU usage < 80% under load",
+      "Test execution time < 5 minutes"
+    ]
+  },
+  
+  "decision_framework": {
+    "when_to_deviate": [
+      "Clear performance requirements conflict with guidelines",
+      "External library constraints require different patterns",
+      "Compatibility with existing systems requires adaptation"
+    ],
+    
+    "deviation_process": [
+      "Document the specific requirement driving deviation",
+      "Analyze alternatives and explain why they don't work",
+      "Minimize scope of deviation",
+      "Plan future migration back to standard patterns"
+    ],
+    
+    "approval_required": [
+      "Any file > 300 lines",
+      "Any function > 50 lines",
+      "New runtime dependencies",
+      "Architectural pattern deviations"
+    ]
+  },
+  
+  "continuous_improvement": {
+    "feedback_collection": [
+      "Developer experience surveys",
+      "Code review friction points",
+      "Build and test performance metrics",
+      "Quality incident analysis"
+    ],
+    
+    "guideline_updates": [
+      "Monthly review of metrics and compliance",
+      "Quarterly assessment of guideline effectiveness",
+      "Annual comprehensive review and update",
+      "Immediate updates for critical issues"
+    ],
+    
+    "learning_integration": [
+      "Industry best practice monitoring",
+      "Tool and technology evaluation",
+      "Team skill development tracking",
+      "External audit recommendations"
+    ]
+  }
+}

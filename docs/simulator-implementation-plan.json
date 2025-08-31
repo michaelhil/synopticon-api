@@ -1,0 +1,1008 @@
+{
+  "title": "Synopticon Simulator Integration Implementation Plan",
+  "version": "2.0.0",
+  "created": "2025-01-31",
+  "author": "Synopticon Architecture Team",
+  
+  "simulator_research": {
+    "msfs_2024": {
+      "name": "Microsoft Flight Simulator 2024",
+      "connection_methods": {
+        "simconnect": {
+          "protocol": "TCP/Named Pipe",
+          "sdk": "SimConnect SDK",
+          "language": "C++/C#",
+          "data_rate": "1-60 Hz configurable",
+          "parameters": "1000+ variables",
+          "features": [
+            "Request/subscribe model",
+            "Event system",
+            "AI object control",
+            "Weather injection",
+            "Camera control"
+          ],
+          "connection_string": "tcp://localhost:500 or pipe://SimConnect",
+          "authentication": "None (local only)"
+        },
+        "wasm": {
+          "protocol": "In-sim WebAssembly",
+          "language": "C++/Rust compiled to WASM",
+          "features": ["Direct memory access", "Custom gauges", "Lower latency"],
+          "limitations": ["Complex deployment", "Version specific"]
+        }
+      },
+      "data_structure": {
+        "aircraft_state": ["position", "attitude", "velocities", "accelerations"],
+        "engine_data": ["rpm", "temperatures", "pressures", "fuel_flow"],
+        "control_surfaces": ["aileron", "elevator", "rudder", "flaps", "gear"],
+        "avionics": ["radios", "navigation", "autopilot", "instruments"],
+        "environment": ["weather", "time", "traffic", "terrain"]
+      }
+    },
+    
+    "xplane_12": {
+      "name": "X-Plane 12",
+      "connection_methods": {
+        "udp_dataref": {
+          "protocol": "UDP",
+          "port": 49000,
+          "data_rate": "Up to 100 Hz",
+          "parameters": "3000+ datarefs",
+          "features": [
+            "Direct dataref access",
+            "Command execution",
+            "Position updates",
+            "No SDK required"
+          ],
+          "packet_format": "Binary with RREF/DREF headers"
+        },
+        "xpconnect": {
+          "protocol": "TCP",
+          "language": "Python/C++",
+          "library": "XPConnect",
+          "features": ["Higher level API", "Plugin system", "Custom commands"]
+        },
+        "datastream": {
+          "protocol": "UDP multicast",
+          "port": 49001,
+          "features": ["Broadcast mode", "Network support", "Configurable output"]
+        }
+      },
+      "data_structure": {
+        "datarefs": {
+          "format": "hierarchical paths",
+          "example": "sim/flightmodel/position/latitude",
+          "types": ["float", "double", "int", "byte_array"],
+          "access": ["read", "write", "subscribe"]
+        }
+      }
+    },
+    
+    "beamng": {
+      "name": "BeamNG.drive",
+      "connection_methods": {
+        "lua_api": {
+          "protocol": "Internal Lua scripting",
+          "features": ["Direct game access", "Real-time control", "Custom scenarios"],
+          "data_access": "getVehicleData(), getPhysicsData()"
+        },
+        "python_api": {
+          "protocol": "TCP",
+          "port": 64256,
+          "library": "BeamNGpy",
+          "features": [
+            "Remote control",
+            "Scenario creation",
+            "Sensor simulation",
+            "AI control"
+          ],
+          "authentication": "None"
+        },
+        "outgauge": {
+          "protocol": "UDP",
+          "port": 4444,
+          "format": "Standard racing telemetry",
+          "data_rate": "100 Hz",
+          "compatibility": "Works with racing peripherals"
+        },
+        "research_api": {
+          "protocol": "HTTP/WebSocket",
+          "features": ["Academic license required", "Advanced sensors", "Batch experiments"]
+        }
+      },
+      "data_structure": {
+        "vehicle": ["position", "velocity", "acceleration", "damage", "fuel"],
+        "physics": ["tire_temps", "suspension", "g_forces", "torque"],
+        "environment": ["road_grip", "weather", "traffic", "time_of_day"],
+        "sensors": ["lidar", "camera", "radar", "ultrasonic"]
+      }
+    },
+    
+    "vatsim_fsd": {
+      "name": "VATSIM FSD Protocol",
+      "connection_methods": {
+        "fsd_protocol": {
+          "protocol": "TCP",
+          "port": 6809,
+          "format": "Text-based line protocol",
+          "authentication": "CID + password",
+          "features": [
+            "Real-time position updates",
+            "ATC communications",
+            "Flight plan filing",
+            "Voice coordination"
+          ],
+          "message_format": "Prefix-based commands (e.g., @N:, #AA, $CQ)",
+          "update_rate": "Position every 5 seconds"
+        }
+      },
+      "data_structure": {
+        "position_update": ["callsign", "lat", "lon", "altitude", "groundspeed", "heading"],
+        "pilot_data": ["CID", "realname", "aircraft_type", "flight_rules"],
+        "atc_data": ["frequency", "facility", "range", "atis"],
+        "messages": ["text", "private_messages", "broadcasts"]
+      }
+    },
+    
+    "vatsim_api": {
+      "name": "VATSIM REST API",
+      "connection_methods": {
+        "rest_api": {
+          "protocol": "HTTPS",
+          "base_url": "https://data.vatsim.net/v3/vatsim-data.json",
+          "update_rate": "15 seconds",
+          "authentication": "None for public data, OAuth for user data",
+          "features": [
+            "Network snapshot",
+            "All pilots/controllers",
+            "Server status",
+            "Events calendar"
+          ],
+          "rate_limits": "No more than once per 15 seconds"
+        },
+        "auth_api": {
+          "protocol": "OAuth 2.0",
+          "endpoint": "https://auth.vatsim.net",
+          "scopes": ["vatsim_details", "email", "full_name", "country"]
+        }
+      },
+      "data_structure": {
+        "general": ["version", "reload", "update_timestamp"],
+        "pilots": ["cid", "callsign", "latitude", "longitude", "altitude", "groundspeed"],
+        "controllers": ["callsign", "frequency", "facility", "rating", "visual_range"],
+        "atis": ["callsign", "atis_code", "text_atis"],
+        "servers": ["ident", "hostname", "location", "clients_connection_allowed"]
+      }
+    }
+  },
+  
+  "architecture_analysis": {
+    "current_synopticon": {
+      "strengths": [
+        "Modular pipeline architecture",
+        "Lazy loading system",
+        "Distribution system (WebSocket, HTTP, MQTT)",
+        "Processing orchestrator",
+        "MCP integration",
+        "Event-driven design",
+        "Zero-dependency approach"
+      ],
+      "limitations": [
+        "Pipelines designed for visual/audio sensors",
+        "No native time synchronization for external sources",
+        "Limited support for high-frequency numerical data",
+        "No built-in telemetry normalization",
+        "Missing correlation engine for multi-source data"
+      ],
+      "components_to_leverage": [
+        "Distribution system for telemetry streaming",
+        "Pipeline orchestrator for processing chains",
+        "WebSocket infrastructure for real-time data",
+        "MCP for LLM integration",
+        "Event system for simulator events"
+      ]
+    },
+    
+    "required_enhancements": {
+      "telemetry_subsystem": {
+        "description": "New subsystem parallel to existing pipelines for telemetry data",
+        "justification": "Telemetry has different characteristics than sensor data",
+        "components": [
+          "Telemetry adapters",
+          "Normalization engine",
+          "Time synchronization service",
+          "High-frequency buffer management"
+        ]
+      },
+      "correlation_engine": {
+        "description": "Service to correlate telemetry with sensor data",
+        "justification": "Core value proposition of simulator integration",
+        "components": [
+          "Timeline service",
+          "Event detector",
+          "Cross-stream analysis",
+          "Derived metrics calculator"
+        ]
+      },
+      "universal_telemetry_model": {
+        "description": "Standardized data model for all simulators",
+        "justification": "Enable simulator-agnostic processing",
+        "components": [
+          "Common schema definition",
+          "Unit conversion system",
+          "Coordinate transformation",
+          "Semantic mapping"
+        ]
+      }
+    }
+  },
+  
+  "architectural_decisions": {
+    "major_decisions": [
+      {
+        "id": "ad1",
+        "decision": "Create separate telemetry module instead of forcing into pipeline system",
+        "rationale": "Telemetry has fundamentally different characteristics",
+        "impact": "New top-level module in src/telemetry/",
+        "breaking_change": false
+      },
+      {
+        "id": "ad2",
+        "decision": "Implement adapter pattern for each simulator",
+        "rationale": "Clean separation of concerns, easier testing",
+        "options": {
+          "adapter_pattern": {
+            "pros": ["Clean interfaces", "Testable", "Extensible"],
+            "cons": ["More code", "Potential overhead"],
+            "selected": true
+          },
+          "monolithic_handler": {
+            "pros": ["Simpler initially", "Less abstraction"],
+            "cons": ["Hard to maintain", "Difficult to test"],
+            "selected": false
+          }
+        }
+      },
+      {
+        "id": "ad3",
+        "decision": "Use factory functions for all telemetry components",
+        "rationale": "Aligns with user's no-class preference",
+        "impact": "All components use factory pattern",
+        "breaking_change": false
+      },
+      {
+        "id": "ad4",
+        "decision": "Implement time synchronization as core service",
+        "rationale": "Critical for correlation accuracy",
+        "options": {
+          "ntp_style": {
+            "pros": ["Proven approach", "Handles drift"],
+            "cons": ["Complex implementation"],
+            "selected": true
+          },
+          "simple_offset": {
+            "pros": ["Easy to implement"],
+            "cons": ["Accumulates error", "No drift handling"],
+            "selected": false
+          }
+        }
+      },
+      {
+        "id": "ad5",
+        "decision": "Refactor distribution system to handle high-frequency telemetry",
+        "rationale": "Current system not optimized for 100Hz+ data",
+        "impact": "Enhanced buffering and compression in distribution layer",
+        "breaking_change": true,
+        "migration_path": "Backward compatible wrapper for existing consumers"
+      }
+    ],
+    
+    "breaking_changes": [
+      {
+        "component": "Distribution System",
+        "change": "Add telemetry-optimized transport with compression",
+        "justification": "Required for 50,000+ values/second throughput",
+        "migration": "Existing endpoints continue working, new endpoints for telemetry"
+      },
+      {
+        "component": "Event System",
+        "change": "Extend to support telemetry events with microsecond precision",
+        "justification": "Simulator events need higher time resolution",
+        "migration": "Backward compatible extension of existing event types"
+      },
+      {
+        "component": "Storage Layer",
+        "change": "Add time-series database support",
+        "justification": "Efficient storage and query of telemetry data",
+        "migration": "Optional feature, existing storage continues to work"
+      }
+    ]
+  },
+  
+  "proposed_architecture": {
+    "overview": "Layered architecture with telemetry as first-class citizen alongside sensors",
+    
+    "layers": {
+      "adapter_layer": {
+        "location": "src/telemetry/adapters/",
+        "components": {
+          "msfs-adapter.ts": "SimConnect protocol implementation",
+          "xplane-adapter.ts": "UDP dataref protocol",
+          "beamng-adapter.ts": "Python/Lua bridge",
+          "vatsim-fsd-adapter.ts": "FSD protocol handler",
+          "vatsim-api-adapter.ts": "REST API client"
+        },
+        "interface": {
+          "connect": "() => Promise<void>",
+          "disconnect": "() => Promise<void>",
+          "subscribe": "(callback: DataCallback) => Unsubscribe",
+          "getCapabilities": "() => Capabilities",
+          "sendCommand": "(command: Command) => Promise<Response>"
+        }
+      },
+      
+      "normalization_layer": {
+        "location": "src/telemetry/normalization/",
+        "components": {
+          "telemetry-normalizer.ts": "Convert to universal model",
+          "unit-converter.ts": "Handle unit conversions",
+          "coordinate-transformer.ts": "Coordinate system alignment",
+          "semantic-mapper.ts": "Map simulator-specific to universal"
+        },
+        "universal_model": {
+          "timestamp": "bigint (microseconds)",
+          "source": "SimulatorSource",
+          "vehicle": "VehicleState",
+          "environment": "EnvironmentState",
+          "controls": "ControlInputs",
+          "events": "SimulatorEvent[]"
+        }
+      },
+      
+      "synchronization_layer": {
+        "location": "src/telemetry/sync/",
+        "components": {
+          "time-sync-service.ts": "NTP-style synchronization",
+          "timeline-manager.ts": "Unified timeline creation",
+          "buffer-manager.ts": "High-frequency data buffering",
+          "interpolator.ts": "Data interpolation for alignment"
+        }
+      },
+      
+      "correlation_layer": {
+        "location": "src/telemetry/correlation/",
+        "components": {
+          "correlation-engine.ts": "Multi-stream correlation",
+          "event-detector.ts": "Detect significant events",
+          "metric-calculator.ts": "Calculate derived metrics",
+          "pattern-analyzer.ts": "Identify behavioral patterns"
+        }
+      },
+      
+      "distribution_layer": {
+        "location": "src/telemetry/distribution/",
+        "components": {
+          "telemetry-distributor.ts": "High-performance distribution",
+          "compression-handler.ts": "Real-time compression",
+          "subscription-manager.ts": "Client subscription handling",
+          "replay-service.ts": "Session replay capability"
+        }
+      }
+    },
+    
+    "data_flow": [
+      "Simulator → Adapter → Raw Data",
+      "Raw Data → Normalizer → Universal Model",
+      "Universal Model → Time Sync → Aligned Data",
+      "Aligned Data → Correlation → Enriched Data",
+      "Enriched Data → Distribution → Clients"
+    ]
+  },
+  
+  "code_structure": {
+    "directory_layout": {
+      "src/telemetry/": {
+        "index.ts": "Main telemetry module export",
+        "types.ts": "TypeScript type definitions",
+        "config.ts": "Configuration management",
+        
+        "adapters/": {
+          "adapter-factory.ts": "Factory for creating adapters",
+          "adapter-interface.ts": "Common adapter interface",
+          "msfs/": {
+            "msfs-adapter.ts": "Main MSFS adapter",
+            "simconnect-client.ts": "SimConnect protocol",
+            "msfs-types.ts": "MSFS-specific types"
+          },
+          "xplane/": {
+            "xplane-adapter.ts": "Main X-Plane adapter",
+            "udp-client.ts": "UDP protocol handler",
+            "dataref-manager.ts": "Dataref subscriptions"
+          },
+          "beamng/": {
+            "beamng-adapter.ts": "Main BeamNG adapter",
+            "python-bridge.ts": "Python API bridge",
+            "outgauge-client.ts": "OutGauge protocol"
+          },
+          "vatsim/": {
+            "fsd-adapter.ts": "FSD protocol adapter",
+            "api-adapter.ts": "REST API adapter",
+            "vatsim-types.ts": "VATSIM-specific types"
+          }
+        },
+        
+        "normalization/": {
+          "normalizer-factory.ts": "Factory for normalizers",
+          "universal-model.ts": "Universal data model",
+          "transformers/": {
+            "msfs-transformer.ts": "MSFS → Universal",
+            "xplane-transformer.ts": "X-Plane → Universal",
+            "beamng-transformer.ts": "BeamNG → Universal",
+            "vatsim-transformer.ts": "VATSIM → Universal"
+          },
+          "units/": {
+            "aviation-units.ts": "Aviation unit conversions",
+            "automotive-units.ts": "Automotive conversions",
+            "si-units.ts": "SI unit system"
+          }
+        },
+        
+        "sync/": {
+          "sync-service.ts": "Main synchronization service",
+          "time-manager.ts": "Time management",
+          "buffer-pool.ts": "Buffer management",
+          "interpolation/": {
+            "linear-interpolator.ts": "Linear interpolation",
+            "spline-interpolator.ts": "Spline interpolation",
+            "predictor.ts": "Predictive interpolation"
+          }
+        },
+        
+        "correlation/": {
+          "correlation-engine.ts": "Main correlation engine",
+          "event-system.ts": "Event detection system",
+          "analyzers/": {
+            "stress-analyzer.ts": "Stress correlation",
+            "attention-analyzer.ts": "Attention patterns",
+            "performance-analyzer.ts": "Performance metrics"
+          }
+        },
+        
+        "distribution/": {
+          "telemetry-stream.ts": "Streaming service",
+          "compression.ts": "Compression algorithms",
+          "protocols/": {
+            "websocket-handler.ts": "WebSocket distribution",
+            "grpc-handler.ts": "gRPC distribution",
+            "mqtt-handler.ts": "MQTT distribution"
+          }
+        },
+        
+        "api/": {
+          "routes.ts": "REST API routes",
+          "handlers.ts": "Request handlers",
+          "validators.ts": "Input validation"
+        },
+        
+        "storage/": {
+          "session-recorder.ts": "Record sessions",
+          "replay-engine.ts": "Replay capability",
+          "timeseries-db.ts": "Time-series storage"
+        }
+      }
+    },
+    
+    "key_interfaces": {
+      "TelemetryAdapter": {
+        "connect": "() => Promise<ConnectionStatus>",
+        "disconnect": "() => Promise<void>",
+        "subscribe": "(params: SubscriptionParams) => Promise<Subscription>",
+        "unsubscribe": "(subscription: Subscription) => Promise<void>",
+        "getStatus": "() => AdapterStatus",
+        "getCapabilities": "() => AdapterCapabilities",
+        "sendCommand": "(command: SimCommand) => Promise<CommandResult>"
+      },
+      
+      "UniversalTelemetryFrame": {
+        "timestamp": "bigint",
+        "sourceId": "string",
+        "sequenceNumber": "number",
+        "vehicle": "VehicleState",
+        "environment": "EnvironmentState",
+        "controls": "ControlState",
+        "performance": "PerformanceMetrics",
+        "events": "TelemetryEvent[]"
+      },
+      
+      "CorrelationResult": {
+        "timestamp": "bigint",
+        "telemetry": "UniversalTelemetryFrame",
+        "sensors": "SensorDataFrame",
+        "derived": "DerivedMetrics",
+        "events": "CorrelatedEvent[]",
+        "confidence": "number"
+      }
+    },
+    
+    "factory_functions": {
+      "createTelemetryAdapter": {
+        "signature": "(type: SimulatorType, config: AdapterConfig) => TelemetryAdapter",
+        "implementation": "Factory pattern with lazy loading"
+      },
+      "createNormalizer": {
+        "signature": "(source: SimulatorType) => Normalizer",
+        "implementation": "Returns simulator-specific normalizer"
+      },
+      "createCorrelationEngine": {
+        "signature": "(config: CorrelationConfig) => CorrelationEngine",
+        "implementation": "Configurable correlation strategies"
+      },
+      "createTelemetryStream": {
+        "signature": "(transport: Transport, options: StreamOptions) => TelemetryStream",
+        "implementation": "Transport-agnostic streaming"
+      }
+    }
+  },
+  
+  "implementation_phases": {
+    "phase1": {
+      "name": "Foundation & BeamNG Prototype",
+      "duration": "2 weeks",
+      "objectives": [
+        "Establish telemetry module structure",
+        "Implement BeamNG adapter as proof of concept",
+        "Create basic normalization",
+        "Test end-to-end data flow"
+      ],
+      "deliverables": [
+        {
+          "item": "Telemetry module skeleton",
+          "files": [
+            "src/telemetry/index.ts",
+            "src/telemetry/types.ts",
+            "src/telemetry/config.ts"
+          ]
+        },
+        {
+          "item": "BeamNG adapter",
+          "files": [
+            "src/telemetry/adapters/beamng/beamng-adapter.ts",
+            "src/telemetry/adapters/beamng/python-bridge.ts"
+          ]
+        },
+        {
+          "item": "Basic normalizer",
+          "files": [
+            "src/telemetry/normalization/normalizer-factory.ts",
+            "src/telemetry/normalization/universal-model.ts"
+          ]
+        },
+        {
+          "item": "Simple WebSocket streaming",
+          "files": [
+            "src/telemetry/distribution/telemetry-stream.ts"
+          ]
+        }
+      ],
+      "success_criteria": [
+        "BeamNG data visible in browser",
+        "30+ Hz update rate achieved",
+        "Basic normalization working"
+      ]
+    },
+    
+    "phase2": {
+      "name": "MSFS & X-Plane Integration",
+      "duration": "3 weeks",
+      "objectives": [
+        "Implement MSFS SimConnect adapter",
+        "Implement X-Plane UDP adapter",
+        "Enhance normalization for aviation data",
+        "Add unit conversion system"
+      ],
+      "deliverables": [
+        {
+          "item": "MSFS adapter",
+          "files": [
+            "src/telemetry/adapters/msfs/msfs-adapter.ts",
+            "src/telemetry/adapters/msfs/simconnect-client.ts"
+          ]
+        },
+        {
+          "item": "X-Plane adapter",
+          "files": [
+            "src/telemetry/adapters/xplane/xplane-adapter.ts",
+            "src/telemetry/adapters/xplane/udp-client.ts"
+          ]
+        },
+        {
+          "item": "Aviation normalizers",
+          "files": [
+            "src/telemetry/normalization/transformers/msfs-transformer.ts",
+            "src/telemetry/normalization/transformers/xplane-transformer.ts"
+          ]
+        },
+        {
+          "item": "Unit conversion",
+          "files": [
+            "src/telemetry/normalization/units/aviation-units.ts",
+            "src/telemetry/normalization/units/si-units.ts"
+          ]
+        }
+      ],
+      "success_criteria": [
+        "Both flight sims connected",
+        "Consistent data model across sims",
+        "Proper unit conversions"
+      ]
+    },
+    
+    "phase3": {
+      "name": "VATSIM & Network Integration",
+      "duration": "2 weeks",
+      "objectives": [
+        "Implement VATSIM FSD adapter",
+        "Implement VATSIM API adapter",
+        "Add network data correlation",
+        "Handle multi-source telemetry"
+      ],
+      "deliverables": [
+        {
+          "item": "VATSIM adapters",
+          "files": [
+            "src/telemetry/adapters/vatsim/fsd-adapter.ts",
+            "src/telemetry/adapters/vatsim/api-adapter.ts"
+          ]
+        },
+        {
+          "item": "Network correlation",
+          "files": [
+            "src/telemetry/correlation/network-correlator.ts"
+          ]
+        },
+        {
+          "item": "Multi-source manager",
+          "files": [
+            "src/telemetry/adapters/multi-source-manager.ts"
+          ]
+        }
+      ],
+      "success_criteria": [
+        "VATSIM data integrated",
+        "Network traffic visible",
+        "Multiple data sources handled"
+      ]
+    },
+    
+    "phase4": {
+      "name": "Time Synchronization & Correlation",
+      "duration": "3 weeks",
+      "objectives": [
+        "Implement time synchronization service",
+        "Build correlation engine",
+        "Add event detection",
+        "Create derived metrics"
+      ],
+      "deliverables": [
+        {
+          "item": "Time sync service",
+          "files": [
+            "src/telemetry/sync/sync-service.ts",
+            "src/telemetry/sync/time-manager.ts"
+          ]
+        },
+        {
+          "item": "Correlation engine",
+          "files": [
+            "src/telemetry/correlation/correlation-engine.ts",
+            "src/telemetry/correlation/event-detector.ts"
+          ]
+        },
+        {
+          "item": "Analyzers",
+          "files": [
+            "src/telemetry/correlation/analyzers/stress-analyzer.ts",
+            "src/telemetry/correlation/analyzers/attention-analyzer.ts"
+          ]
+        }
+      ],
+      "success_criteria": [
+        "< 10ms sync accuracy",
+        "Telemetry-sensor correlation working",
+        "Events detected accurately"
+      ]
+    },
+    
+    "phase5": {
+      "name": "Performance & Distribution",
+      "duration": "2 weeks",
+      "objectives": [
+        "Optimize for high-frequency data",
+        "Implement compression",
+        "Add buffering strategies",
+        "Support multiple protocols"
+      ],
+      "deliverables": [
+        {
+          "item": "Performance optimization",
+          "files": [
+            "src/telemetry/sync/buffer-pool.ts",
+            "src/telemetry/distribution/compression.ts"
+          ]
+        },
+        {
+          "item": "Multi-protocol support",
+          "files": [
+            "src/telemetry/distribution/protocols/websocket-handler.ts",
+            "src/telemetry/distribution/protocols/grpc-handler.ts"
+          ]
+        },
+        {
+          "item": "Load testing",
+          "files": [
+            "tests/telemetry/load-test.ts"
+          ]
+        }
+      ],
+      "success_criteria": [
+        "50,000+ values/second",
+        "< 100ms latency",
+        "10+ concurrent connections"
+      ]
+    },
+    
+    "phase6": {
+      "name": "Storage & Replay",
+      "duration": "2 weeks",
+      "objectives": [
+        "Implement session recording",
+        "Add replay capability",
+        "Integrate time-series database",
+        "Create analysis tools"
+      ],
+      "deliverables": [
+        {
+          "item": "Session recording",
+          "files": [
+            "src/telemetry/storage/session-recorder.ts",
+            "src/telemetry/storage/replay-engine.ts"
+          ]
+        },
+        {
+          "item": "Time-series integration",
+          "files": [
+            "src/telemetry/storage/timeseries-db.ts"
+          ]
+        },
+        {
+          "item": "Analysis tools",
+          "files": [
+            "src/telemetry/analysis/session-analyzer.ts"
+          ]
+        }
+      ],
+      "success_criteria": [
+        "Full session recording",
+        "Synchronized replay",
+        "Query performance < 1s"
+      ]
+    },
+    
+    "phase7": {
+      "name": "API & MCP Integration",
+      "duration": "2 weeks",
+      "objectives": [
+        "Create REST API endpoints",
+        "Add MCP tools",
+        "Implement authentication",
+        "Document everything"
+      ],
+      "deliverables": [
+        {
+          "item": "REST API",
+          "files": [
+            "src/telemetry/api/routes.ts",
+            "src/telemetry/api/handlers.ts"
+          ]
+        },
+        {
+          "item": "MCP tools",
+          "files": [
+            "src/services/mcp/tools/telemetry-tools.ts"
+          ]
+        },
+        {
+          "item": "Documentation",
+          "files": [
+            "docs/telemetry-api.md",
+            "docs/telemetry-setup.md"
+          ]
+        }
+      ],
+      "success_criteria": [
+        "All endpoints working",
+        "MCP tools integrated",
+        "Complete documentation"
+      ]
+    },
+    
+    "phase8": {
+      "name": "Testing & Production",
+      "duration": "2 weeks",
+      "objectives": [
+        "Comprehensive testing",
+        "Performance tuning",
+        "Production deployment",
+        "User training"
+      ],
+      "deliverables": [
+        {
+          "item": "Test suite",
+          "files": [
+            "tests/telemetry/unit/",
+            "tests/telemetry/integration/",
+            "tests/telemetry/e2e/"
+          ]
+        },
+        {
+          "item": "Deployment scripts",
+          "files": [
+            "scripts/deploy-telemetry.sh",
+            "docker/telemetry.dockerfile"
+          ]
+        },
+        {
+          "item": "Training materials",
+          "files": [
+            "docs/telemetry-user-guide.md",
+            "examples/telemetry/"
+          ]
+        }
+      ],
+      "success_criteria": [
+        "80% test coverage",
+        "Production deployment",
+        "User acceptance"
+      ]
+    }
+  },
+  
+  "technical_details": {
+    "performance_targets": {
+      "latency": {
+        "adapter_to_normalization": "< 5ms",
+        "normalization_to_correlation": "< 10ms",
+        "correlation_to_distribution": "< 5ms",
+        "end_to_end": "< 50ms"
+      },
+      "throughput": {
+        "telemetry_values": "50,000/second",
+        "concurrent_simulators": "10+",
+        "concurrent_clients": "100+"
+      },
+      "accuracy": {
+        "time_synchronization": "< 10ms",
+        "unit_conversion": "6 decimal places",
+        "interpolation_error": "< 1%"
+      }
+    },
+    
+    "technology_stack": {
+      "runtime": "Bun 1.0+",
+      "language": "TypeScript with JSDoc",
+      "protocols": {
+        "tcp": "Native Bun TCP",
+        "udp": "Node dgram compatibility",
+        "websocket": "Bun WebSocket",
+        "http": "Bun.serve"
+      },
+      "libraries": {
+        "minimal_deps": true,
+        "prefer_native": true,
+        "lazy_loading": true
+      }
+    },
+    
+    "error_handling": {
+      "connection_failures": "Exponential backoff retry",
+      "data_corruption": "Checksum validation",
+      "buffer_overflow": "Circular buffer with overwrite",
+      "time_drift": "Continuous recalibration"
+    },
+    
+    "monitoring": {
+      "metrics": [
+        "Data rate per adapter",
+        "Latency histograms",
+        "Error rates",
+        "Buffer utilization",
+        "CPU/memory usage"
+      ],
+      "alerts": [
+        "Connection loss",
+        "High latency",
+        "Buffer overflow",
+        "Data corruption"
+      ]
+    }
+  },
+  
+  "migration_strategy": {
+    "backward_compatibility": {
+      "existing_pipelines": "Continue to work unchanged",
+      "distribution_system": "Extended, not replaced",
+      "api_endpoints": "New endpoints, old ones preserved",
+      "storage": "Additional storage, not replacement"
+    },
+    
+    "rollout_plan": {
+      "alpha": "Internal testing with single simulator",
+      "beta": "Selected users with multiple simulators",
+      "production": "Gradual rollout with feature flags"
+    },
+    
+    "rollback_plan": {
+      "feature_flags": "Disable telemetry features",
+      "data_migration": "Export tools for critical data",
+      "version_pinning": "Lock to stable version"
+    }
+  },
+  
+  "risk_mitigation": {
+    "technical_risks": [
+      {
+        "risk": "Simulator API changes",
+        "mitigation": "Adapter abstraction, version detection"
+      },
+      {
+        "risk": "Performance bottlenecks",
+        "mitigation": "Profiling, horizontal scaling"
+      },
+      {
+        "risk": "Time sync accuracy",
+        "mitigation": "Multiple sync strategies, validation"
+      }
+    ],
+    
+    "operational_risks": [
+      {
+        "risk": "Complex setup",
+        "mitigation": "Auto-configuration, setup wizards"
+      },
+      {
+        "risk": "High resource usage",
+        "mitigation": "Configurable quality levels"
+      },
+      {
+        "risk": "Network issues",
+        "mitigation": "Local buffering, retry logic"
+      }
+    ]
+  },
+  
+  "estimated_timeline": {
+    "total_duration": "16 weeks",
+    "start_date": "2025-02-01",
+    "end_date": "2025-05-24",
+    "milestones": {
+      "week_2": "BeamNG streaming working",
+      "week_5": "Three simulators integrated",
+      "week_7": "VATSIM integration complete",
+      "week_10": "Correlation engine operational",
+      "week_12": "Performance targets met",
+      "week_14": "Storage and replay working",
+      "week_16": "Production ready"
+    }
+  },
+  
+  "success_metrics": {
+    "phase1": ["BeamNG connected", "30Hz streaming"],
+    "phase2": ["MSFS/X-Plane working", "Normalized data"],
+    "phase3": ["VATSIM integrated", "Multi-source handling"],
+    "phase4": ["Correlation working", "< 10ms sync"],
+    "phase5": ["50k values/sec", "< 100ms latency"],
+    "phase6": ["Recording working", "Replay synchronized"],
+    "phase7": ["APIs documented", "MCP integrated"],
+    "phase8": ["Tests passing", "Production deployed"]
+  }
+}

@@ -1,0 +1,605 @@
+{
+  "title": "Enhanced Synopticon Implementation Plan: Selective Convergence with Development Guardrails",
+  "version": "3.0.0",
+  "created": "2025-01-31",
+  "strategy": "selective_convergence",
+  "breaking_changes_approved": true,
+  
+  "development_guardrails": {
+    "purpose": "Systematic prevention of architectural drift and style regressions",
+    "enforcement_strategy": "mandatory_consultation_before_coding",
+    
+    "architectural_principles": {
+      "runtime": {
+        "primary": "Bun 1.0+",
+        "secondary": "Node.js compatibility layer if absolutely required",
+        "never": "Direct Node.js-only implementations",
+        "reasoning": "Bun provides superior performance and native TypeScript support"
+      },
+      
+      "programming_paradigm": {
+        "required": "Functional programming with factory functions",
+        "forbidden": "ES6 classes, constructors, inheritance patterns",
+        "pattern": "const createService = (config) => ({ method1, method2 })",
+        "reasoning": "Composition over inheritance, easier testing, memory efficiency"
+      },
+      
+      "code_organization": {
+        "max_file_length": {
+          "lines": 300,
+          "reasoning": "Maintainability, easier code review, reduced complexity",
+          "exceptions": ["Generated files", "Configuration files", "Type definitions"],
+          "action_when_exceeded": "Split into multiple files with clear interfaces"
+        },
+        
+        "max_function_length": {
+          "lines": 50,
+          "reasoning": "Single responsibility, easier testing, reduced cognitive load",
+          "exceptions": ["Factory functions with multiple methods", "Configuration objects"],
+          "action_when_exceeded": "Extract helper functions or split functionality"
+        },
+        
+        "module_structure": {
+          "pattern": "index.ts exports, implementation in separate files",
+          "naming": "kebab-case for files, camelCase for functions",
+          "organization": "Feature-based folders, not type-based"
+        }
+      },
+      
+      "loading_strategy": {
+        "default": "Lazy loading for all non-critical components",
+        "critical_path": "Only essential bootstrapping components loaded immediately",
+        "pattern": "Dynamic imports with error handling",
+        "performance_target": "< 200ms initial load time"
+      },
+      
+      "error_handling": {
+        "pattern": "Explicit error types, no silent failures",
+        "return_style": "Result<T, Error> pattern or Promise rejection",
+        "logging": "Structured logging with context",
+        "never": "try-catch without specific error handling"
+      }
+    },
+    
+    "code_quality_standards": {
+      "placeholder_code": {
+        "status": "strictly_forbidden",
+        "examples_forbidden": [
+          "// TODO: Implement this",
+          "throw new Error('Not implemented')",
+          "const mockData = {...}",
+          "// Placeholder for future feature"
+        ],
+        "requirement": "All code must be production-ready or clearly marked as experimental",
+        "alternative": "Create stub functions that work but return minimal viable implementations"
+      },
+      
+      "type_safety": {
+        "requirement": "TypeScript with strict mode enabled",
+        "style": "Explicit interfaces over 'any' types",
+        "documentation": "JSDoc for all public APIs",
+        "validation": "Runtime type checking for external data"
+      },
+      
+      "dependencies": {
+        "philosophy": "Zero-dependency approach where possible",
+        "evaluation_criteria": [
+          "Does this solve a problem we can't solve ourselves?",
+          "Is the maintenance burden justified?",
+          "Does it align with Bun/native capabilities?"
+        ],
+        "preferred": "Bun built-in modules > Small focused libraries > Large frameworks"
+      }
+    },
+    
+    "architecture_consistency": {
+      "data_flow_patterns": {
+        "sensors": "Pipeline-based: Input → Processing → Analysis → Output",
+        "telemetry": "Stream-based: Connect → Normalize → Correlate → Distribute",
+        "shared": "Event-driven communication between domains"
+      },
+      
+      "interface_design": {
+        "principle": "Consistent interfaces across similar components",
+        "pattern": "Factory function returning object with methods",
+        "configuration": "Single config object parameter",
+        "lifecycle": "connect/disconnect, start/stop, cleanup patterns"
+      },
+      
+      "performance_considerations": {
+        "memory": "Object pooling for high-frequency operations",
+        "cpu": "Web Workers for intensive processing",
+        "io": "Streaming for large data sets",
+        "network": "Compression and batching for distribution"
+      }
+    },
+    
+    "implementation_workflow": {
+      "pre_coding_checklist": [
+        "Consult this guardrail document",
+        "Verify architectural alignment",
+        "Check for existing similar implementations",
+        "Identify performance requirements",
+        "Plan error handling strategy"
+      ],
+      
+      "during_coding_validation": [
+        "File length check every 50 lines",
+        "Function complexity review",
+        "Dependency evaluation",
+        "Performance impact assessment"
+      ],
+      
+      "post_coding_validation": [
+        "Automated linting and type checking",
+        "Performance benchmarking",
+        "Integration testing",
+        "Documentation completeness"
+      ]
+    }
+  },
+  
+  "comprehensive_testing_system": {
+    "philosophy": "Shift-left testing with comprehensive automation",
+    "objectives": [
+      "Reduce manual testing iterations",
+      "Catch issues before user interaction",
+      "Provide transparent test coverage",
+      "Enable confident refactoring"
+    ],
+    
+    "testing_pyramid": {
+      "unit_tests": {
+        "coverage_target": "90%",
+        "focus": "Individual functions and components",
+        "framework": "Bun test (native)",
+        "patterns": [
+          "Factory function validation",
+          "Pure function testing",
+          "Error condition handling",
+          "Type safety verification"
+        ],
+        "automation": "Run on every file save"
+      },
+      
+      "integration_tests": {
+        "coverage_target": "80%",
+        "focus": "Component interactions and data flow",
+        "framework": "Bun test with test containers",
+        "scenarios": [
+          "Sensor pipeline end-to-end",
+          "Telemetry adapter connections",
+          "Distribution system reliability",
+          "Configuration validation"
+        ],
+        "automation": "Run on every commit"
+      },
+      
+      "system_tests": {
+        "coverage_target": "Key user journeys",
+        "focus": "Complete workflows and performance",
+        "framework": "Custom test harness",
+        "scenarios": [
+          "Full sensor-to-distribution pipeline",
+          "Simulator integration workflows",
+          "Correlation engine accuracy",
+          "Multi-user concurrent usage"
+        ],
+        "automation": "Run on every pull request"
+      },
+      
+      "performance_tests": {
+        "coverage_target": "All critical paths",
+        "focus": "Latency, throughput, resource usage",
+        "framework": "Custom benchmarking suite",
+        "metrics": [
+          "Pipeline processing latency < 100ms",
+          "Telemetry throughput > 50k values/sec",
+          "Memory usage growth < 10MB/hour",
+          "CPU usage < 80% under load"
+        ],
+        "automation": "Run nightly and on performance-critical changes"
+      }
+    },
+    
+    "test_data_management": {
+      "approach": "Generated synthetic data with real-world characteristics",
+      "sensor_data": {
+        "video_frames": "Procedurally generated faces with known landmarks",
+        "audio_streams": "Synthetic speech with controlled characteristics",
+        "eye_tracking": "Simulated gaze patterns with ground truth"
+      },
+      
+      "telemetry_data": {
+        "flight_sim": "Recorded flight patterns with GPS coordinates",
+        "driving_sim": "Test track scenarios with known outcomes",
+        "network_sim": "Controlled VATSIM-like data streams"
+      },
+      
+      "correlation_scenarios": {
+        "stress_testing": "High G-force events with simulated biometric response",
+        "attention_mapping": "Known visual targets with expected gaze patterns",
+        "learning_curves": "Progressive skill scenarios with performance metrics"
+      }
+    },
+    
+    "test_infrastructure": {
+      "test_environments": {
+        "local": "Full stack on developer machine",
+        "ci": "Lightweight stack for automated testing",
+        "staging": "Production-like environment for integration",
+        "performance": "Dedicated hardware for benchmarking"
+      },
+      
+      "mock_services": {
+        "simulator_mocks": "Controllable fake simulators for testing",
+        "sensor_mocks": "Predictable sensor data generators",
+        "network_mocks": "Simulated network conditions and failures"
+      },
+      
+      "test_orchestration": {
+        "parallel_execution": "Tests run in parallel where possible",
+        "smart_scheduling": "Only run relevant tests based on changes",
+        "failure_isolation": "Prevent cascading test failures",
+        "reporting": "Comprehensive test reports with trend analysis"
+      }
+    },
+    
+    "quality_gates": {
+      "commit_gate": [
+        "All unit tests pass",
+        "No linting errors",
+        "Type checking passes",
+        "No security vulnerabilities"
+      ],
+      
+      "merge_gate": [
+        "Integration tests pass", 
+        "Performance benchmarks within 10% of baseline",
+        "Test coverage targets met",
+        "Documentation updated"
+      ],
+      
+      "release_gate": [
+        "Full system tests pass",
+        "Performance tests meet SLA requirements",
+        "Security scan passes",
+        "User acceptance criteria met"
+      ]
+    },
+    
+    "monitoring_and_feedback": {
+      "test_metrics": [
+        "Test execution time trends",
+        "Flaky test identification", 
+        "Coverage evolution over time",
+        "Performance regression detection"
+      ],
+      
+      "feedback_loops": [
+        "Automated issue creation for test failures",
+        "Performance alerts for regressions",
+        "Test gap analysis based on production issues",
+        "Developer productivity metrics"
+      ]
+    }
+  },
+  
+  "revised_implementation_phases": {
+    "phase_0": {
+      "name": "Guardrails and Testing Foundation",
+      "duration": "1 week",
+      "priority": "critical",
+      "objectives": [
+        "Implement development guardrail validation",
+        "Set up comprehensive testing infrastructure", 
+        "Create test data generators",
+        "Establish quality gates"
+      ],
+      "deliverables": [
+        {
+          "item": "Guardrail validation system",
+          "description": "Automated checks for file length, function complexity, architectural compliance",
+          "files": [
+            "scripts/validate-guardrails.ts",
+            "scripts/pre-commit-validation.ts"
+          ]
+        },
+        {
+          "item": "Testing infrastructure", 
+          "description": "Test harness, data generators, mock services",
+          "files": [
+            "tests/infrastructure/test-harness.ts",
+            "tests/mocks/simulator-mock.ts",
+            "tests/data/generators.ts"
+          ]
+        }
+      ],
+      "success_criteria": [
+        "Guardrail validation catches style violations",
+        "Test infrastructure can generate realistic data",
+        "Quality gates prevent problematic commits"
+      ]
+    },
+    
+    "phase_1": {
+      "name": "Shared Infrastructure Extraction",
+      "duration": "2 weeks", 
+      "objectives": [
+        "Extract common components to src/core/common/",
+        "Enhance distribution for multiple data types",
+        "Unified configuration system",
+        "Universal event system"
+      ],
+      "deliverables": [
+        {
+          "item": "Common infrastructure",
+          "files": [
+            "src/core/common/distribution/universal-distributor.ts",
+            "src/core/common/configuration/unified-config.ts",
+            "src/core/common/events/universal-events.ts",
+            "src/core/common/monitoring/cross-domain-metrics.ts"
+          ],
+          "validation": [
+            "All existing tests pass after refactoring",
+            "New tests cover common components",
+            "Performance benchmarks show no regression"
+          ]
+        }
+      ],
+      "breaking_changes": [
+        {
+          "component": "Distribution system",
+          "change": "Enhanced API for multiple data types",
+          "migration": "Backward compatible wrapper maintained"
+        }
+      ]
+    },
+    
+    "phase_2": {
+      "name": "Sensor Architecture Consolidation", 
+      "duration": "1 week",
+      "objectives": [
+        "Move sensor-specific code to src/core/sensors/",
+        "Refactor pipelines to use shared infrastructure",
+        "Maintain performance characteristics"
+      ],
+      "deliverables": [
+        {
+          "item": "Sensor architecture refactor",
+          "files": [
+            "src/core/sensors/pipelines/",
+            "src/core/sensors/processing/",
+            "src/core/sensors/index.ts"
+          ],
+          "validation": [
+            "Sensor pipeline performance unchanged",
+            "All sensor tests pass",
+            "Memory usage within 5% of baseline"
+          ]
+        }
+      ]
+    },
+    
+    "phase_3": {
+      "name": "Telemetry System Implementation",
+      "duration": "6 weeks",
+      "objectives": [
+        "Implement telemetry adapters using shared infrastructure",
+        "Build normalization and time sync systems", 
+        "Achieve performance targets"
+      ],
+      "deliverables": [
+        {
+          "item": "Simulator adapters",
+          "files": [
+            "src/core/telemetry/adapters/msfs/",
+            "src/core/telemetry/adapters/xplane/",
+            "src/core/telemetry/adapters/beamng/",
+            "src/core/telemetry/adapters/vatsim/"
+          ],
+          "validation": [
+            "Each adapter passes connection tests",
+            "Data normalization accuracy > 99%", 
+            "Latency < 50ms end-to-end"
+          ]
+        },
+        {
+          "item": "Time synchronization system",
+          "files": [
+            "src/core/telemetry/sync/time-sync-service.ts",
+            "src/core/telemetry/sync/timeline-manager.ts"
+          ],
+          "validation": [
+            "Sync accuracy < 10ms",
+            "Handles clock drift automatically",
+            "Performance tests show stable operation"
+          ]
+        }
+      ]
+    },
+    
+    "phase_4": {
+      "name": "Correlation Engine",
+      "duration": "3 weeks", 
+      "objectives": [
+        "Build cross-domain correlation engine",
+        "Implement event detection",
+        "Create derived metrics system"
+      ],
+      "deliverables": [
+        {
+          "item": "Correlation engine",
+          "files": [
+            "src/core/correlation/correlation-engine.ts",
+            "src/core/correlation/event-detector.ts",
+            "src/core/correlation/analyzers/"
+          ],
+          "validation": [
+            "Correlation accuracy validated with known scenarios",
+            "Event detection precision/recall > 90%",
+            "Real-time operation at target throughput"
+          ]
+        }
+      ]
+    },
+    
+    "phase_5": {
+      "name": "Integration and Optimization",
+      "duration": "2 weeks",
+      "objectives": [
+        "Full system integration testing",
+        "Performance optimization",
+        "Production readiness validation"
+      ],
+      "deliverables": [
+        {
+          "item": "System integration",
+          "validation": [
+            "All system tests pass",
+            "Performance targets met",
+            "Stress tests show stability",
+            "User acceptance criteria satisfied"
+          ]
+        }
+      ]
+    }
+  },
+  
+  "guardrail_enforcement_mechanism": {
+    "pre_commit_hooks": {
+      "file_length_check": "Reject commits with files > 300 lines",
+      "function_length_check": "Warn for functions > 50 lines",
+      "architecture_compliance": "Verify imports follow architectural patterns",
+      "placeholder_detection": "Block commits containing placeholder code"
+    },
+    
+    "ci_pipeline_gates": {
+      "architectural_review": "Automated analysis of architectural drift",
+      "performance_regression": "Benchmark comparison with baseline",
+      "test_coverage": "Enforce minimum coverage thresholds",
+      "dependency_audit": "Review new dependencies against guidelines"
+    },
+    
+    "development_tools": {
+      "ide_integration": "VS Code extension for real-time guardrail feedback",
+      "cli_validation": "Command-line tool for manual architecture validation",
+      "documentation_generation": "Auto-generate architecture docs from code"
+    }
+  },
+  
+  "testing_system_implementation": {
+    "test_harness_architecture": {
+      "orchestrator": {
+        "file": "tests/infrastructure/test-orchestrator.ts",
+        "responsibilities": [
+          "Parallel test execution",
+          "Smart test selection based on changes", 
+          "Resource management",
+          "Result aggregation"
+        ]
+      },
+      
+      "data_generators": {
+        "file": "tests/data/generators/",
+        "capabilities": [
+          "Synthetic sensor data with ground truth",
+          "Realistic telemetry streams",
+          "Network condition simulation",
+          "Edge case scenario creation"
+        ]
+      },
+      
+      "mock_services": {
+        "simulator_mock": {
+          "file": "tests/mocks/simulator-services.ts",
+          "features": [
+            "Controllable telemetry generation",
+            "Network failure simulation",
+            "Latency injection",
+            "Data corruption scenarios"
+          ]
+        },
+        
+        "sensor_mock": {
+          "file": "tests/mocks/sensor-services.ts", 
+          "features": [
+            "Predictable frame generation",
+            "Quality variation simulation",
+            "Device failure scenarios",
+            "Performance characteristic tuning"
+          ]
+        }
+      }
+    },
+    
+    "performance_monitoring": {
+      "benchmark_suite": {
+        "file": "tests/performance/benchmark-suite.ts",
+        "metrics": [
+          "Pipeline latency distribution",
+          "Memory usage patterns",
+          "CPU utilization curves",
+          "Network throughput limits"
+        ]
+      },
+      
+      "regression_detection": {
+        "algorithm": "Statistical process control with confidence intervals",
+        "thresholds": "2 standard deviations from baseline",
+        "trending": "7-day moving average analysis",
+        "alerting": "Automated notifications for significant changes"
+      }
+    }
+  },
+  
+  "success_metrics": {
+    "development_quality": [
+      "Zero files > 300 lines after phase 1",
+      "Zero functions > 50 lines except documented exceptions",
+      "Zero placeholder code in production branches",
+      "90% adherence to architectural patterns"
+    ],
+    
+    "testing_effectiveness": [
+      "90% unit test coverage maintained",
+      "80% integration test coverage",
+      "< 5% false positive rate in tests",
+      "< 2 hour feedback cycle for changes"
+    ],
+    
+    "system_reliability": [
+      "99% uptime in staging environment", 
+      "< 100ms p95 latency for all operations",
+      "Zero critical bugs escaping to production",
+      "Automated recovery from 90% of failure modes"
+    ]
+  },
+  
+  "risk_mitigation_enhanced": {
+    "architectural_drift": {
+      "risk": "Gradual deviation from architectural principles",
+      "mitigation": "Automated guardrail enforcement with CI gates",
+      "monitoring": "Weekly architectural compliance reports"
+    },
+    
+    "testing_debt": {
+      "risk": "Accumulation of untested code",
+      "mitigation": "Coverage gates prevent merging undertested code",
+      "monitoring": "Test coverage trend analysis"
+    },
+    
+    "performance_regression": {
+      "risk": "Unnoticed performance degradation",
+      "mitigation": "Automated performance testing with statistical analysis",
+      "monitoring": "Continuous benchmarking with alerting"
+    }
+  },
+  
+  "timeline_summary": {
+    "total_duration": "15 weeks (reduced from 16 with better guardrails)",
+    "critical_path": "Guardrails → Infrastructure → Telemetry → Correlation → Integration",
+    "parallel_opportunities": "Testing development alongside feature implementation",
+    "risk_buffer": "1 week contingency for integration issues"
+  }
+}
