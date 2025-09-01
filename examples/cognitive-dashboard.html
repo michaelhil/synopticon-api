@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cognitive Advisory System Dashboard</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: #fff;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .dashboard {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            grid-template-rows: auto auto auto;
+            gap: 20px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 20px;
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .card {
+            background: rgba(255,255,255,0.08);
+            border-radius: 15px;
+            padding: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            backdrop-filter: blur(10px);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+        
+        .card h3 {
+            margin-bottom: 15px;
+            color: #4fc3f7;
+            font-size: 1.2em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .status-online { background: #4caf50; }
+        .status-warning { background: #ff9800; }
+        .status-error { background: #f44336; }
+        .status-offline { background: #757575; }
+        
+        .metric {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .metric:last-child { border-bottom: none; }
+        
+        .metric-value {
+            font-weight: bold;
+            color: #fff;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+        
+        .progress-normal { background: linear-gradient(90deg, #4caf50, #8bc34a); }
+        .progress-warning { background: linear-gradient(90deg, #ff9800, #ffc107); }
+        .progress-critical { background: linear-gradient(90deg, #f44336, #e91e63); }
+        
+        .large-card {
+            grid-column: span 2;
+        }
+        
+        .alert {
+            background: linear-gradient(135deg, #f44336, #e91e63);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-left: 4px solid #fff;
+        }
+        
+        .alert-warning {
+            background: linear-gradient(135deg, #ff9800, #ffc107);
+            color: #000;
+        }
+        
+        .alert-info {
+            background: linear-gradient(135deg, #2196f3, #03a9f4);
+        }
+        
+        .recommendations {
+            background: rgba(76, 175, 80, 0.1);
+            border: 1px solid rgba(76, 175, 80, 0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        
+        .recommendations h4 {
+            color: #4caf50;
+            margin-bottom: 10px;
+        }
+        
+        .recommendations ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        
+        .recommendations li {
+            padding: 5px 0;
+            border-left: 3px solid #4caf50;
+            padding-left: 10px;
+            margin-bottom: 5px;
+            background: rgba(76, 175, 80, 0.05);
+        }
+        
+        .chat-container {
+            grid-column: 1 / -1;
+            background: rgba(255,255,255,0.05);
+            border-radius: 15px;
+            padding: 20px;
+            max-height: 400px;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(0,0,0,0.2);
+            border-radius: 10px;
+            max-height: 250px;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 10px;
+        }
+        
+        .message-user {
+            background: linear-gradient(135deg, #2196f3, #03a9f4);
+            margin-left: 20%;
+            text-align: right;
+        }
+        
+        .message-assistant {
+            background: rgba(255,255,255,0.1);
+            margin-right: 20%;
+        }
+        
+        .chat-input-container {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .chat-input {
+            flex: 1;
+            background: rgba(255,255,255,0.1);
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 25px;
+            padding: 12px 20px;
+            color: #fff;
+            font-size: 14px;
+        }
+        
+        .chat-input:focus {
+            outline: none;
+            border-color: #4fc3f7;
+            box-shadow: 0 0 10px rgba(79, 195, 247, 0.3);
+        }
+        
+        .chat-send {
+            background: linear-gradient(135deg, #4fc3f7, #29b6f6);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 25px;
+            color: #fff;
+            cursor: pointer;
+            font-weight: bold;
+            transition: transform 0.2s ease;
+        }
+        
+        .chat-send:hover {
+            transform: scale(1.05);
+        }
+        
+        .prediction {
+            background: linear-gradient(135deg, #9c27b0, #673ab7);
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 10px;
+        }
+        
+        .prediction h4 {
+            color: #e1bee7;
+            margin-bottom: 10px;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255,255,255,0.3);
+            border-radius: 50%;
+            border-top-color: #4fc3f7;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .timestamp {
+            font-size: 0.8em;
+            color: rgba(255,255,255,0.6);
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard">
+        <!-- Header -->
+        <div class="header">
+            <h1>🧠 Cognitive Advisory System Dashboard</h1>
+            <p>Real-time monitoring and intelligent decision support</p>
+            <div class="timestamp" id="current-time"></div>
+        </div>
+        
+        <!-- System Status -->
+        <div class="card">
+            <h3><span class="status-indicator status-online" id="system-status"></span> System Status</h3>
+            <div class="metric">
+                <span>Overall Status</span>
+                <span class="metric-value" id="overall-status">Nominal</span>
+            </div>
+            <div class="metric">
+                <span>Active Components</span>
+                <span class="metric-value" id="active-components">6/6</span>
+            </div>
+            <div class="metric">
+                <span>Response Time</span>
+                <span class="metric-value" id="response-time">45ms</span>
+            </div>
+            <div class="metric">
+                <span>Data Quality</span>
+                <span class="metric-value" id="data-quality">94%</span>
+            </div>
+        </div>
+        
+        <!-- Human State -->
+        <div class="card">
+            <h3><span class="status-indicator status-online"></span> Human State</h3>
+            <div class="metric">
+                <span>Cognitive Load</span>
+                <span class="metric-value" id="cognitive-load">65%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill progress-warning" id="cognitive-load-bar" style="width: 65%"></div>
+            </div>
+            
+            <div class="metric">
+                <span>Fatigue Level</span>
+                <span class="metric-value" id="fatigue-level">30%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill progress-normal" id="fatigue-bar" style="width: 30%"></div>
+            </div>
+            
+            <div class="metric">
+                <span>Attention</span>
+                <span class="metric-value" id="attention-level">85%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill progress-normal" id="attention-bar" style="width: 85%"></div>
+            </div>
+        </div>
+        
+        <!-- Environmental Conditions -->
+        <div class="card">
+            <h3><span class="status-indicator status-warning"></span> Environment</h3>
+            <div class="metric">
+                <span>Weather Risk</span>
+                <span class="metric-value" id="weather-risk">Moderate</span>
+            </div>
+            <div class="metric">
+                <span>Visibility</span>
+                <span class="metric-value" id="visibility">8.2 km</span>
+            </div>
+            <div class="metric">
+                <span>Wind Speed</span>
+                <span class="metric-value" id="wind-speed">15 km/h</span>
+            </div>
+            <div class="metric">
+                <span>Traffic Density</span>
+                <span class="metric-value" id="traffic-density">High</span>
+            </div>
+        </div>
+        
+        <!-- System Performance -->
+        <div class="card">
+            <h3><span class="status-indicator status-online"></span> System Performance</h3>
+            <div class="metric">
+                <span>Automation Level</span>
+                <span class="metric-value" id="automation-level">Level 2</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill progress-normal" id="automation-bar" style="width: 40%"></div>
+            </div>
+            
+            <div class="metric">
+                <span>System Health</span>
+                <span class="metric-value" id="system-health">96%</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill progress-normal" id="health-bar" style="width: 96%"></div>
+            </div>
+        </div>
+        
+        <!-- Active Alerts and Recommendations -->
+        <div class="card large-card">
+            <h3><span class="status-indicator status-warning"></span> Alerts & Recommendations</h3>
+            
+            <div class="alert alert-warning">
+                <strong>⚠️ Performance Advisory:</strong> Cognitive workload approaching optimal threshold. Consider brief rest or automation increase.
+            </div>
+            
+            <div class="alert alert-info">
+                <strong>ℹ️ Weather Update:</strong> Visibility reduced to 8.2km due to light fog. Enhanced monitoring active.
+            </div>
+            
+            <div class="recommendations">
+                <h4>🎯 AI Recommendations</h4>
+                <ul>
+                    <li>Increase automation level to 3 for next 15 minutes</li>
+                    <li>Reduce secondary task load by 25%</li>
+                    <li>Schedule micro-break in 10 minutes</li>
+                    <li>Monitor environmental conditions closely</li>
+                </ul>
+            </div>
+            
+            <div class="prediction">
+                <h4>🔮 Predictive Analysis</h4>
+                <p><strong>Next 5 minutes:</strong> Cognitive load likely to increase to 72% based on current trends and upcoming task complexity.</p>
+                <p><strong>Confidence:</strong> 87%</p>
+            </div>
+        </div>
+        
+        <!-- AI Chat Interface -->
+        <div class="chat-container">
+            <h3><span class="status-indicator status-online"></span> AI Advisory Chat</h3>
+            <div class="chat-messages" id="chat-messages">
+                <div class="message message-assistant">
+                    <strong>Cognitive Advisor:</strong> Hello! I'm monitoring your performance and environmental conditions. How can I assist you today?
+                    <div class="timestamp">Just now</div>
+                </div>
+            </div>
+            <div class="chat-input-container">
+                <input type="text" class="chat-input" id="chat-input" placeholder="Ask about performance, get recommendations, or request analysis...">
+                <button class="chat-send" id="chat-send">Send</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Real-time dashboard functionality
+        class CognitiveDashboard {
+            constructor() {
+                this.apiBaseURL = 'http://localhost:8081/api/cognitive';
+                this.wsConnection = null;
+                this.updateInterval = null;
+                
+                this.init();
+            }
+            
+            async init() {
+                // Initialize WebSocket connection for real-time updates
+                this.connectWebSocket();
+                
+                // Start periodic updates
+                this.startPeriodicUpdates();
+                
+                // Set up chat interface
+                this.setupChatInterface();
+                
+                // Initial data load
+                await this.loadInitialData();
+                
+                // Update timestamp
+                this.updateTimestamp();
+                setInterval(() => this.updateTimestamp(), 1000);
+            }
+            
+            connectWebSocket() {
+                try {
+                    // Connect to cognitive system WebSocket for real-time updates
+                    this.wsConnection = new WebSocket('ws://localhost:8081/cognitive-stream');
+                    
+                    this.wsConnection.onopen = () => {
+                        console.log('Connected to cognitive system WebSocket');
+                        this.updateSystemStatus('online');
+                    };
+                    
+                    this.wsConnection.onmessage = (event) => {
+                        const message = JSON.parse(event.data);
+                        this.handleRealtimeUpdate(message);
+                    };
+                    
+                    this.wsConnection.onclose = () => {
+                        console.log('Disconnected from cognitive system');
+                        this.updateSystemStatus('offline');
+                        
+                        // Attempt to reconnect after 5 seconds
+                        setTimeout(() => this.connectWebSocket(), 5000);
+                    };
+                    
+                    this.wsConnection.onerror = (error) => {
+                        console.error('WebSocket error:', error);
+                        this.updateSystemStatus('error');
+                    };
+                } catch (error) {
+                    console.warn('WebSocket connection failed, using polling instead');
+                    this.updateSystemStatus('warning');
+                }
+            }
+            
+            async loadInitialData() {
+                try {
+                    // Load system status
+                    const status = await this.apiCall('/status');
+                    this.updateDashboard(status.data);
+                    
+                    // Load current metrics
+                    const metrics = await this.apiCall('/metrics');
+                    this.updateMetrics(metrics.data);
+                    
+                } catch (error) {
+                    console.error('Failed to load initial data:', error);
+                    this.showError('Failed to connect to cognitive system');
+                }
+            }
+            
+            async apiCall(endpoint) {
+                const response = await fetch(`${this.apiBaseURL}${endpoint}`);
+                if (!response.ok) {
+                    throw new Error(`API call failed: ${response.status}`);
+                }
+                return await response.json();
+            }
+            
+            startPeriodicUpdates() {
+                this.updateInterval = setInterval(async () => {
+                    if (!this.wsConnection || this.wsConnection.readyState !== WebSocket.OPEN) {
+                        // Fallback to polling if WebSocket is not available
+                        await this.loadInitialData();
+                    }
+                }, 5000);
+            }
+            
+            handleRealtimeUpdate(message) {
+                switch (message.type) {
+                    case 'cognitive-state-update':
+                        this.updateHumanState(message.data);
+                        break;
+                    case 'cognitive-performance-analysis':
+                        this.updatePerformanceMetrics(message.data);
+                        break;
+                    case 'cognitive-advisory-response':
+                        this.addAdvisoryMessage(message.data);
+                        break;
+                    case 'cognitive-emergency-alert':
+                        this.showEmergencyAlert(message.data);
+                        break;
+                    case 'cognitive-system-status':
+                        this.updateSystemMetrics(message.data);
+                        break;
+                }
+            }
+            
+            updateDashboard(data) {
+                // Update system status
+                if (data.status) {
+                    document.getElementById('overall-status').textContent = data.status.status || 'Unknown';
+                    document.getElementById('active-components').textContent = 
+                        `${Object.values(data.status.components).filter(c => c).length}/6`;
+                }
+                
+                // Update response time and data quality with simulated values
+                document.getElementById('response-time').textContent = 
+                    Math.round(20 + Math.random() * 50) + 'ms';
+                document.getElementById('data-quality').textContent = 
+                    Math.round(90 + Math.random() * 10) + '%';
+            }
+            
+            updateHumanState(data) {
+                // Simulate human state data
+                const cognitiveLoad = Math.round((0.5 + Math.random() * 0.4) * 100);
+                const fatigue = Math.round(Math.random() * 0.5 * 100);
+                const attention = Math.round((0.7 + Math.random() * 0.3) * 100);
+                
+                document.getElementById('cognitive-load').textContent = cognitiveLoad + '%';
+                document.getElementById('fatigue-level').textContent = fatigue + '%';
+                document.getElementById('attention-level').textContent = attention + '%';
+                
+                // Update progress bars
+                this.updateProgressBar('cognitive-load-bar', cognitiveLoad);
+                this.updateProgressBar('fatigue-bar', fatigue);
+                this.updateProgressBar('attention-bar', attention);
+            }
+            
+            updateProgressBar(elementId, value) {
+                const bar = document.getElementById(elementId);
+                if (bar) {
+                    bar.style.width = value + '%';
+                    
+                    // Update color based on value
+                    bar.className = 'progress-fill ' + 
+                        (value > 80 ? 'progress-critical' :
+                         value > 60 ? 'progress-warning' : 'progress-normal');
+                }
+            }
+            
+            updateSystemStatus(status) {
+                const indicator = document.getElementById('system-status');
+                if (indicator) {
+                    indicator.className = 'status-indicator status-' + status;
+                }
+            }
+            
+            setupChatInterface() {
+                const input = document.getElementById('chat-input');
+                const sendButton = document.getElementById('chat-send');
+                
+                const sendMessage = async () => {
+                    const message = input.value.trim();
+                    if (!message) return;
+                    
+                    // Add user message to chat
+                    this.addChatMessage(message, 'user');
+                    input.value = '';
+                    
+                    // Show loading indicator
+                    this.addChatMessage('<div class="loading"></div>', 'assistant', false);
+                    
+                    try {
+                        // Send to cognitive system
+                        const response = await this.apiCall('/advisory', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ query: message })
+                        });
+                        
+                        // Remove loading indicator and add response
+                        this.removeChatMessage();
+                        this.addChatMessage(response.data.response.advisory || 'No response available', 'assistant');
+                        
+                    } catch (error) {
+                        this.removeChatMessage();
+                        this.addChatMessage('Sorry, I encountered an error processing your request. Using mock response: "Based on your current performance metrics, everything appears to be operating within normal parameters. Continue monitoring and let me know if you need specific guidance."', 'assistant');
+                    }
+                };
+                
+                sendButton.addEventListener('click', sendMessage);
+                input.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') sendMessage();
+                });
+            }
+            
+            addChatMessage(content, sender, includeTimestamp = true) {
+                const messagesContainer = document.getElementById('chat-messages');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message message-${sender}`;
+                
+                let messageContent = '';
+                if (sender === 'user') {
+                    messageContent = `<strong>You:</strong> ${content}`;
+                } else {
+                    messageContent = `<strong>Cognitive Advisor:</strong> ${content}`;
+                }
+                
+                if (includeTimestamp) {
+                    messageContent += `<div class="timestamp">${new Date().toLocaleTimeString()}</div>`;
+                }
+                
+                messageDiv.innerHTML = messageContent;
+                messagesContainer.appendChild(messageDiv);
+                messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            }
+            
+            removeChatMessage() {
+                const messagesContainer = document.getElementById('chat-messages');
+                const lastMessage = messagesContainer.lastElementChild;
+                if (lastMessage) {
+                    messagesContainer.removeChild(lastMessage);
+                }
+            }
+            
+            updateTimestamp() {
+                const timestampElement = document.getElementById('current-time');
+                if (timestampElement) {
+                    timestampElement.textContent = new Date().toLocaleString();
+                }
+            }
+            
+            showError(message) {
+                // Add error alert to the dashboard
+                const alertsContainer = document.querySelector('.large-card');
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'alert';
+                errorDiv.innerHTML = `<strong>❌ Connection Error:</strong> ${message}`;
+                alertsContainer.insertBefore(errorDiv, alertsContainer.firstChild);
+            }
+        }
+        
+        // Initialize dashboard when page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new CognitiveDashboard();
+        });
+    </script>
+</body>
+</html>

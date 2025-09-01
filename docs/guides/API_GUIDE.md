@@ -1,4 +1,4 @@
-# API Guide: Complete Beginner's Guide and Synopticon System APIs
+# API Guide: Complete Beginner's Guide and Synopticon Cognitive Advisory System APIs
 
 ## 📖 What is an API?
 
@@ -1201,6 +1201,17 @@ console.log('Synopticon API Server running on http://localhost:3000');
 // POST /api/speaker/diarize - Speaker diarization
 // POST /api/emotion/detect - Emotion detection
 // WebSocket /ws - Real-time streaming
+
+// 🧠 NEW: Cognitive Advisory API Endpoints
+// GET /api/cognitive/status - System health monitoring with component status
+// POST /api/cognitive/state - State updates with contextual information
+// POST /api/cognitive/analyze - Situational analysis with confidence scoring
+// POST /api/cognitive/advisory - AI-powered recommendation generation
+// POST /api/cognitive/emergency - Emergency response protocol activation
+// GET /api/cognitive/fusion - Information fusion engine status and metrics
+// GET /api/cognitive/temporal - Temporal analysis and prediction results
+// GET /api/cognitive/metrics - Real-time performance optimization metrics
+// POST /api/cognitive/human-input - Human input processing for collaborative decisions
 ```
 
 **Remote Connection Example**:
@@ -1316,3 +1327,133 @@ socket.onmessage = (event) => {
 4. **gRPC Streaming**: For high-performance, low-latency audio feature streaming
 
 Our system's architecture supports hybrid transport methods, allowing researchers to choose the best communication method for their specific use case while maintaining consistent API interfaces.
+
+## 🧠 Cognitive Advisory System API Examples
+
+### Real-Time Pilot Performance Monitoring
+```javascript
+// Connect to cognitive advisory system for flight training
+const cognitiveAPI = 'https://synopticon-api.flight-center.edu';
+
+// Start cognitive monitoring session
+const sessionResponse = await fetch(`${cognitiveAPI}/api/cognitive/state`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    context: {
+      environment: 'flight_simulator',
+      scenario: 'emergency_landing',
+      participant: 'pilot_trainee_042',
+      session: 'advanced_training_session_15'
+    },
+    sensors: ['eye_tracking', 'face_detection', 'heart_rate'],
+    telemetry: ['flight_controls', 'aircraft_state', 'weather_data']
+  })
+});
+
+// Request real-time cognitive analysis
+const analysisResponse = await fetch(`${cognitiveAPI}/api/cognitive/analyze`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    request: 'performance_assessment',
+    timeframe: 'current',
+    priority: 'tactical'  // 50ms response time for critical alerts
+  })
+});
+
+const analysis = await analysisResponse.json();
+console.log('Pilot stress level:', analysis.cognitive_load);
+console.log('Attention focus areas:', analysis.attention_distribution);
+console.log('Performance prediction:', analysis.performance_trend);
+
+// Get AI-powered coaching recommendations
+const advisoryResponse = await fetch(`${cognitiveAPI}/api/cognitive/advisory`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    situation: 'high_workload_emergency',
+    request_type: 'coaching_recommendation',
+    processing_level: 'operational'  // 500ms for detailed coaching
+  })
+});
+
+const recommendations = await advisoryResponse.json();
+console.log('AI Coach:', recommendations.advisory_text);
+console.log('Recommended actions:', recommendations.suggested_actions);
+```
+
+### Emergency Response System Integration
+```javascript
+// Set up emergency monitoring for critical situations
+const emergencySocket = new WebSocket(`wss://${cognitiveAPI}/ws/cognitive/emergency`);
+
+emergencySocket.onopen = () => {
+  // Configure emergency thresholds
+  emergencySocket.send(JSON.stringify({
+    type: 'configure_thresholds',
+    stress_critical: 0.85,
+    attention_loss_critical: 0.3,
+    performance_degradation_critical: 0.4
+  }));
+};
+
+emergencySocket.onmessage = (event) => {
+  const alert = JSON.parse(event.data);
+  
+  if (alert.type === 'critical_alert') {
+    // Automatic emergency response
+    console.log('🚨 CRITICAL ALERT:', alert.message);
+    console.log('Severity:', alert.severity);
+    console.log('Recommended action:', alert.emergency_action);
+    
+    // Trigger emergency protocols
+    if (alert.severity === 'critical') {
+      triggerEmergencyStop();
+      notifyInstructor(alert);
+      saveEmergencyData(alert);
+    }
+  }
+};
+
+// Human-machine collaborative decision making
+const collaborativeDecision = await fetch(`${cognitiveAPI}/api/cognitive/human-input`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    human_input: "I think the pilot needs a break, stress levels seem high",
+    context: "instructor_observation",
+    request_ai_analysis: true
+  })
+});
+
+const aiResponse = await collaborativeDecision.json();
+console.log('AI agrees:', aiResponse.ai_assessment);
+console.log('Combined recommendation:', aiResponse.collaborative_decision);
+```
+
+### Multi-Modal Research Data Integration
+```javascript
+// Research scenario: Combining face tracking, flight data, and weather
+const researchSession = await fetch(`${cognitiveAPI}/api/cognitive/fusion`, {
+  method: 'GET',
+  headers: { 'Content-Type': 'application/json' }
+});
+
+const fusionStatus = await researchSession.json();
+console.log('Data sources active:', fusionStatus.active_sources);
+console.log('Fusion confidence:', fusionStatus.overall_confidence);
+console.log('Data quality scores:', fusionStatus.source_quality);
+
+// Get predictive analysis for research insights
+const predictiveAnalysis = await fetch(`${cognitiveAPI}/api/cognitive/temporal`, {
+  method: 'GET'
+});
+
+const predictions = await predictiveAnalysis.json();
+console.log('Performance trend:', predictions.performance_trajectory);
+console.log('Risk forecast:', predictions.risk_prediction);
+console.log('Optimal intervention time:', predictions.intervention_window);
+```
+
+The Cognitive Advisory System represents the next evolution of human-machine interaction, providing real-time AI-powered insights that enhance human performance while maintaining collaborative decision-making capabilities.

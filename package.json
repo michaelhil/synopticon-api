@@ -1,7 +1,7 @@
 {
   "name": "synopticon-api",
   "version": "0.6.1",
-  "description": "synopticon-api: an open-source platform for real-time multi-modal behavioral analysis and sensor synchronization",
+  "description": "synopticon-api: an open-source platform for real-time multi-modal behavioral analysis, sensor synchronization, and AI-powered cognitive advisory systems",
   "main": "src/services/api/server.js",
   "type": "module",
   "scripts": {
@@ -65,7 +65,13 @@
     "vatsim",
     "multi-modal",
     "behavioral-analysis",
-    "real-time-streaming"
+    "real-time-streaming",
+    "cognitive-advisory",
+    "ai-powered",
+    "human-machine-teaming",
+    "information-fusion",
+    "predictive-analysis",
+    "performance-optimization"
   ],
   "author": "Synopticon API Team",
   "license": "MIT",

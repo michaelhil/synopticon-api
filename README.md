@@ -1,24 +1,54 @@
 # Synopticon API 👁️
-## Open-Source Multi-Modal Behavioral Analysis & Telemetry Platform
+## Open-Source Multi-Modal Behavioral Analysis & Cognitive Advisory Platform
 
 [![Docker](https://img.shields.io/badge/Docker-Available-blue?logo=docker)](https://github.com/orgs/username/packages/container/synopticon-api)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![TypeScript](https://img.shields.io/badge/TypeScript-Native-blue?logo=typescript)](src/)
 [![Bun](https://img.shields.io/badge/Bun-Optimized-orange?logo=bun)](package.json)
-[![Version](https://img.shields.io/badge/Version-0.6.0-brightgreen)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/Version-0.6.1-brightgreen)](CHANGELOG.md)
 [![Tests](https://img.shields.io/badge/Tests-38%2F38%20Passing-green)](tests/)
 [![Guardrails](https://img.shields.io/badge/Guardrails-100%25%20Compliant-blue)](scripts/guardrail-validator.ts)
 
-**A production-ready platform for behavioral research and simulator integration with advanced telemetry processing, 100Hz real-time streams, multi-modal correlation, and enterprise-grade development guardrails.**
+**A production-ready platform for behavioral research and simulator integration with advanced telemetry processing, 100Hz real-time streams, multi-modal correlation, enterprise-grade development guardrails, and revolutionary AI-powered cognitive advisory capabilities.**
 
-**🎯 Designed for Multi-Modal Research & Simulator Integration**  
-Synopticon API provides researchers and engineers with enterprise-grade tools for behavioral analysis combined with high-frequency telemetry data from flight and driving simulators. Perfect for aviation training, automotive research, and complex multi-modal behavioral studies with real-time sensor-telemetry correlation.
+**🎯 Designed for Multi-Modal Research & Intelligent Human-Machine Teaming**  
+Synopticon API provides researchers and engineers with enterprise-grade tools for behavioral analysis combined with high-frequency telemetry data from flight and driving simulators. Perfect for aviation training, automotive research, complex multi-modal behavioral studies with real-time sensor-telemetry correlation, and intelligent cognitive advisory systems that enhance human performance through AI-powered insights.
 
 ---
 
-## 🆕 Version 0.6.0: Multi-Modal Telemetry Integration
+## 🆕 Version 0.6.1: Cognitive Advisory & Monitoring System
 
-### **Revolutionary Simulator Integration**
+### **🧠 Revolutionary AI-Powered Cognitive Advisory System**
+**World's first multi-modal cognitive advisory platform for human-machine teaming:**
+
+- ✅ **Intelligent Advisory Generation**: Real-time AI-powered recommendations based on situational context
+- ✅ **Multi-Level Processing**: Tactical (50ms), Operational (500ms), Strategic (5s) response times
+- ✅ **Human-Machine Teaming**: Bidirectional communication and collaborative decision-making
+- ✅ **Information Fusion Engine**: Confidence-scored data quality assessment and correlation
+- ✅ **Predictive State Management**: Temporal analysis with future state prediction
+- ✅ **Real-Time Performance Optimization**: Auto-optimization based on system metrics
+
+### **🎯 Advanced Behavioral Intelligence**
+**Next-generation human performance monitoring and enhancement:**
+
+- ✅ **Cognitive Load Assessment**: Real-time workload monitoring with stress detection
+- ✅ **Attention Pattern Analysis**: Advanced gaze tracking with focus area mapping
+- ✅ **Performance Prediction**: Machine learning-based performance forecasting
+- ✅ **Adaptive Recommendations**: Context-aware coaching and improvement suggestions
+- ✅ **Emergency Response**: Automatic alert generation for critical situations
+- ✅ **Interactive Dashboard**: Real-time cognitive monitoring with AI chat interface
+
+### **🌐 Production-Ready Integration**
+**Enterprise-grade cognitive advisory deployment:**
+
+- ✅ **MCP Server Integration**: 8 specialized tools for LLM client integration
+- ✅ **REST API Endpoints**: 9 cognitive analysis endpoints with real-time status
+- ✅ **WebSocket Distribution**: Live cognitive insights streaming to multiple clients
+- ✅ **Error Recovery System**: Comprehensive error handling with automatic recovery
+- ✅ **Environmental Data Integration**: Real-time weather and traffic correlation
+- ✅ **Complete Deployment Guide**: Production setup for local, Docker, AWS, Kubernetes
+
+### **🚀 Revolutionary Simulator Integration**
 **Real-time telemetry processing at 100Hz from major simulators:**
 
 - ✅ **Microsoft Flight Simulator (MSFS)**: SimConnect protocol integration
@@ -337,6 +367,9 @@ console.log('Critical decision synchronization:', approachAnalysis.decisions.syn
 | **BeamNG Telemetry** | 100 Hz | 5ms | Real-time | Physics-accurate |
 | **Multi-Modal Correlation** | Real-time | <5ms | 100Hz | Cross-modal fusion |
 | **Stress Analysis** | Real-time | <2ms | Continuous | Behavioral metrics |
+| **🆕 Cognitive Advisory** | Real-time | 50-5000ms | Multi-level | AI-powered insights |
+| **🆕 Information Fusion** | Real-time | <10ms | Continuous | Confidence-scored data |
+| **🆕 Predictive Analysis** | Real-time | <100ms | Continuous | Future state prediction |
 
 ---
 
@@ -352,6 +385,18 @@ console.log('Critical decision synchronization:', approachAnalysis.decisions.syn
 - **`POST /api/detect`**: Single image analysis with pipeline selection
 - **`POST /api/batch`**: High-throughput batch processing for research datasets
 - **`POST /api/process`**: Process frame through configured pipeline combination
+
+### **🆕 Cognitive Advisory API**
+**Revolutionary AI-powered cognitive advisory system:**
+- **`GET /api/cognitive/status`**: Cognitive system health and component status
+- **`POST /api/cognitive/state`**: Update system state with new context information
+- **`POST /api/cognitive/analyze`**: Request cognitive analysis of current situation
+- **`POST /api/cognitive/advisory`**: Generate AI-powered recommendations
+- **`POST /api/cognitive/emergency`**: Trigger emergency response protocols
+- **`GET /api/cognitive/fusion`**: Information fusion engine status and confidence scores
+- **`GET /api/cognitive/temporal`**: Temporal analysis and prediction results
+- **`GET /api/cognitive/metrics`**: Real-time performance metrics and optimization status
+- **`POST /api/cognitive/human-input`**: Process human input for collaborative decision-making
 
 ### **🆕 Telemetry Integration API**
 **Real-time simulator data processing:**

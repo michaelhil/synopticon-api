@@ -82,6 +82,22 @@ export const TOOL_CATEGORIES: Record<string, ToolCategory> = {
       'synopticon_list_devices'
     ]
   },
+
+  cognitive: {
+    name: 'Cognitive Advisory',
+    description: 'Human-machine teaming, performance analysis, and intelligent decision support',
+    enabled: true,
+    tools: [
+      'get_cognitive_system_status',
+      'update_human_state',
+      'analyze_performance',
+      'get_cognitive_advisory',
+      'trigger_emergency_response',
+      'get_fusion_results',
+      'get_temporal_analysis',
+      'update_environmental_data'
+    ]
+  },
   
   // Future categories (disabled by default)
   eye_tracking: {

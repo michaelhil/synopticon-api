@@ -8,6 +8,7 @@ import { createEmotionRoutes } from './emotion.js';
 import { createDistributionRoutes } from './distribution.js';
 import { createSystemRoutes } from './system.js';
 import { createTelemetryRoutes } from './telemetry.js';
+import { routes as cognitiveRoutes } from './cognitive.js';
 
 /**
  * Create unified route registry
@@ -72,6 +73,9 @@ export const createRouteRegistry = (dependencies) => {
     createDistributionStream: dependencies.createDistributionStream
   });
   routes.push(...telemetryRoutes);
+
+  // Cognitive advisory system routes (static routes - no dependencies needed)
+  routes.push(...cognitiveRoutes);
 
   console.log(`📝 Route registry created with ${routes.length} routes`);
   

@@ -14,6 +14,7 @@ const loadSystemTools = () => import('./tools/system-tools.ts');
 const loadFaceTools = () => import('./tools/face-tools.ts');  
 const loadEmotionTools = () => import('./tools/emotion-tools.ts');
 const loadMediaTools = () => import('./tools/media-tools.ts');
+const loadCognitiveTools = () => import('./tools/cognitive-tools.ts');
 
 const logger = createLogger('MCPServer', getLogLevelFromEnv());
 
@@ -280,6 +281,15 @@ class SynopticonMCPServer {
       allTools.push(...this.toolsCache.get('media'));
     }
 
+    // Load cognitive advisory tools
+    if (TOOL_CATEGORIES.cognitive.enabled) {
+      if (!this.toolsCache.has('cognitive')) {
+        const { cognitiveTools } = await loadCognitiveTools();
+        this.toolsCache.set('cognitive', cognitiveTools);
+      }
+      allTools.push(...this.toolsCache.get('cognitive'));
+    }
+
     return allTools;
   }
 
@@ -290,6 +300,7 @@ class SynopticonMCPServer {
     TOOL_CATEGORIES.face.enabled = capabilities.face_detection || false;
     TOOL_CATEGORIES.emotion.enabled = capabilities.emotion_analysis || false;
     TOOL_CATEGORIES.media.enabled = capabilities.media_streaming || false;
+    TOOL_CATEGORIES.cognitive.enabled = true; // Always enabled - cognitive system is always available
     
     // Future capabilities
     TOOL_CATEGORIES.eye_tracking.enabled = capabilities.eye_tracking || false;
