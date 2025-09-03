@@ -191,6 +191,14 @@ export {
   createEyeTrackingSystem
 };
 
+// Export Tobii 5 integration
+export {
+  createTobii5Device,
+  createTobii5Discovery,
+  createRemoteTobiiClient,
+  tobii5DeviceFactory
+} from './devices/tobii5/index.js';
+
 // Default API instance factory
 export const createEyeTracker = (config = {}) => {
   return createEyeTrackingAPI(config);

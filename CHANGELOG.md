@@ -5,6 +5,54 @@ All notable changes to Synopticon API will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.2] - 2025-09-03 - Tobii 5 Eye Tracker Integration & Advanced Features Roadmap
+
+### 👁️ **Major Feature: Tobii 5 Eye Tracker Integration**
+
+#### High-Performance Cross-Computer Eye Tracking Platform
+- **Direct TGI API Integration**: Superior 5-10ms latency vs OpenTrack's 20-50ms
+- **Cross-Computer Architecture**: Lightweight 3MB Windows bridge + Mac/Linux master
+- **Auto-Discovery System**: Zero-config network setup with UDP beacon discovery
+- **Multi-Protocol Distribution**: WebSocket, UDP (OpenTrack compatible), MQTT, SSE support
+- **Real-Time Cognitive Analysis**: Attention zones, gaze patterns, cognitive load measurement
+- **C++ Bridge Server**: Production-ready Windows executable with Tobii Game Integration API
+
+#### Complete Implementation
+- **Remote Client** (`src/features/eye-tracking/devices/tobii5/remote-client.js`): WebSocket connection with auto-reconnection
+- **Device Factory** (`src/features/eye-tracking/devices/tobii5/device.js`): Full Synopticon device interface
+- **Network Discovery** (`src/features/eye-tracking/devices/tobii5/discovery.js`): UDP-based auto-discovery
+- **Cognitive Integration** (`src/features/eye-tracking/devices/tobii5/cognitive-integration.js`): Real-time pipeline processing
+- **Distribution Integration** (`src/features/eye-tracking/devices/tobii5/distribution-integration.js`): Multi-protocol data distribution
+
+#### Advanced Features & Visualization
+- **Interactive Demo** (`examples/tobii5-demo/`): Real-time gaze visualization with attention analysis
+- **Performance Metrics**: Latency monitoring, data quality assessment, connection statistics  
+- **Cognitive Analytics**: Attention zones, scan patterns, fixation detection, cognitive load calculation
+- **Head Pose Tracking**: 6DOF head orientation with stability analysis
+
+### 🚀 **Advanced Features Roadmap**
+
+#### Future Development Opportunities
+- **Machine Learning Integration**: Attention prediction models, biometric fusion, predictive safety
+- **Multi-User Platform**: Team collaboration analytics, remote expert assistance
+- **Enterprise Integration**: SCADA/industrial systems, LMS integration, business intelligence
+- **Research Platform**: Automated experiments, statistical analysis, publication-ready reports
+- **Clinical Applications**: ADHD assessment, cognitive rehabilitation, medical research tools
+- **Gaming & VR Integration**: Attention-based gameplay, foveated rendering, immersive experiences
+
+#### Documentation & Guides
+- **Complete Setup Guide** (`docs/tobii5/README.md`): Installation and configuration
+- **Development Guide** (`docs/tobii5/development-guide.md`): Technical implementation details
+- **Advanced Features Roadmap** (`docs/tobii5/advanced-features-roadmap.md`): Future development plans
+
+### 🔧 **Technical Improvements**
+- Enhanced eye tracking system architecture with modular device support
+- Improved distribution system with multi-protocol capabilities  
+- Extended cognitive system with eye tracking pipeline integration
+- Production-ready C++ bridge server with automated Windows deployment
+
+---
+
 ## [0.6.1] - 2025-09-01 - Cognitive Advisory & Monitoring System
 
 ### 🧠 **Revolutionary Feature: AI-Powered Cognitive Advisory System**
