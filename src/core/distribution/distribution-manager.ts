@@ -3,12 +3,12 @@
  * Central coordinator for all distribution mechanisms
  */
 
-import { createLogger } from '../../shared/utils/logger.ts';
+import { createLogger } from '../../shared/utils/logger.js';
 import { 
   BaseDistributor, 
   SendOptions, 
   DistributorHealth 
-} from './base-distributor.ts';
+} from './base-distributor.js';
 
 const logger = createLogger({ level: 2 });
 
@@ -316,7 +316,7 @@ export const createDistributionManager = (config: DistributionManagerConfig = {}
    */
   const setEventRouting = (event: string, distributors: string[], options: Record<string, any> = {}): void => {
     state.eventRoutes.set(event, { distributors, options });
-    console.log(`📍 Set routing for ${event} -> [${distributors.join(', ')}]`);
+    console.log(`📍 Set routing for ${event} -> [${distributors.join(', ')]`);
   };
 
   /**

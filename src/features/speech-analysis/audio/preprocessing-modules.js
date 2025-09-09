@@ -29,26 +29,26 @@ export const createModulesManager = (state, createNoiseReduction, createAutomati
     // Process according to configured order
     for (const module of state.config.processingOrder) {
       switch (module) {
-        case 'highpass':
-          if (state.highPassFilter) {
-            processedAudio = state.highPassFilter.processFrame(processedAudio);
-            modulesApplied.push('highpass');
-          }
-          break;
+      case 'highpass':
+        if (state.highPassFilter) {
+          processedAudio = state.highPassFilter.processFrame(processedAudio);
+          modulesApplied.push('highpass');
+        }
+        break;
           
-        case 'agc':
-          if (state.agc) {
-            processedAudio = state.agc.processFrame(processedAudio);
-            modulesApplied.push('agc');
-          }
-          break;
+      case 'agc':
+        if (state.agc) {
+          processedAudio = state.agc.processFrame(processedAudio);
+          modulesApplied.push('agc');
+        }
+        break;
           
-        case 'denoise':
-          if (state.noiseReduction) {
-            processedAudio = state.noiseReduction.processFrame(processedAudio, isQuiet);
-            modulesApplied.push('denoise');
-          }
-          break;
+      case 'denoise':
+        if (state.noiseReduction) {
+          processedAudio = state.noiseReduction.processFrame(processedAudio, isQuiet);
+          modulesApplied.push('denoise');
+        }
+        break;
       }
     }
     

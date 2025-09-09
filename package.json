@@ -1,8 +1,8 @@
 {
   "name": "synopticon-api",
-  "version": "0.6.2",
+  "version": "0.6.3",
   "description": "synopticon-api: an open-source platform for real-time multi-modal behavioral analysis, sensor synchronization, and AI-powered cognitive advisory systems",
-  "main": "src/services/api/server.js",
+  "main": "src/services/api/server.ts",
   "type": "module",
   "scripts": {
     "dev:vite": "bunx --bun vite",
@@ -17,9 +17,9 @@
     "test:lazy-loading": "bun test tests/lazy-loading.test.js",
     "build:shaders": "bun run scripts/compile-shaders.js",
     "start": "bun run serve",
-    "serve": "bun src/services/api/server.js",
-    "dev": "bun --watch src/services/api/server.js",
-    "dev:hot": "bun --hot src/services/api/server.js",
+    "serve": "bun src/services/api/server.ts",
+    "dev": "bun --watch src/services/api/server.ts",
+    "dev:hot": "bun --hot src/services/api/server.ts",
     "api:test": "curl http://localhost:3000/api/health",
     "mcp": "bun src/services/mcp/server.ts",
     "mcp:dev": "bun --watch src/services/mcp/server.ts",
@@ -35,6 +35,9 @@
     "lint:fix": "bunx eslint 'src/**/*.js' 'examples/**/*.js' --fix --ignore-pattern '**/*.backup'",
     "lint:check": "bunx eslint 'src/**/*.js' 'examples/**/*.js' --max-warnings 1200 --ignore-pattern '**/*.backup'",
     "lint:strict": "bunx eslint 'src/**/*.js' 'examples/**/*.js' --max-warnings 20 --ignore-pattern '**/*.backup'",
+    "lint:functional": "bunx eslint --config eslint.config.functional.js 'src/**/*.{js,ts}' --ignore-pattern '**/*.backup'",
+    "lint:functional:fix": "bunx eslint --config eslint.config.functional.js 'src/**/*.{js,ts}' --fix --ignore-pattern '**/*.backup'",
+    "lint:functional:strict": "bunx eslint --config eslint.config.functional.js 'src/**/*.{js,ts}' --max-warnings 0 --ignore-pattern '**/*.backup'",
     "quality": "bun run lint:check && bun run typecheck",
     "quality:strict": "bun run lint:strict && bun run typecheck && bun run knip:check",
     "knip:check": "bunx knip --reporter compact",
@@ -76,8 +79,14 @@
   "author": "Synopticon API Team",
   "license": "MIT",
   "devDependencies": {
+    "@eslint/js": "^9.35.0",
     "@types/bun": "^1.2.20",
+    "@typescript-eslint/eslint-plugin": "^8.42.0",
+    "@typescript-eslint/parser": "^8.42.0",
+    "concurrently": "^9.2.1",
     "eslint": "^9.34.0",
+    "eslint-plugin-fp": "^2.3.0",
+    "eslint-plugin-functional": "^9.0.2",
     "knip": "^5.63.0",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"
@@ -91,7 +100,11 @@
   "optionalDependencies": {
     "canvas": "^3.2.0"
   },
-  "dependencies": {},
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.17.5",
+    "ws": "^8.18.3",
+    "zod": "^4.1.5"
+  },
   "engines": {
     "bun": ">=1.0.0"
   },

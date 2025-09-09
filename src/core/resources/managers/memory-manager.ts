@@ -3,7 +3,7 @@
  * Centralized memory allocation, deallocation, and optimization
  */
 
-import type { ResourcePool } from '../../performance/resource-pool.js';
+import type { ResourcePool } from '../../performance/resource-pool.js'
 
 export interface MemoryManagerConfig {
   maxMemoryUsage: number;
@@ -144,21 +144,21 @@ export const createMemoryManager = (config: MemoryManagerConfig) => {
     const allocationType = options.type || 'generic';
     
     switch (allocationType) {
-      case 'buffer':
-        resource = new ArrayBuffer(size);
-        break;
-      case 'uint8array':
-        resource = new Uint8Array(size);
-        break;
-      case 'float32array':
-        resource = new Float32Array(size / 4);
-        break;
-      case 'object':
-        resource = {};
-        break;
-      default:
-        resource = { size, type: allocationType };
-        break;
+    case 'buffer':
+      resource = new ArrayBuffer(size);
+      break;
+    case 'uint8array':
+      resource = new Uint8Array(size);
+      break;
+    case 'float32array':
+      resource = new Float32Array(size / 4);
+      break;
+    case 'object':
+      resource = {};
+      break;
+    default:
+      resource = { size, type: allocationType };
+      break;
     }
     
     // Track allocation

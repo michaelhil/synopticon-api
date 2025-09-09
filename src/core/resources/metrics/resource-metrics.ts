@@ -3,7 +3,7 @@
  * Comprehensive metrics collection and analysis for resource management
  */
 
-import type { ResourcePool } from '../../performance/resource-pool.js';
+import type { ResourcePool } from '../../performance/resource-pool.js'
 import type { createMemoryManager } from '../managers/memory-manager.js';
 import type { createCacheManager } from '../managers/cache-manager.js';
 import type { createLifecycleManager } from '../managers/lifecycle-manager.js';
@@ -462,7 +462,7 @@ export const createResourceMetrics = (
   const recordStateImport = (state: any): void => {
     generateAlert('info', 'state_import', 'Resource state imported', {
       timestamp: state.timestamp,
-      hasMetrics: !!state.metrics
+      hasMetrics: Boolean(state.metrics)
     });
   };
 

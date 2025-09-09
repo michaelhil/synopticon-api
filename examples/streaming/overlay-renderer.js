@@ -4,10 +4,10 @@
 
 export const createOverlayRenderer = (canvasElement) => {
     let ctx = null;
-    let videoElement = null;
+    let _videoElement = null;
     
     const setupCanvas = (video) => {
-        videoElement = video;
+        _videoElement = video;
         
         console.log('Setting up canvas:', {
             video,

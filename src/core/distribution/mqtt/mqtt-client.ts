@@ -146,26 +146,26 @@ export const createMqttClient = (options: MqttClientOptions = {}) => {
       
       packets.forEach(packet => {
         switch (packet.type) {
-          case 'CONNACK':
-            handleConnAck(packet);
-            break;
-          case 'PUBLISH':
-            handlePublish(packet);
-            break;
-          case 'PUBACK':
-            handlePubAck(packet);
-            break;
-          case 'SUBACK':
-            handleSubAck(packet);
-            break;
-          case 'UNSUBACK':
-            handleUnsubAck(packet);
-            break;
-          case 'PINGRESP':
-            handlePingResp();
-            break;
-          default:
-            emit('packet', packet);
+        case 'CONNACK':
+          handleConnAck(packet);
+          break;
+        case 'PUBLISH':
+          handlePublish(packet);
+          break;
+        case 'PUBACK':
+          handlePubAck(packet);
+          break;
+        case 'SUBACK':
+          handleSubAck(packet);
+          break;
+        case 'UNSUBACK':
+          handleUnsubAck(packet);
+          break;
+        case 'PINGRESP':
+          handlePingResp();
+          break;
+        default:
+          emit('packet', packet);
         }
       });
     } catch (error) {

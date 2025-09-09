@@ -350,37 +350,37 @@ export const createAdaptiveStrategy = (): Strategy => {
       const compatible = findCompatiblePipelines(available, requirements);
       
       switch (currentLevel) {
-        case 'low':
-          // Use only fastest, most efficient pipelines
-          return compatible
-            .filter(p => p.config.performance.fps > 40)
-            .sort((a, b) => b.config.performance.fps - a.config.performance.fps)
-            .slice(0, 1)
-            .map(p => p.name);
+      case 'low':
+        // Use only fastest, most efficient pipelines
+        return compatible
+          .filter(p => p.config.performance.fps > 40)
+          .sort((a, b) => b.config.performance.fps - a.config.performance.fps)
+          .slice(0, 1)
+          .map(p => p.name);
             
-        case 'medium':
-          // Balance speed and capability
-          return compatible
-            .filter(p => p.config.performance.fps > 25)
-            .sort((a, b) => {
-              const performanceReq = { ...requirements, strategy: 'performance_first' as const };
-              const scoreA = scorePipeline(a, performanceReq);
-              const scoreB = scorePipeline(b, performanceReq);
-              return scoreB - scoreA;
-            })
-            .slice(0, 2)
-            .map(p => p.name);
+      case 'medium':
+        // Balance speed and capability
+        return compatible
+          .filter(p => p.config.performance.fps > 25)
+          .sort((a, b) => {
+            const performanceReq = { ...requirements, strategy: 'performance_first' as const };
+            const scoreA = scorePipeline(a, performanceReq);
+            const scoreB = scorePipeline(b, performanceReq);
+            return scoreB - scoreA;
+          })
+          .slice(0, 2)
+          .map(p => p.name);
             
-        case 'high':
-        default:
-          // Use best available pipelines
-          return [...compatible]
-            .sort((a, b) => {
-              const scoreA = scorePipeline(a, requirements);
-              const scoreB = scorePipeline(b, requirements);
-              return scoreB - scoreA;
-            })
-            .map(p => p.name);
+      case 'high':
+      default:
+        // Use best available pipelines
+        return [...compatible]
+          .sort((a, b) => {
+            const scoreA = scorePipeline(a, requirements);
+            const scoreB = scorePipeline(b, requirements);
+            return scoreB - scoreA;
+          })
+          .map(p => p.name);
       }
     },
     
@@ -427,7 +427,7 @@ export const createStrategyRegistry = (): StrategyRegistry => {
   strategies.set('battery_optimized', createBatteryOptimizedStrategy());
   strategies.set('hybrid', createHybridStrategy());
   strategies.set('adaptive', createAdaptiveStrategy());
-  strategies.set('balanced', createPerformanceFirstStrategy()); // Alias for backward compatibility
+  strategies.set('balanced', createPerformanceFirstStrategy());
   
   return {
     getStrategy: (name: string): Strategy | undefined => strategies.get(name),

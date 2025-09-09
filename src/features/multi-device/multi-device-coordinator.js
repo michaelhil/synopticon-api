@@ -98,7 +98,7 @@ export const createMultiDeviceCoordinator = (config = {}) => {
     activeStreams: streamManager.getActiveStreams().length,
     networkStats: networkMonitor.getNetworkStats(),
     groupSettings: coordinatorConfig.groupSettings,
-    globalQualityEnabled: !!globalQualityController,
+    globalQualityEnabled: Boolean(globalQualityController),
     lastUpdate: Date.now()
   });
 

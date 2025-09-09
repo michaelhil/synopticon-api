@@ -8,7 +8,7 @@ export const createTopicAnalyzer = (state) => {
   const extractKeywords = (text) => {
     // Simple keyword extraction (in production, use more sophisticated NLP)
     const stopWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 
-                              'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were']);
+      'to', 'for', 'of', 'with', 'by', 'is', 'are', 'was', 'were']);
     
     return text.toLowerCase()
       .split(/\s+/)

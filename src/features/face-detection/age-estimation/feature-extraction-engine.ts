@@ -10,7 +10,7 @@ import type {
   createEmptyFacialFeatures,
   createEmptyGenderFeatures,
   normalizeFacialFeatures
-} from './base-age-detector.ts';
+} from './base-age-detector.js';
 
 /**
  * Creates a feature extraction engine for facial analysis

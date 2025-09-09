@@ -99,7 +99,7 @@ export const createTranscriptProcessor = (analysisEngine, config) => {
           }
         }
       } catch (error) {
-        console.error(`Error processing transcript:`, error);
+        console.error('Error processing transcript:', error);
         results.push({
           error: error.message,
           transcript: transcript.text
@@ -163,7 +163,7 @@ export const createTranscriptProcessor = (analysisEngine, config) => {
         analyses: validAnalyses,
         context: {
           chunkCount: context.chunks.length,
-          hasSummary: !!context.summary
+          hasSummary: Boolean(context.summary)
         },
         timestamp: Date.now()
       };
@@ -192,7 +192,7 @@ export const createTranscriptProcessor = (analysisEngine, config) => {
     const context = session.contextManager.getContext();
     summary.context = {
       chunkCount: context.chunks.length,
-      hasSummary: !!context.summary,
+      hasSummary: Boolean(context.summary),
       totalWords: context.chunks.reduce((sum, chunk) => 
         sum + chunk.text.split(' ').length, 0
       )

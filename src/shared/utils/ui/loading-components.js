@@ -296,9 +296,9 @@ export const createPipelineLoadingCard = (pipelineName, options = {}) => {
       
       <div class="loading-indicator">
         ${createLoadingSpinner({
-          size: config.compact ? 'small' : 'medium',
-          showText: false
-        }).outerHTML}
+    size: config.compact ? 'small' : 'medium',
+    showText: false
+  }).outerHTML}
       </div>
     </div>
   `;
@@ -362,10 +362,10 @@ export const createLoadingOverlay = (options = {}) => {
         ${config.showProgress ? `
           <div style="margin-top: 16px;">
             ${createProgressBar({
-              width: '100%',
-              showLabel: false,
-              showPercentage: true
-            }).outerHTML}
+    width: '100%',
+    showLabel: false,
+    showPercentage: true
+  }).outerHTML}
           </div>
         ` : ''}
         

@@ -10,7 +10,7 @@ import type {
   GenderResult,
   getLifeStageFromAge,
   calculateAgeRange
-} from './base-age-detector.ts';
+} from './base-age-detector.js';
 
 /**
  * Creates an age and gender calculation engine

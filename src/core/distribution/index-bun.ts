@@ -1,25 +1,39 @@
 /**
- * Multi-Distribution System - Bun Native Entry Point
- * Modular distribution architecture using Bun native APIs
+ * Universal Distribution System - Bun Native Entry Point
+ * Phase 2: Bun-optimized universal distributor system
  * Zero external dependencies for optimal performance
  */
 
-import { createLogger } from '../../shared/utils/logger.ts';
+import { createLogger } from '../../shared/utils/logger.js';
 
 const logger = createLogger({ level: 2 });
 
-// Core distribution components (these should already be Bun-compatible)
-export { createDistributionManager } from './distribution-manager.ts';
-export { createDistributionConfigManager } from './distribution-config-manager.ts';
-export { createBaseDistributor } from './base-distributor.ts';
+// Universal distributor system (Bun-native)
+export {
+  createUniversalDistributor,
+  type UniversalDistributor,
+  type UniversalDistributorConfig
+} from './universal-distributor.js';
 
-// Bun-native protocol-specific distributors
-export { createHttpDistributor } from './distributors/http-distributor-bun.ts';
-export { createWebSocketDistributor } from './distributors/websocket-distributor-bun.ts';
+// Bun-optimized distributor factory
+export {
+  createDistributorWithAdapters,
+  createWebDistributor,
+  createIoTDistributor,
+  createRealtimeDistributor
+} from './universal-distributor-factory.js';
 
-// Legacy distributors (still Node.js based - use with caution)
-export { createMqttDistributor } from './distributors/mqtt-distributor-builtin.ts';
-export { createUdpDistributor } from './distributors/udp-distributor.ts';
+// All adapters are Bun-native
+export {
+  createHttpAdapter,
+  createWebSocketAdapter,
+  createMqttAdapter,
+  createSSEAdapter,
+  createUdpAdapter
+} from './adapters/index.js';
+
+export { createDistributionManager } from './distribution-manager.js';
+export { createDistributionConfigManager } from './distribution-config-manager.js';
 
 // Configuration presets (will need to be converted separately if exists)
 // export { 
@@ -27,7 +41,7 @@ export { createUdpDistributor } from './distributors/udp-distributor.ts';
 //   getDistributionPreset, 
 //   getAvailablePresets,
 //   validatePreset 
-// } from './configs/distribution-presets.ts';
+// } from './configs/distribution-presets.js';
 
 // Distributor factory interface
 interface DistributorFactory {
@@ -72,14 +86,15 @@ interface SessionStatus {
 }
 
 /**
- * Bun-native distributor factory registry
+ * Universal distributor adapter registry
+ * Phase 2: All adapters are Bun-native with zero dependencies
  */
-export const BUN_DISTRIBUTOR_FACTORIES: Record<string, DistributorFactory> = {
-  http: () => import('./distributors/http-distributor-bun.ts').then(m => m.createHttpDistributor),
-  websocket: () => import('./distributors/websocket-distributor-bun.ts').then(m => m.createWebSocketDistributor),
-  // Legacy Node.js distributors (fallback)
-  mqtt: () => import('./distributors/mqtt-distributor-builtin.ts').then(m => m.createMqttDistributor),
-  udp: () => import('./distributors/udp-distributor.ts').then(m => m.createUdpDistributor),
+export const UNIVERSAL_ADAPTER_FACTORIES: Record<string, DistributorFactory> = {
+  http: () => import('./adapters/http-adapter.js').then(m => m.createHttpAdapter),
+  websocket: () => import('./adapters/websocket-adapter.js').then(m => m.createWebSocketAdapter),
+  mqtt: () => import('./adapters/mqtt-adapter.js').then(m => m.createMqttAdapter),
+  sse: () => import('./adapters/sse-adapter.js').then(m => m.createSSEAdapter),
+  udp: () => import('./adapters/udp-adapter.js').then(m => m.createUdpAdapter)
 };
 
 /**
@@ -131,7 +146,7 @@ export const createBunDistributionSessionManager = (config: any = {}) => {
     if (sessionConfig.eventRouting) {
       for (const [event, distributors] of Object.entries(sessionConfig.eventRouting)) {
         session.eventRouting.set(event, distributors);
-        console.log(`📍 Set routing for ${event} -> [${distributors.join(', ')}]`);
+        console.log(`📍 Set routing for ${event} -> [${distributors.join(', ')]`);
       }
     }
 
@@ -149,7 +164,7 @@ export const createBunDistributionSessionManager = (config: any = {}) => {
     const initPromises = [];
 
     for (const [type, config] of Object.entries(distributorConfigs)) {
-      if (!BUN_DISTRIBUTOR_FACTORIES[type]) {
+      if (!UNIVERSAL_ADAPTER_FACTORIES[type]) {
         console.warn(`⚠️ Unknown Bun distributor type: ${type}, skipping`);
         continue;
       }
@@ -166,7 +181,7 @@ export const createBunDistributionSessionManager = (config: any = {}) => {
   const initializeBunDistributor = async (session: Session, type: string, config: any): Promise<any> => {
     try {
       // Get the factory function
-      const factory = await BUN_DISTRIBUTOR_FACTORIES[type]();
+      const factory = await UNIVERSAL_ADAPTER_FACTORIES[type]();
       
       // Create distributor instance with Bun-native implementation
       const distributorId = `${type}_${session.id}`;
@@ -289,19 +304,51 @@ export const createBunDistributionSessionManager = (config: any = {}) => {
 
 /**
  * Quick setup factory for common distribution patterns with Bun native
+ * Phase 2: Uses universal distributor with full Bun optimization
  */
 export const createQuickBunDistribution = (pattern: string = 'basic') => {
-  // For now, create a basic distribution manager
-  // TODO: Implement distribution presets when converted
-  console.warn('Distribution presets not yet converted to TypeScript. Using basic Bun configuration.');
+  const { createDistributorWithAdapters } = require('./universal-distributor-factory.js');
   
-  const config = {
-    enableHealthCheck: true,
-    healthCheckInterval: 30000,
-    retryAttempts: 3,
-    retryDelay: 1000
-  };
-  
-  // Use Bun-native session manager
-  return createBunDistributionSessionManager(config);
+  switch (pattern) {
+    case 'web':
+      return createWebDistributor({
+        maxConcurrency: 10, // Higher concurrency for Bun
+        defaultTimeout: 30000,
+        adapters: {
+          http: { timeout: 30000 },
+          websocket: { maxConnections: 200 }, // Higher limits for Bun
+          sse: { maxConnections: 200 }
+        }
+      });
+    case 'iot':
+      return createIoTDistributor({
+        maxConcurrency: 20, // Bun handles higher concurrency better
+        defaultTimeout: 5000,
+        adapters: {
+          mqtt: { keepAlive: 60 },
+          udp: { broadcast: true, bufferSize: 65536 },
+          http: { timeout: 5000 }
+        }
+      });
+    case 'realtime':
+      return createRealtimeDistributor({
+        maxConcurrency: 50, // Maximize Bun's performance
+        defaultTimeout: 1000,
+        adapters: {
+          websocket: { heartbeatInterval: 5000, maxConnections: 500 },
+          sse: { heartbeatInterval: 5000, maxConnections: 500 },
+          udp: { bufferSize: 65536 }
+        }
+      });
+    default:
+      return createDistributorWithAdapters({
+        maxConcurrency: 10,
+        defaultTimeout: 30000,
+        retryConfig: {
+          maxRetries: 3,
+          initialDelayMs: 100,
+          backoffMultiplier: 2
+        }
+      });
+  }
 };

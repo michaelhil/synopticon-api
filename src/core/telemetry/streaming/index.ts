@@ -60,7 +60,7 @@ export const createTelemetryStreamingService = (config: TelemetryStreamConfig) =
 
   const buffer = createTelemetryBuffer(config.bufferSize);
   
-  let metrics: StreamingMetrics = {
+  const metrics: StreamingMetrics = {
     framesProcessed: 0,
     bytesStreamed: 0,
     activeClients: 0,

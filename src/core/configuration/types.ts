@@ -574,15 +574,15 @@ export const createAnalysisPipelineResult = <T = any>(
   data: T | { success?: boolean; data?: T }, 
   metadata: AnalysisPipelineMetadata = {}
 ): AnalysisPipelineResult<T> => ({
-  success: (data as any)?.success ?? true,
-  data: (data as any)?.data || data as T,
-  metadata: {
-    timestamp: Date.now(),
-    processingTime: metadata.processingTime || 0,
-    ...metadata
-  },
-  pipeline: metadata.pipeline || 'unknown'
-});
+    success: (data as any)?.success ?? true,
+    data: (data as any)?.data || data as T,
+    metadata: {
+      timestamp: Date.now(),
+      processingTime: metadata.processingTime || 0,
+      ...metadata
+    },
+    pipeline: metadata.pipeline || 'unknown'
+  });
 
 /**
  * Analysis Prompt Result Interface

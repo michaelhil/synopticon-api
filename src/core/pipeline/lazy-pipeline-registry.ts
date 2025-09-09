@@ -4,7 +4,7 @@
  * retry logic, and comprehensive error handling.
  */
 
-import { handleError, ErrorCategory, ErrorSeverity } from '../../shared/utils/error-handler.js';
+import { handleError, ErrorCategory, ErrorSeverity } from '../../shared/utils/error-handler.js'
 import {
   type PipelineType,
   type PipelineLoader,
@@ -276,7 +276,7 @@ export const createLazyPipelineRegistry = (config: Partial<LazyPipelineRegistryC
     }
 
     handleError(
-      `Starting preload of ${criticalTypes.length} critical pipelines: ${criticalTypes.join(', ')}`,
+      `Starting preload of ${criticalTypes.length} critical pipelines: ${criticalTypes.join(', ')`,
       ErrorCategory.INITIALIZATION,
       ErrorSeverity.INFO,
       { criticalTypes }

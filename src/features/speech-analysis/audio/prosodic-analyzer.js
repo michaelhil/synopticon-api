@@ -111,7 +111,7 @@ export const createProsodicAnalyzer = (config = {}) => {
     return {
       rms: rms * (1 - state.config.energySmoothing) + 
            (state.featureHistory.length > 0 ? 
-            state.featureHistory[state.featureHistory.length - 1].energy?.rms || 0 : 0) * 
+             state.featureHistory[state.featureHistory.length - 1].energy?.rms || 0 : 0) * 
            state.config.energySmoothing,
       peak,
       zcr

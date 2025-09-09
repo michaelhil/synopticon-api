@@ -5,9 +5,9 @@
  */
 
 import { createPipeline } from '../../core/pipeline/pipeline.ts';
-import { createPipelineConfig } from '../../core/pipeline/pipeline-config.js';
+import { createPipelineConfig } from '../../core/pipeline/pipeline-config.ts';
 import { createImageProcessor } from '../../core/engine/image-processor.js';
-import { getGlobalResourcePool } from '../../core/performance/resource-pool.js';
+import { getGlobalResourcePool } from '../../core/performance/resource-pool.ts';
 import { 
   MEDIAPIPE_LANDMARKS,
   calculateFaceBoundingBox,
@@ -23,7 +23,7 @@ import {
   createPerformanceProfile,
   createPose3DOF
 } from '../../core/configuration/types.ts';
-import { ErrorCategory, ErrorSeverity, handleError } from '../../shared/utils/error-handler.js';
+import { ErrorCategory, ErrorSeverity, handleError } from "../../../shared/utils/error-handler.ts";
 import { 
   checkFeatures, 
   createUniversalCanvas, 
@@ -186,7 +186,7 @@ export const createMediaPipeFacePipeline = (config = {}) => {
         throw new Error('Failed to load MediaPipe');
       }
 
-      console.log(`📊 MediaPipe loaded successfully`);
+      console.log('📊 MediaPipe loaded successfully');
 
       // Initialize MediaPipe Face Mesh
       try {
@@ -399,8 +399,8 @@ export const createMediaPipeFacePipeline = (config = {}) => {
       initialized: state.isInitialized,
       runtime: state.runtime,
       features: state.features,
-      mediapipeLoaded: !!state.mediapipe,
-      faceMeshLoaded: !!state.faceMesh
+      mediapipeLoaded: Boolean(state.mediapipe),
+      faceMeshLoaded: Boolean(state.faceMesh)
     }),
 
     // Check if pipeline is initialized
@@ -411,8 +411,8 @@ export const createMediaPipeFacePipeline = (config = {}) => {
       healthy: state.isInitialized,
       runtime: state.runtime,
       backend: 'mediapipe-face',
-      modelLoaded: !!state.faceMesh,
-      mediapipeAvailable: !!state.mediapipe
+      modelLoaded: Boolean(state.faceMesh),
+      mediapipeAvailable: Boolean(state.mediapipe)
     })
   });
 
@@ -426,8 +426,8 @@ export const createMediaPipeFacePipeline = (config = {}) => {
       healthy: state.isInitialized,
       runtime: state.runtime,
       backend: 'mediapipe-face',
-      modelLoaded: !!state.faceMesh,
-      mediapipeAvailable: !!state.mediapipe
+      modelLoaded: Boolean(state.faceMesh),
+      mediapipeAvailable: Boolean(state.mediapipe)
     }),
     updateConfig: (updates) => {
       state.config = createPipelineConfig('mediapipe-face', { ...state.config, ...updates });

@@ -5,7 +5,7 @@
  */
 
 import { createDataStream } from '../../core/state/streams.js';
-import { createSynchronizationEngine } from '../../core/orchestration/synchronization.js';
+import { createSynchronizationEngine } from '../../core/orchestration/synchronization/sync-engine.js';
 import { createSpeechRecognition } from './speech-recognition.js';
 import { createAnalysisEngine } from './analysis-engine.js';
 import { createContextManager } from './context-manager.js';
@@ -285,7 +285,7 @@ export const createSpeechStreaming = (config = {}) => {
       isProcessing: state.isAnalyzing,
       
       speechRecognition: {
-        available: !!state.speechRecognition,
+        available: Boolean(state.speechRecognition),
         isActive: state.isListening,
         ...(state.speechRecognition ? state.speechRecognition.getStatus() : {})
       },

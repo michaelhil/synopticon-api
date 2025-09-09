@@ -7,21 +7,21 @@ export const createDeviceManager = (state, systemHandlers) => {
   // Handle device connection events
   const handleDeviceConnectionEvent = (event) => {
     switch (event.event) {
-      case 'discovered':
-        console.log(`Device discovered: ${event.device.name}`);
-        break;
-      case 'connected':
-        state.activeDevices.set(event.deviceId, {
-          device: state.system.getDevice(event.deviceId),
-          connectedAt: Date.now(),
-          status: 'connected'
-        });
-        break;
-      case 'disconnected':
-        state.activeDevices.delete(event.deviceId);
-        // Clean up any active sessions for this device
-        systemHandlers.cleanupDeviceSessions(event.deviceId);
-        break;
+    case 'discovered':
+      console.log(`Device discovered: ${event.device.name}`);
+      break;
+    case 'connected':
+      state.activeDevices.set(event.deviceId, {
+        device: state.system.getDevice(event.deviceId),
+        connectedAt: Date.now(),
+        status: 'connected'
+      });
+      break;
+    case 'disconnected':
+      state.activeDevices.delete(event.deviceId);
+      // Clean up any active sessions for this device
+      systemHandlers.cleanupDeviceSessions(event.deviceId);
+      break;
     }
 
     // Notify status change callbacks

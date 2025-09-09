@@ -4,9 +4,9 @@
  */
 
 import { createPipeline } from '../../core/pipeline/pipeline.ts';
-import { createPipelineConfig } from '../../core/pipeline/pipeline-config.js';
+import { createPipelineConfig } from '../../core/pipeline/pipeline-config.ts';
 import { createImageProcessor } from '../../core/engine/image-processor.js';
-import { getGlobalResourcePool } from '../../core/performance/resource-pool.js';
+import { getGlobalResourcePool } from '../../core/performance/resource-pool.ts';
 import { 
   IRIS_LANDMARKS,
   MEDIAPIPE_LANDMARKS,
@@ -24,7 +24,7 @@ import {
   createPerformanceProfile,
   createPose6DOF
 } from '../../core/configuration/types.ts';
-import { ErrorCategory, ErrorSeverity, handleError } from '../../shared/utils/error-handler.js';
+import { ErrorCategory, ErrorSeverity, handleError } from "../../../shared/utils/error-handler.ts";
 
 // Use MediaPipe commons for shared configuration
 
@@ -516,7 +516,7 @@ export const createMediaPipeFaceMeshPipeline = (userConfig = {}) => {
         }
         
         // Convert to standardized format
-        const faces = processMediaPipeResults(results, !!iris);
+        const faces = processMediaPipeResults(results, Boolean(iris));
         
         return createAnalysisResult({
           faces,
@@ -524,7 +524,7 @@ export const createMediaPipeFaceMeshPipeline = (userConfig = {}) => {
           source: 'mediapipe-face-mesh',
           metadata: {
             totalLandmarks: faces.reduce((sum, face) => sum + face.landmarks.length, 0),
-            irisEnabled: !!iris,
+            irisEnabled: Boolean(iris),
             processingMode: mediaPipeConfig.refineLandmarks ? 'refined' : 'standard'
           }
         });
@@ -570,13 +570,13 @@ export const createMediaPipeFaceMeshPipeline = (userConfig = {}) => {
 
     // Standardized health status
     getHealthStatus: () => ({
-      healthy: !!faceMesh && !!imageProcessor,
+      healthy: Boolean(faceMesh) && Boolean(imageProcessor),
       runtime: 'browser',
       backend: 'mediapipe-face-mesh',
-      modelLoaded: !!faceMesh,
-      irisEnabled: !!iris,
+      modelLoaded: Boolean(faceMesh),
+      irisEnabled: Boolean(iris),
       refinedLandmarks: config.refineLandmarks,
-      resourcePoolAvailable: !!resourcePool,
+      resourcePoolAvailable: Boolean(resourcePool),
       maxFaces: config.maxNumFaces
     }),
 
@@ -591,7 +591,7 @@ export const createMediaPipeFaceMeshPipeline = (userConfig = {}) => {
     },
 
     // Check if pipeline is initialized
-    isInitialized: () => !!faceMesh && !!imageProcessor
+    isInitialized: () => Boolean(faceMesh) && Boolean(imageProcessor)
   });
 };
 

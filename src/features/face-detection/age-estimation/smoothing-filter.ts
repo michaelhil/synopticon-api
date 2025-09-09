@@ -3,7 +3,7 @@
  * Provides smoothing for video streams to reduce flickering
  */
 
-import type { AgeResult, GenderResult } from './base-age-detector.ts';
+import type { AgeResult, GenderResult } from './base-age-detector.js';
 
 export interface SmoothingFilterConfiguration {
   readonly smoothingFactor: number;

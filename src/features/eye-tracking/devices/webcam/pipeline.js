@@ -4,9 +4,9 @@
  */
 
 import { createPipeline } from '../../../../core/pipeline/pipeline.js';
-import { createPipelineConfig } from '../../../../core/pipeline/pipeline-config.js';
+import { createPipelineConfig } from '../../../../core/pipeline/pipeline-config.ts';
 import { createImageProcessor } from '../../../../core/engine/image-processor.js';
-import { getGlobalResourcePool } from '../../../../core/performance/resource-pool.js';
+import { getGlobalResourcePool } from '../../../../core/performance/resource-pool.ts';
 import { 
   IRIS_LANDMARKS as SHARED_IRIS_LANDMARKS,
   calculateEyeAspectRatio,
@@ -21,7 +21,7 @@ import {
   createEyeResult,
   createPerformanceProfile
 } from '../../../../core/configuration/types.js';
-import { ErrorCategory, ErrorSeverity, handleError } from '../../../../shared/utils/error-handler.js';
+import { ErrorCategory, ErrorSeverity, handleError } from "../../../../shared/utils/error-handler.ts";
 
 // Use shared iris landmarks from MediaPipe commons
 const IRIS_LANDMARKS = SHARED_IRIS_LANDMARKS;
@@ -485,7 +485,7 @@ export const createIrisTrackingPipeline = (userConfig = {}) => {
           pipelineName: 'mediapipe-iris',
           irisDetected: (smoothedResult.metadata?.irisLandmarksDetected || 0) > 0,
           gazeEstimationEnabled: state.config.enableGazeEstimation,
-          smoothingApplied: !!state.eyeTrackingFilter
+          smoothingApplied: Boolean(state.eyeTrackingFilter)
         }
       });
 
@@ -543,8 +543,8 @@ export const createIrisTrackingPipeline = (userConfig = {}) => {
       healthy: state.isInitialized,
       runtime: 'browser', // MediaPipe Iris browser-only
       backend: 'mediapipe-iris',
-      modelLoaded: !!state.iris,
-      smoothingEnabled: !!state.eyeTrackingFilter
+      modelLoaded: Boolean(state.iris),
+      smoothingEnabled: Boolean(state.eyeTrackingFilter)
     })
   });
 
@@ -558,8 +558,8 @@ export const createIrisTrackingPipeline = (userConfig = {}) => {
       healthy: state.isInitialized,
       runtime: 'browser',
       backend: 'mediapipe-iris',
-      modelLoaded: !!state.iris,
-      smoothingEnabled: !!state.eyeTrackingFilter
+      modelLoaded: Boolean(state.iris),
+      smoothingEnabled: Boolean(state.eyeTrackingFilter)
     }),
     updateConfig: (updates) => {
       state.config = { ...state.config, ...updates };

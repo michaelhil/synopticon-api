@@ -47,7 +47,7 @@ export const createRemoteTobiiClient = (config = {}) => {
     }
   };
 
-  let latencyBuffer = [];
+  const latencyBuffer = [];
   let lastSecondPackets = 0;
   let dataRateTimer = null;
 
@@ -165,29 +165,29 @@ export const createRemoteTobiiClient = (config = {}) => {
       lastSecondPackets++;
 
       switch (message.type) {
-        case TOBII_MESSAGE_TYPES.DATA:
-          handleDataMessage(message, receiveTime);
-          break;
+      case TOBII_MESSAGE_TYPES.DATA:
+        handleDataMessage(message, receiveTime);
+        break;
           
-        case TOBII_MESSAGE_TYPES.STATUS:
-          handleStatusMessage(message);
-          break;
+      case TOBII_MESSAGE_TYPES.STATUS:
+        handleStatusMessage(message);
+        break;
           
-        case TOBII_MESSAGE_TYPES.CALIBRATION:
-          handleCalibrationMessage(message);
-          break;
+      case TOBII_MESSAGE_TYPES.CALIBRATION:
+        handleCalibrationMessage(message);
+        break;
           
-        case TOBII_MESSAGE_TYPES.HEARTBEAT:
-          state.lastHeartbeat = receiveTime;
-          break;
+      case TOBII_MESSAGE_TYPES.HEARTBEAT:
+        state.lastHeartbeat = receiveTime;
+        break;
           
-        case TOBII_MESSAGE_TYPES.ERROR:
-          logger.error('Tobii bridge error:', message.error);
-          emitter.emit('error', new Error(message.error));
-          break;
+      case TOBII_MESSAGE_TYPES.ERROR:
+        logger.error('Tobii bridge error:', message.error);
+        emitter.emit('error', new Error(message.error));
+        break;
           
-        default:
-          logger.warn(`Unknown message type: ${message.type}`);
+      default:
+        logger.warn(`Unknown message type: ${message.type}`);
       }
     } catch (error) {
       logger.error('Failed to parse Tobii message:', error);

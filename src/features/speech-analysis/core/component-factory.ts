@@ -12,7 +12,7 @@ import type {
   AudioQualityConfiguration,
   AnalyticsConfiguration,
   FlowConfiguration 
-} from './configuration-manager.ts';
+} from './configuration-manager.js';
 
 export interface ComponentState {
   streamingSystem: any;
@@ -247,19 +247,19 @@ export const createComponentFactory = () => {
     return {
       isInitialized: state.isInitialized,
       streamingSystem: {
-        available: !!state.streamingSystem,
+        available: Boolean(state.streamingSystem),
         active: state.streamingSystem?.isActive?.() || false
       },
       audioQualityAnalyzer: {
-        available: !!state.audioQualityAnalyzer,
+        available: Boolean(state.audioQualityAnalyzer),
         analyzing: state.audioQualityAnalyzer?.isAnalyzing?.() || false
       },
       conversationAnalytics: {
-        available: !!state.conversationAnalytics,
+        available: Boolean(state.conversationAnalytics),
         analyzing: state.conversationAnalytics?.isAnalyzing?.() || false
       },
       conversationFlow: {
-        available: !!state.conversationFlow
+        available: Boolean(state.conversationFlow)
       }
     };
   };

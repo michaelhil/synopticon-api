@@ -427,14 +427,3 @@ export const createBrowserSpeechClient = (config = {}) => {
   };
 };
 
-// Export default configuration
-export const DEFAULT_CLIENT_CONFIG = {
-  language: 'en-US',
-  continuous: true,
-  interimResults: true,
-  sendInterimResults: false,
-  batchSize: 5,
-  batchTimeout: 2000,
-  serverUrl: process.env.SPEECH_SERVER_URL || 'http://localhost:3000/api/analyze',
-  retryOnError: false
-};

@@ -52,7 +52,7 @@ export const createContextManager = (config: ContextAggregatorConfig = {}): Cont
       topics: topicWords,
       sentiment: 0.5, // Neutral sentiment placeholder
       entities: [], // Would extract named entities
-      summary: text.length > 100 ? text.substring(0, 100) + '...' : text
+      summary: text.length > 100 ? `${text.substring(0, 100)  }...` : text
     };
   };
 

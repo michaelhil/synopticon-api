@@ -124,19 +124,19 @@ export const createErrorHandler = (config: ErrorHandlerConfig = {}) => {
     
     if (state.config.enableConsole) {
       switch (error.severity) {
-        case ErrorSeverity.FATAL:
-        case ErrorSeverity.ERROR:
-          console.error(message, error.context);
-          break;
-        case ErrorSeverity.WARNING:
-          console.warn(message, error.context);
-          break;
-        case ErrorSeverity.INFO:
-          console.info(message, error.context);
-          break;
-        case ErrorSeverity.DEBUG:
-          console.debug(message, error.context);
-          break;
+      case ErrorSeverity.FATAL:
+      case ErrorSeverity.ERROR:
+        console.error(message, error.context);
+        break;
+      case ErrorSeverity.WARNING:
+        console.warn(message, error.context);
+        break;
+      case ErrorSeverity.INFO:
+        console.info(message, error.context);
+        break;
+      case ErrorSeverity.DEBUG:
+        console.debug(message, error.context);
+        break;
       }
     }
 
@@ -177,14 +177,14 @@ export const createErrorHandler = (config: ErrorHandlerConfig = {}) => {
     state.recoveryAttempts.set(recoveryKey, attempts + 1);
     
     switch (error.category) {
-      case ErrorCategory.WEBGL:
-        return recoverWebGL(error);
-      case ErrorCategory.CAMERA:
-        return recoverCamera(error);
-      case ErrorCategory.MEMORY:
-        return recoverMemory(error);
-      default:
-        return false;
+    case ErrorCategory.WEBGL:
+      return recoverWebGL(error);
+    case ErrorCategory.CAMERA:
+      return recoverCamera(error);
+    case ErrorCategory.MEMORY:
+      return recoverMemory(error);
+    default:
+      return false;
     }
   };
 
@@ -310,7 +310,7 @@ export const createErrorHandler = (config: ErrorHandlerConfig = {}) => {
     try {
       return await operation();
     } catch (error) {
-      handleError(`Async operation failed: ${(error as Error).message}`, ErrorCategory.PROCESSING, ErrorSeverity.ERROR, { hasStack: !!(error as Error).stack });
+      handleError(`Async operation failed: ${(error as Error).message}`, ErrorCategory.PROCESSING, ErrorSeverity.ERROR, { hasStack: Boolean((error as Error).stack) });
       return fallback;
     }
   };

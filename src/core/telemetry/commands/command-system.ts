@@ -80,7 +80,7 @@ export const FLIGHT_COMMANDS = {
   AP_MASTER: 'autopilot-master',         // { enabled: boolean }
   AP_HEADING: 'autopilot-heading',       // { heading: degrees }
   AP_ALTITUDE: 'autopilot-altitude',     // { altitude: feet }
-  AP_SPEED: 'autopilot-speed',          // { speed: knots }
+  AP_SPEED: 'autopilot-speed'          // { speed: knots }
 } as const;
 
 // Standard vehicle control commands  
@@ -104,7 +104,7 @@ export const VEHICLE_COMMANDS = {
   // Advanced
   SET_ABS: 'set-abs',                   // { enabled: boolean }
   SET_TC: 'set-traction-control',       // { enabled: boolean }
-  SET_ESC: 'set-stability-control',     // { enabled: boolean }
+  SET_ESC: 'set-stability-control'     // { enabled: boolean }
 } as const;
 
 // Command builder utilities
@@ -121,7 +121,7 @@ export const createCommand = (
   timestamp: Date.now(),
   priority: 'normal',
   timeout: 5000,
-  ...options,
+  ...options
 });
 
 // Pre-built command factories
@@ -140,7 +140,7 @@ export const createVehicleCommand = (
 // Command queue manager
 export const createCommandQueue = (maxSize = 100) => {
   let queue: SimulatorCommand[] = [];
-  let processing = false;
+  const processing = false;
 
   const add = (command: SimulatorCommand): boolean => {
     if (queue.length >= maxSize) {
@@ -274,7 +274,7 @@ export const VALIDATORS = {
     typeof value === 'number' && value >= -1000 && value <= 100000,
     
   speed: (value: unknown): boolean => 
-    typeof value === 'number' && value >= 0 && value <= 1000,
+    typeof value === 'number' && value >= 0 && value <= 1000
 };
 
 // Utility to create event from command result
@@ -287,5 +287,5 @@ export const createCommandResultEvent = (
   timestamp: Date.now(),
   source: sourceId,
   data: result,
-  severity: result.success ? 'info' : 'error',
+  severity: result.success ? 'info' : 'error'
 });

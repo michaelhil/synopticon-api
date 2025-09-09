@@ -3,7 +3,7 @@
  * Common interface that all distribution mechanisms must implement
  */
 
-import { createLogger } from '../../shared/utils/logger.ts';
+import { createLogger } from '../../shared/utils/logger.js';
 
 const logger = createLogger({ level: 2 });
 

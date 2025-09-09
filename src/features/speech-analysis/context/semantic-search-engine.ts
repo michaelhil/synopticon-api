@@ -221,7 +221,7 @@ export const createSemanticSearchEngine = () => {
 
     // Truncate if too long
     if (bestSentence.length > maxSnippetLength) {
-      bestSentence = bestSentence.substring(0, maxSnippetLength - 3) + '...';
+      bestSentence = `${bestSentence.substring(0, maxSnippetLength - 3)  }...`;
     }
 
     return bestSentence;

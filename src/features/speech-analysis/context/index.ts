@@ -8,7 +8,7 @@ import {
   createConversationContext,
   createSpeechChunk,
   createSpeechEvent
-} from '../../../core/configuration/types.ts';
+} from '../../../core/configuration/types.js';
 
 import {
   type BaseContextManager,
@@ -26,14 +26,14 @@ import {
   validateContextChunk,
   validateConversationContext,
   createContextEvent
-} from './base-context-manager.ts';
+} from './base-context-manager.js';
 
 import { 
   createSemanticSearchEngine,
   type SemanticSearchEngine,
   type SemanticSearchOptions,
   type SemanticSearchResult
-} from './semantic-search-engine.ts';
+} from './semantic-search-engine.js';
 
 import {
   createTopicModelingEngine,
@@ -42,14 +42,14 @@ import {
   type TopicExtractionResult,
   type TopicEvolutionResult,
   type TopicModelingOptions
-} from './topic-modeling-engine.ts';
+} from './topic-modeling-engine.js';
 
 import {
   createContextSummarizationEngine,
   type ContextSummarizationEngine,
   type SummarizationOptions,
   type SummaryResult
-} from './context-summarization-engine.ts';
+} from './context-summarization-engine.js';
 
 export interface ContextManagerState {
   llmClient: any;
@@ -249,7 +249,7 @@ export const createContextManager = (config: Partial<ContextManagerConfiguration
   const addChunk = async (chunk: ContextChunk, contextId?: string): Promise<void> => {
     const errors = validateContextChunk(chunk);
     if (errors.length > 0) {
-      throw new Error(`Invalid chunk: ${errors.join(', ')}`);
+      throw new Error(`Invalid chunk: ${errors.join(', ')`);
     }
 
     const targetContextId = contextId || state.defaultContextId;
@@ -281,7 +281,7 @@ export const createContextManager = (config: Partial<ContextManagerConfiguration
     };
 
     // Check if we need to generate a new summary
-    let summary = context.summary;
+    let {summary} = context;
     if (updatedChunks.length >= state.configuration.summaryThreshold) {
       const summaryResult = await summarizationEngine.generateSummary(
         updatedContext,
@@ -679,7 +679,7 @@ export {
 export const analyzeContext = (context: any) => {
   const errors = validateConversationContext(context);
   if (errors.length > 0) {
-    return { valid: false, error: errors.join(', ') };
+    return { valid: false, error: errors.join(', ')) };
   }
 
   const totalWords = context.chunks.reduce((sum: number, chunk: any) => sum + chunk.text.split(' ').length, 0);

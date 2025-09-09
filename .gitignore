@@ -100,8 +100,20 @@ models/
 *.pb
 *.json.gz
 
+# SECURITY: Never commit these files
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+*secret*
+*password*
+*credential*
+!.env.example
+
 # Synopticon-specific
 examples/outputs/
 test-images/
 benchmark-results/
 performance-logs/
+quality-report.json

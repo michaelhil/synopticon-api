@@ -9,7 +9,7 @@ import {
   createResourcePoolState,
   type ResourcePoolConfig,
   type ResourcePoolState 
-} from './resource-pool-config.js';
+} from './resource-pool-config.js'
 import { createCanvasManager } from './resource-pool-canvas.js';
 import { createWebGLManager } from './resource-pool-webgl.js';
 import { createBufferManager } from './resource-pool-buffers.js';

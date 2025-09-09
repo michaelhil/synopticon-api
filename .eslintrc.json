@@ -1,5 +1,6 @@
 {
   "extends": ["eslint:recommended"],
+  "plugins": ["fp", "functional"],
   "env": {
     "browser": true,
     "node": true,
@@ -19,13 +20,115 @@
     "Bun": "readonly"
   },
   "rules": {
+    // Functional Programming Rules
+    "fp/no-class": "error",
+    "fp/no-this": "error", 
+    "fp/no-mutating-methods": "error",
+    "fp/no-mutation": ["error", {
+      "commonjs": true,
+      "allowThis": false
+    }],
+    "functional/no-classes": "error",
+    "functional/no-mixed-types": "off",
+    "functional/immutable-data": ["error", {
+      "ignoreClasses": true,
+      "ignoreImmediateMutation": true
+    }],
+    "functional/no-let": ["warn"],
+    "functional/prefer-immutable-types": "off",
+    
+    // Built-in Functional Programming Enforcement
+    "no-var": "error",
+    "prefer-const": "error",
+    "no-new": "warn",
+    
+    // Pure Functions & Immutability
+    "no-param-reassign": ["error", { "props": true }],
+    "prefer-arrow-callback": "error",
+    "arrow-spacing": "error",
+    "no-loop-func": "error",
+    "no-implicit-coercion": "error",
+    "no-magic-numbers": ["warn", { 
+      "ignore": [0, 1, -1, 2],
+      "ignoreArrayIndexes": true,
+      "ignoreDefaultValues": true
+    }],
+    
+    // Code Quality & Readability
     "no-unused-vars": ["error", { 
       "argsIgnorePattern": "^_",
       "varsIgnorePattern": "^_"
     }],
-    "prefer-const": "warn",
     "no-console": "off",
-    "max-lines-per-function": ["warn", 200],
-    "prefer-template": "warn"
-  }
+    "max-lines-per-function": ["error", 150],
+    "max-params": ["error", 4],
+    "complexity": ["warn", 10],
+    "prefer-template": "error",
+    "template-curly-spacing": "error",
+    
+    // Object & Array Patterns
+    "prefer-destructuring": ["error", {
+      "VariableDeclarator": {
+        "array": false,
+        "object": true
+      },
+      "AssignmentExpression": {
+        "array": false,
+        "object": true
+      }
+    }],
+    "object-shorthand": "error",
+    "prefer-object-spread": "error",
+    "prefer-spread": "error",
+    "no-array-constructor": "error",
+    
+    // Error Handling
+    "no-throw-literal": "error",
+    "prefer-promise-reject-errors": "error",
+    "no-return-await": "error",
+    
+    // Modern JavaScript Features
+    "prefer-rest-params": "error",
+    "no-useless-call": "error",
+    "no-useless-concat": "error",
+    "no-useless-return": "error",
+    "no-redundant-return": "off",
+    
+    // Spacing and Formatting
+    "space-before-function-paren": ["error", {
+      "anonymous": "always",
+      "named": "never",
+      "asyncArrow": "always"
+    }],
+    "comma-dangle": ["error", "never"],
+    "semi": ["error", "always"],
+    "quotes": ["error", "single", { "avoidEscape": true }],
+    "indent": ["error", 2],
+    "eol-last": "error"
+  },
+  "overrides": [
+    {
+      "files": ["*.ts", "*.tsx"],
+      "parser": "@typescript-eslint/parser",
+      "plugins": ["@typescript-eslint"],
+      "extends": [
+        "eslint:recommended",
+        "@typescript-eslint/recommended"
+      ],
+      "rules": {
+        "@typescript-eslint/no-explicit-any": "warn",
+        "@typescript-eslint/prefer-function-type": "error",
+        "@typescript-eslint/no-unnecessary-type-assertion": "error",
+        "@typescript-eslint/prefer-optional-chain": "error",
+        "@typescript-eslint/prefer-nullish-coalescing": "error"
+      }
+    },
+    {
+      "files": ["*.test.js", "*.test.ts", "test-*.js", "test-*.ts"],
+      "rules": {
+        "max-lines-per-function": "off",
+        "no-magic-numbers": "off"
+      }
+    }
+  ]
 }

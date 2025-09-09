@@ -1,6 +1,6 @@
 /**
- * Pipeline Composer - Main Factory
- * Unified interface for all composition patterns with Strategy pattern implementation
+ * Pipeline Composer Factory
+ * Unified interface for 3 core composition patterns: Sequential, Parallel, Adaptive
  */
 
 import {
@@ -17,55 +17,39 @@ import {
   generateCacheKey,
   createEmptyMetrics,
   createDefaultComposerConfig
-} from './base-composer.ts';
+} from './base-composer.js';
 
-// Import all composer implementations
+// Import only core composer implementations (3 strategies)
 import {
   SequentialCompositionConfig,
   createSequentialComposition,
   executeSequential,
   validateSequentialComposition
-} from './sequential-composer.ts';
+} from './sequential-composer.js';
 
 import {
   ParallelCompositionConfig,
   createParallelComposition,
   executeParallel,
   validateParallelComposition
-} from './parallel-composer.ts';
-
-import {
-  ConditionalCompositionConfig,
-  createConditionalComposition,
-  executeConditional,
-  validateConditionalComposition
-} from './conditional-composer.ts';
+} from './parallel-composer.js';
 
 import {
   AdaptiveCompositionConfig,
   createAdaptiveComposition,
   executeAdaptive,
   validateAdaptiveComposition
-} from './adaptive-composer.ts';
+} from './adaptive-composer.js';
 
-import {
-  CascadingCompositionConfig,
-  createCascadingComposition,
-  executeCascading,
-  validateCascadingComposition
-} from './cascading-composer.ts';
-
-// Type unions for all composition configs
-export type AnyCompositionConfig = 
+// Core composition configuration types
+export type CoreCompositionConfig = 
   | SequentialCompositionConfig
   | ParallelCompositionConfig
-  | ConditionalCompositionConfig
-  | AdaptiveCompositionConfig
-  | CascadingCompositionConfig;
+  | AdaptiveCompositionConfig;
 
 // Execution function type
 type ExecutionFunction = (
-  composition: AnyCompositionConfig,
+  composition: CoreCompositionConfig,
   input: any,
   registeredPipelines: Map<string, PipelineInfo>,
   executePipelineStep: (pipeline: PipelineInfo, input: any, options: any) => Promise<any>,
@@ -73,11 +57,11 @@ type ExecutionFunction = (
 ) => Promise<ExecutionResult>;
 
 // Validation function type
-type ValidationFunction = (composition: AnyCompositionConfig) => string[];
+type ValidationFunction = (composition: CoreCompositionConfig) => string[];
 
 /**
- * Main Pipeline Composer Factory
- * Implements the Strategy pattern for different composition types
+ * Create Pipeline Composer
+ * Implements Strategy pattern for 3 core composition types
  */
 export const createPipelineComposer = (config: Partial<ComposerConfig> = {}): BaseComposer => {
   const composerConfig = createDefaultComposerConfig(config);
@@ -95,21 +79,17 @@ export const createPipelineComposer = (config: Partial<ComposerConfig> = {}): Ba
   const executionStrategies: Map<CompositionPattern, ExecutionFunction> = new Map([
     [CompositionPattern.SEQUENTIAL, executeSequential as ExecutionFunction],
     [CompositionPattern.PARALLEL, executeParallel as ExecutionFunction],
-    [CompositionPattern.CONDITIONAL, executeConditional as ExecutionFunction],
-    [CompositionPattern.ADAPTIVE, executeAdaptive as ExecutionFunction],
-    [CompositionPattern.CASCADING, executeCascading as ExecutionFunction]
+    [CompositionPattern.ADAPTIVE, executeAdaptive as ExecutionFunction]
   ]);
 
   // Strategy map for validation functions
   const validationStrategies: Map<CompositionPattern, ValidationFunction> = new Map([
     [CompositionPattern.SEQUENTIAL, validateSequentialComposition as ValidationFunction],
     [CompositionPattern.PARALLEL, validateParallelComposition as ValidationFunction],
-    [CompositionPattern.CONDITIONAL, validateConditionalComposition as ValidationFunction],
-    [CompositionPattern.ADAPTIVE, validateAdaptiveComposition as ValidationFunction],
-    [CompositionPattern.CASCADING, validateCascadingComposition as ValidationFunction]
+    [CompositionPattern.ADAPTIVE, validateAdaptiveComposition as ValidationFunction]
   ]);
 
-  // Pipeline execution function that handles individual pipeline steps
+  // Enhanced pipeline execution with improved error handling
   const executePipelineStep = async (
     pipeline: PipelineInfo,
     input: any,
@@ -117,28 +97,63 @@ export const createPipelineComposer = (config: Partial<ComposerConfig> = {}): Ba
   ): Promise<any> => {
     const timeout = options.timeout || pipeline.metadata.timeout || composerConfig.defaultTimeout;
     
-    // Create execution promise
-    const executionPromise = pipeline.instance.process 
-      ? pipeline.instance.process(input, { ...pipeline.options, ...options })
-      : pipeline.instance(input, { ...pipeline.options, ...options });
+    try {
+      // Create execution promise with enhanced context
+      const executionPromise = pipeline.instance.process 
+        ? pipeline.instance.process(input, { 
+          ...pipeline.options, 
+          ...options,
+          pipelineId: pipeline.id,
+          executionContext: options.executionContext || 'composer'
+        })
+        : pipeline.instance(input, { 
+          ...pipeline.options, 
+          ...options,
+          pipelineId: pipeline.id
+        });
 
-    // Apply timeout if specified
-    if (timeout > 0) {
-      return Promise.race([
-        executionPromise,
-        new Promise((_, reject) => 
-          setTimeout(() => reject(new Error(`Pipeline ${pipeline.id} timed out after ${timeout}ms`)), timeout)
-        )
-      ]);
+      // Apply timeout with enhanced error context
+      if (timeout > 0) {
+        return Promise.race([
+          executionPromise,
+          new Promise((_, reject) => 
+            setTimeout(() => 
+              reject(new Error(`Pipeline ${pipeline.id} (${pipeline.metadata.name}) timed out after ${timeout}ms`)), 
+            timeout
+            )
+          )
+        ]);
+      }
+
+      return executionPromise;
+
+    } catch (error) {
+      // Enhanced error context for better debugging
+      const enhancedError = new Error(
+        `Pipeline execution failed: ${pipeline.id} (${pipeline.metadata.name}) - ${error.message}`
+      );
+      enhancedError.cause = error;
+      throw enhancedError;
     }
-
-    return executionPromise;
   };
 
-  // Cache management
+  // Optimized cache management with TTL support
   const getCachedResult = (cacheKey: string): ExecutionResult | null => {
     if (!composerConfig.enableCaching) return null;
-    return state.executionCache.get(cacheKey) || null;
+    
+    const cachedEntry = state.executionCache.get(cacheKey);
+    if (!cachedEntry) return null;
+
+    // Check TTL if configured
+    if (composerConfig.cacheMaxAge && cachedEntry.metadata.cachedAt) {
+      const age = Date.now() - cachedEntry.metadata.cachedAt;
+      if (age > composerConfig.cacheMaxAge) {
+        state.executionCache.delete(cacheKey);
+        return null;
+      }
+    }
+
+    return cachedEntry;
   };
 
   const setCachedResult = (cacheKey: string, result: ExecutionResult): void => {
@@ -150,13 +165,20 @@ export const createPipelineComposer = (config: Partial<ComposerConfig> = {}): Ba
       state.executionCache.delete(firstKey);
     }
     
-    state.executionCache.set(cacheKey, {
+    // Add cache timestamp for TTL
+    const cachedResult: ExecutionResult = {
       ...result,
-      metadata: { ...result.metadata, fromCache: true }
-    });
+      metadata: { 
+        ...result.metadata, 
+        fromCache: true,
+        cachedAt: Date.now()
+      }
+    };
+    
+    state.executionCache.set(cacheKey, cachedResult);
   };
 
-  // Update metrics
+  // Enhanced metrics tracking
   const updateMetrics = (result: ExecutionResult, fromCache: boolean = false): void => {
     if (!composerConfig.enableMetrics) return;
     
@@ -170,12 +192,22 @@ export const createPipelineComposer = (config: Partial<ComposerConfig> = {}): Ba
     } else {
       state.metrics.failedExecutions++;
     }
+
+    // Track pattern usage for analytics
+    const pattern = result.metadata.executionPattern;
+    if (pattern) {
+      if (!state.metrics.patternUsage) {
+        state.metrics.patternUsage = new Map();
+      }
+      const current = state.metrics.patternUsage.get(pattern) || 0;
+      state.metrics.patternUsage.set(pattern, current + 1);
+    }
   };
 
   // Return the composer interface
   return {
     /**
-     * Register a pipeline with the composer
+     * Register a pipeline with enhanced validation
      */
     registerPipeline: (id: string, pipeline: any, options: any = {}): void => {
       if (!id || typeof id !== 'string') {
@@ -184,6 +216,11 @@ export const createPipelineComposer = (config: Partial<ComposerConfig> = {}): Ba
       
       if (!pipeline) {
         throw new Error('Pipeline instance is required');
+      }
+
+      // Enhanced pipeline validation
+      if (typeof pipeline !== 'function' && !pipeline.process) {
+        throw new Error(`Pipeline ${id} must be a function or have a 'process' method`);
       }
 
       const pipelineInfo: PipelineInfo = {
@@ -197,6 +234,7 @@ export const createPipelineComposer = (config: Partial<ComposerConfig> = {}): Ba
           timeout: options.timeout || composerConfig.defaultTimeout,
           retryCount: options.retryCount || 0,
           priority: options.priority || 0,
+          registeredAt: Date.now(),
           ...options.metadata
         }
       };
@@ -205,25 +243,49 @@ export const createPipelineComposer = (config: Partial<ComposerConfig> = {}): Ba
     },
 
     /**
-     * Create a composition configuration
+     * Create a composition configuration with enhanced validation
      */
     createComposition: (config: CompositionConfig): CompositionConfig => {
-      // Validate the composition
+      // Validate supported patterns only (3 core strategies)
+      const supportedPatterns = [
+        CompositionPattern.SEQUENTIAL,
+        CompositionPattern.PARALLEL, 
+        CompositionPattern.ADAPTIVE
+      ];
+
+      if (!supportedPatterns.includes(config.pattern)) {
+        throw new Error(
+          `Unsupported composition pattern: ${config.pattern}. ` +
+          `Supported patterns: ${supportedPatterns.join(', '). ` +
+          'Note: CONDITIONAL and CASCADING patterns are not supported.'
+        );
+      }
+
+      // Enhanced composition validation
       const validationFunc = validationStrategies.get(config.pattern);
       if (validationFunc) {
-        const errors = validationFunc(config as AnyCompositionConfig);
+        const errors = validationFunc(config as CoreCompositionConfig);
         if (errors.length > 0) {
-          throw new Error(`Composition validation failed: ${errors.join(', ')}`);
+          throw new Error(`Composition validation failed: ${errors.join(', ')`);
         }
       }
 
-      // Store the composition
-      state.compositions.set(config.id, config);
-      return config;
+      // Store the composition with metadata
+      const enhancedConfig = {
+        ...config,
+        metadata: {
+          ...config.metadata,
+          createdAt: Date.now(),
+          composerVersion: '2.0.0'
+        }
+      };
+
+      state.compositions.set(config.id, enhancedConfig);
+      return enhancedConfig;
     },
 
     /**
-     * Execute a composition
+     * Execute a composition with enhanced error handling and monitoring
      */
     executeComposition: async (
       compositionId: string,
@@ -231,51 +293,72 @@ export const createPipelineComposer = (config: Partial<ComposerConfig> = {}): Ba
       options: ExecutionOptions = {}
     ): Promise<ExecutionResult> => {
       const startTime = performance.now();
+      const executionId = `${compositionId}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       
-      // Get composition
-      const composition = state.compositions.get(compositionId);
-      if (!composition) {
-        throw new Error(`Composition ${compositionId} not found`);
-      }
-
-      // Check cache if enabled
-      const cacheKey = generateCacheKey(compositionId, input, options);
-      const cachedResult = getCachedResult(cacheKey);
-      if (cachedResult) {
-        updateMetrics(cachedResult, true);
-        return cachedResult;
-      }
-
-      // Get execution strategy
-      const executionFunc = executionStrategies.get(composition.pattern);
-      if (!executionFunc) {
-        throw new Error(`Execution strategy for pattern ${composition.pattern} not found`);
-      }
-
       try {
-        // Execute composition
+        // Get composition
+        const composition = state.compositions.get(compositionId);
+        if (!composition) {
+          throw new Error(`Composition ${compositionId} not found`);
+        }
+
+        // Enhanced options with execution context
+        const enhancedOptions = {
+          ...options,
+          executionId,
+          startTime,
+          executionContext: 'composer'
+        };
+
+        // Check cache if enabled
+        const cacheKey = generateCacheKey(compositionId, input, enhancedOptions);
+        const cachedResult = getCachedResult(cacheKey);
+        if (cachedResult) {
+          updateMetrics(cachedResult, true);
+          return cachedResult;
+        }
+
+        // Get execution strategy
+        const executionFunc = executionStrategies.get(composition.pattern);
+        if (!executionFunc) {
+          throw new Error(
+            `Execution strategy for pattern ${composition.pattern} not found. ` +
+            'This should not happen with supported strategies.'
+          );
+        }
+
+        // Execute composition with enhanced context
         const result = await executionFunc(
-          composition as AnyCompositionConfig,
+          composition as CoreCompositionConfig,
           input,
           state.registeredPipelines,
           executePipelineStep,
-          options
+          enhancedOptions
         );
 
-        // Update execution time in metadata
+        // Enhanced result metadata
         const totalExecutionTime = performance.now() - startTime;
-        result.metadata.executionTime = totalExecutionTime;
-        result.metadata.compositionId = compositionId;
+        const enhancedResult: ExecutionResult = {
+          ...result,
+          metadata: {
+            ...result.metadata,
+            executionTime: totalExecutionTime,
+            compositionId,
+            executionId,
+            composerVersion: '2.0.0',
+            strategyCount: 3 // Number of available strategies
+          }
+        };
 
         // Cache result if successful
         if (result.success) {
-          setCachedResult(cacheKey, result);
+          setCachedResult(cacheKey, enhancedResult);
         }
 
         // Update metrics
-        updateMetrics(result);
+        updateMetrics(enhancedResult);
 
-        return result;
+        return enhancedResult;
 
       } catch (error) {
         const errorResult: ExecutionResult = {
@@ -288,7 +371,9 @@ export const createPipelineComposer = (config: Partial<ComposerConfig> = {}): Ba
             failedPipelines: 0,
             fromCache: false,
             compositionId,
-            executionPattern: composition.pattern
+            executionId,
+            composerVersion: '2.0.0',
+            errorStack: error instanceof Error ? error.stack : undefined
           }
         };
 
@@ -298,10 +383,17 @@ export const createPipelineComposer = (config: Partial<ComposerConfig> = {}): Ba
     },
 
     /**
-     * Get a composition by ID
+     * Get composition by ID
      */
     getComposition: (id: string): CompositionConfig | undefined => {
       return state.compositions.get(id);
+    },
+
+    /**
+     * List all compositions
+     */
+    listCompositions: (): CompositionConfig[] => {
+      return Array.from(state.compositions.values());
     },
 
     /**
@@ -312,10 +404,16 @@ export const createPipelineComposer = (config: Partial<ComposerConfig> = {}): Ba
     },
 
     /**
-     * Get composer metrics
+     * Get enhanced metrics
      */
     getMetrics: (): ComposerMetrics => {
-      return { ...state.metrics };
+      return { 
+        ...state.metrics,
+        registeredPipelines: state.registeredPipelines.size,
+        registeredCompositions: state.compositions.size,
+        cacheSize: state.executionCache.size,
+        supportedStrategies: ['sequential', 'parallel', 'adaptive']
+      };
     },
 
     /**
@@ -324,6 +422,19 @@ export const createPipelineComposer = (config: Partial<ComposerConfig> = {}): Ba
     clearCache: (): void => {
       state.executionCache.clear();
     },
+
+    /**
+     * Get composer status
+     */
+    getStatus: () => ({
+      version: '2.0.0',
+      strategiesSupported: 3,
+      strategiesRemoved: ['conditional', 'cascading'],
+      pipelinesRegistered: state.registeredPipelines.size,
+      compositionsRegistered: state.compositions.size,
+      cacheEnabled: composerConfig.enableCaching,
+      metricsEnabled: composerConfig.enableMetrics
+    }),
 
     /**
      * Cleanup resources
@@ -344,22 +455,12 @@ export const createPipelineComposer = (config: Partial<ComposerConfig> = {}): Ba
   };
 };
 
-// Re-export all the factory functions for convenience
+// Re-export factory functions (3 core strategies only)
 export {
-  // Sequential
+  // Core strategies
   createSequentialComposition,
-  
-  // Parallel  
   createParallelComposition,
-  
-  // Conditional
-  createConditionalComposition,
-  
-  // Adaptive
   createAdaptiveComposition,
-  
-  // Cascading
-  createCascadingComposition,
   
   // Base types and enums
   CompositionPattern,
@@ -373,7 +474,5 @@ export {
   type PipelineInfo,
   type ComposerMetrics,
   type BaseComposer,
-  type AnyCompositionConfig
+  type CoreCompositionConfig
 };
-
-// Default export

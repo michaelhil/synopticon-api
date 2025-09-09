@@ -294,29 +294,29 @@ export const createCompositionRegistry = () => {
       let aValue: any, bValue: any;
 
       switch (sortBy) {
-        case 'name':
-          aValue = a.name.toLowerCase();
-          bValue = b.name.toLowerCase();
-          break;
-        case 'usage':
-          aValue = a.metadata.usageCount;
-          bValue = b.metadata.usageCount;
-          break;
-        case 'created':
-          aValue = a.metadata.createdAt;
-          bValue = b.metadata.createdAt;
-          break;
-        case 'updated':
-          aValue = a.metadata.updatedAt;
-          bValue = b.metadata.updatedAt;
-          break;
-        case 'success_rate':
-          aValue = a.metadata.successRate || 0;
-          bValue = b.metadata.successRate || 0;
-          break;
-        default:
-          aValue = a.name;
-          bValue = b.name;
+      case 'name':
+        aValue = a.name.toLowerCase();
+        bValue = b.name.toLowerCase();
+        break;
+      case 'usage':
+        aValue = a.metadata.usageCount;
+        bValue = b.metadata.usageCount;
+        break;
+      case 'created':
+        aValue = a.metadata.createdAt;
+        bValue = b.metadata.createdAt;
+        break;
+      case 'updated':
+        aValue = a.metadata.updatedAt;
+        bValue = b.metadata.updatedAt;
+        break;
+      case 'success_rate':
+        aValue = a.metadata.successRate || 0;
+        bValue = b.metadata.successRate || 0;
+        break;
+      default:
+        aValue = a.name;
+        bValue = b.name;
       }
 
       if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;

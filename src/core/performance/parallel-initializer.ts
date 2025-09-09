@@ -327,7 +327,7 @@ export const createParallelInitializer = (config: ParallelInitializerConfig = {}
               );
               
               console.error(
-                `Circular dependency or missing dependencies detected for pipelines: ${remaining.map(p => p.name).join(', ')}`
+                `Circular dependency or missing dependencies detected for pipelines: ${remaining.map(p => p.name).join(', ')`
               );
               break;
             }
@@ -345,18 +345,18 @@ export const createParallelInitializer = (config: ParallelInitializerConfig = {}
               pipeline, 
               pipelineConfigs[pipeline.name] || {}
             )
-            .then(() => {
-              initialized.add(pipeline.name);
-              initializing.delete(pipeline.name);
-              results.successful.push(pipeline.name);
-              initPromises.delete(pipeline.name);
-            })
-            .catch((error: Error) => {
-              failed.add(pipeline.name);
-              initializing.delete(pipeline.name);
-              results.failed.push({ name: pipeline.name, error: error.message });
-              initPromises.delete(pipeline.name);
-            });
+              .then(() => {
+                initialized.add(pipeline.name);
+                initializing.delete(pipeline.name);
+                results.successful.push(pipeline.name);
+                initPromises.delete(pipeline.name);
+              })
+              .catch((error: Error) => {
+                failed.add(pipeline.name);
+                initializing.delete(pipeline.name);
+                results.failed.push({ name: pipeline.name, error: error.message });
+                initPromises.delete(pipeline.name);
+              });
             
             initPromises.set(pipeline.name, initPromise);
           }

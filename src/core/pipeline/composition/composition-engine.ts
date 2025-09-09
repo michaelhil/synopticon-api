@@ -3,33 +3,22 @@
  * Central orchestrator for all pipeline composition patterns and strategies
  */
 
-import { createSequentialComposer } from './composers/sequential-composer.js';
-import { createParallelComposer } from './composers/parallel-composer.js';
-import { createConditionalComposer } from './composers/conditional-composer.js';
-import { createCascadingComposer } from './composers/cascading-composer.js';
-import { createAdaptiveComposer } from './composers/adaptive-composer.js';
+import { 
+  createPipelineComposer,
+  CompositionPattern,
+  ExecutionStrategy
+} from '../composers/index.js';
 import { createCompositionMetrics } from './metrics/composition-metrics.js';
 import { createCompositionRegistry } from './registry/composition-registry.js';
 import { createExecutionScheduler } from './scheduling/execution-scheduler.js';
 
-// Composition pattern types
-export const CompositionPattern = {
-  SEQUENTIAL: 'sequential',
-  PARALLEL: 'parallel', 
-  CONDITIONAL: 'conditional',
-  CASCADING: 'cascading',
-  ADAPTIVE: 'adaptive'
-} as const;
+// Re-export composition patterns
+export { CompositionPattern };
 
 export type CompositionPatternType = typeof CompositionPattern[keyof typeof CompositionPattern];
 
-// Execution strategy types
-export const ExecutionStrategy = {
-  FAIL_FAST: 'fail_fast',
-  CONTINUE_ON_ERROR: 'continue_on_error',
-  RETRY_ON_FAILURE: 'retry_on_failure',
-  ADAPTIVE: 'adaptive'
-} as const;
+// Re-export execution strategies
+export { ExecutionStrategy };
 
 export type ExecutionStrategyType = typeof ExecutionStrategy[keyof typeof ExecutionStrategy];
 
@@ -80,13 +69,14 @@ export const createPipelineCompositionEngine = (config: CompositionEngineConfig 
     ...config
   };
 
-  // Initialize composers for each pattern
+  // Initialize composer (single instance managing all patterns)
+  const composer = createPipelineComposer(engineConfig);
+  
+  // Create pattern-specific interfaces
   const composers = {
-    [CompositionPattern.SEQUENTIAL]: createSequentialComposer(engineConfig),
-    [CompositionPattern.PARALLEL]: createParallelComposer(engineConfig),
-    [CompositionPattern.CONDITIONAL]: createConditionalComposer(engineConfig),
-    [CompositionPattern.CASCADING]: createCascadingComposer(engineConfig),
-    [CompositionPattern.ADAPTIVE]: createAdaptiveComposer(engineConfig)
+    [CompositionPattern.SEQUENTIAL]: composer,
+    [CompositionPattern.PARALLEL]: composer,
+    [CompositionPattern.ADAPTIVE]: composer
   };
 
   // Initialize supporting systems
@@ -133,23 +123,58 @@ export const createPipelineCompositionEngine = (config: CompositionEngineConfig 
         throw new Error(`No composer found for pattern: ${composition.pattern}`);
       }
 
-      // Execute composition
-      const result = await composer.execute(composition);
+      // Execute composition using composer
+      const result = await composer.executeComposition(composition.id, {}, {
+        strategy: composition.strategy,
+        ...composition.options
+      });
+      
 
       // Update metrics
       const executionTime = Date.now() - startTime;
       updateExecutionMetrics(composition.pattern, true, executionTime);
 
+      // Convert composer result to composition engine format
+      // Handle different result formats based on composition pattern
+      let results = [];
+      if (result.data) {
+        if (composition.pattern === CompositionPattern.PARALLEL && result.metadata?.results) {
+          // For parallel compositions, extract individual pipeline results
+          results = result.metadata.results.map((pipelineResult: any) => pipelineResult.data);
+        } else if (composition.pattern === CompositionPattern.SEQUENTIAL) {
+          // For sequential compositions, extract the final pipeline result
+          if (Array.isArray(result.data) && result.data.length > 0) {
+            // Get the last pipeline result (final result in sequential execution)
+            const finalResult = result.data[result.data.length - 1];
+            results = [{ result: finalResult.data }];
+          } else {
+            results = [{ result: result.data }];
+          }
+        } else if (Array.isArray(result.data)) {
+          results = result.data;
+        } else {
+          results = [result.data];
+        }
+      }
+
+      const compositionResult: CompositionResult = {
+        compositionId: composition.id,
+        pattern: composition.pattern,
+        success: result.success,
+        results,
+        errors: result.error ? [{ pipelineId: 'unknown', error: new Error(result.error) }] : [],
+        executionTime,
+        timestamp: Date.now(),
+        metadata: result.metadata
+      };
+
       // Record in history
       if (state.compositionHistory.length > 100) {
         state.compositionHistory.shift();
       }
-      state.compositionHistory.push({
-        ...result,
-        executionTime
-      });
+      state.compositionHistory.push(compositionResult);
 
-      return result;
+      return compositionResult;
 
     } catch (error) {
       // Update error metrics
@@ -204,11 +229,58 @@ export const createPipelineCompositionEngine = (config: CompositionEngineConfig 
     compositionConfig: any
   ): BaseComposition => {
     const composer = composers[pattern];
-    if (!composer.createComposition) {
-      throw new Error(`Composer for ${pattern} does not support composition creation`);
+    if (!composer) {
+      throw new Error(`No composer found for pattern: ${pattern}`);
     }
 
-    return composer.createComposition(compositionConfig);
+    // Register pipelines from the composition config if they contain inline pipeline definitions
+    if (compositionConfig.pipelines) {
+      for (const pipelineSpec of compositionConfig.pipelines) {
+        if (pipelineSpec.pipeline && pipelineSpec.id) {
+          // Register inline pipeline
+          composer.registerPipeline(pipelineSpec.id, pipelineSpec.pipeline);
+        }
+      }
+    }
+
+    // Convert composition to standard format
+    let convertedConfig = { ...compositionConfig, pattern };
+    
+    // Handle pattern-specific conversions
+    if (pattern === CompositionPattern.SEQUENTIAL) {
+      convertedConfig.pipelines = compositionConfig.pipelines?.map((p: any) => 
+        typeof p === 'string' ? { id: p } : { id: p.id || p }
+      ) || [];
+      // Ensure sequential composition has proper default options
+      convertedConfig.options = {
+        retryCount: 0,
+        retryDelay: 1000,
+        continueOnError: false,
+        passPreviousResults: false,
+        ...convertedConfig.options
+      };
+    } else if (pattern === CompositionPattern.PARALLEL) {
+      convertedConfig.pipelines = compositionConfig.pipelines?.map((p: any) => 
+        typeof p === 'string' ? { id: p } : { id: p.id || p }
+      ) || [];
+      // Ensure parallel composition has proper default options
+      convertedConfig.options = {
+        failureThreshold: 0.5,
+        maxConcurrent: 5,
+        waitForAll: true,
+        ...convertedConfig.options
+      };
+    } else if (pattern === CompositionPattern.ADAPTIVE) {
+      // Adaptive needs special handling - keep as is if already in proper format
+      if (compositionConfig.pipelines && compositionConfig.pipelines[0]?.condition) {
+        convertedConfig = compositionConfig; // Already in adaptive format
+      }
+    }
+
+    // Create composition using composer
+    const composition = composer.createComposition(convertedConfig);
+
+    return composition;
   };
 
   // Schedule composition for execution
@@ -280,17 +352,9 @@ export const createPipelineCompositionEngine = (config: CompositionEngineConfig 
       errorTolerance = 'medium'
     } = requirements;
 
-    // Rule-based pattern suggestion
-    if (requiresAdaptation) {
+    // Rule-based pattern suggestion (3 core patterns)
+    if (requiresAdaptation || needsConditionalLogic) {
       return CompositionPattern.ADAPTIVE;
-    }
-
-    if (needsConditionalLogic) {
-      return CompositionPattern.CONDITIONAL;
-    }
-
-    if (pipelineCount > 5 && executionTime > 10000) {
-      return CompositionPattern.CASCADING;
     }
 
     if (pipelineCount > 2 && errorTolerance === 'high') {
@@ -416,11 +480,9 @@ export const createPipelineCompositionEngine = (config: CompositionEngineConfig 
     if (registry) await registry.cleanup();
     if (metrics) await metrics.cleanup();
 
-    // Cleanup individual composers
-    for (const composer of Object.values(composers)) {
-      if (composer.cleanup) {
-        await composer.cleanup();
-      }
+    // Cleanup composer
+    if (composer && composer.cleanup) {
+      await composer.cleanup();
     }
 
     // Reset state

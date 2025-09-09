@@ -4,7 +4,7 @@
  * Following functional programming patterns with comprehensive type safety
  */
 
-import { createLogger } from '../../shared/utils/logger.ts';
+import { createLogger } from '../../shared/utils/logger.js';
 import {
   type WebSocketConfig,
   type WebSocketTransport,
@@ -76,7 +76,7 @@ export const createWebSocketTransport = (config: WebSocketConfig = {}): WebSocke
         }
         
         // Fallback for non-WebSocket requests
-        return new Response("WebSocket transport server", { status: 200 });
+        return new Response('WebSocket transport server', { status: 200 });
       },
       
       websocket: {
@@ -346,7 +346,7 @@ export const createWebSocketTransport = (config: WebSocketConfig = {}): WebSocke
     // Status
     getConnectionCount: () => state.connections.size,
     isConnected: () => state.isServer ? state.connections.size > 0 : 
-                       (state.clientSocket !== null && state.clientSocket.readyState === WebSocket.OPEN),
+      (state.clientSocket !== null && state.clientSocket.readyState === WebSocket.OPEN),
     getStats: (): TransportStats => ({
       connectionCount: state.connections.size,
       isServer: state.isServer,

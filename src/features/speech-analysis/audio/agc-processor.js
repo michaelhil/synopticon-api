@@ -46,7 +46,7 @@ export const createAGCProcessor = (state) => {
     
     // Limit gain
     const limitedGainDb = Math.max(state.config.minGain, 
-                                 Math.min(state.config.maxGain, gainNeededDb));
+      Math.min(state.config.maxGain, gainNeededDb));
     
     // Smooth gain changes
     const targetGain = dbToLinear(limitedGainDb);

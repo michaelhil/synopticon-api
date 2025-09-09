@@ -14,7 +14,7 @@ export type {
   ErrorResult,
   CapabilityType,
   ModelSize,
-  UsageLevel,
+  UsageLevel
 } from './configuration/types';
 
 export {

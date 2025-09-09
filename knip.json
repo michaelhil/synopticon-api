@@ -3,7 +3,7 @@
     "src/index.js",
     "src/browser-speech-client.js",
     "examples/**/*.js",
-    "src/services/api/server.js",
+    "src/services/api/server.ts",
     "src/services/mcp/server.ts",
     "scripts/*.js"
   ],
@@ -30,7 +30,7 @@
     ".": {
       "entry": [
         "src/index.js",
-        "src/services/api/server.js",
+        "src/services/api/server.ts",
         "src/services/mcp/server.ts"
       ]
     }

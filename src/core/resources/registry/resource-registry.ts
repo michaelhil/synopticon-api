@@ -252,7 +252,7 @@ export const createResourceRegistry = (config: ResourceRegistryConfig) => {
           try {
             await resourceType.destroyer(resource);
           } catch (error) {
-            console.warn(`Failed to destroy shared resource:`, error);
+            console.warn('Failed to destroy shared resource:', error);
           }
         }
         
@@ -268,8 +268,8 @@ export const createResourceRegistry = (config: ResourceRegistryConfig) => {
 
   // Get registry statistics
   const getStats = (): RegistryStats => {
-    const totalAllocations = state.metrics.totalAllocations;
-    const sharedAllocations = state.metrics.sharedAllocations;
+    const {totalAllocations} = state.metrics;
+    const {sharedAllocations} = state.metrics;
     const sharingRatio = totalAllocations > 0 ? sharedAllocations / totalAllocations : 0;
 
     // Calculate estimated memory shared
@@ -284,7 +284,7 @@ export const createResourceRegistry = (config: ResourceRegistryConfig) => {
     return {
       registeredTypes: state.resourceTypes.size,
       sharedResources: state.sharedResources.size,
-      totalAllocations: totalAllocations,
+      totalAllocations,
       sharingRatio,
       memoryShared
     };
@@ -375,7 +375,7 @@ export const createResourceRegistry = (config: ResourceRegistryConfig) => {
         try {
           await resourceType.destroyer(resource);
         } catch (error) {
-          console.warn(`Failed to destroy resource during cleanup:`, error);
+          console.warn('Failed to destroy resource during cleanup:', error);
         }
       }
     }

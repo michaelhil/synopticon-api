@@ -3,8 +3,8 @@
  * Modular architecture assembling feature extraction, age calculation, and smoothing
  */
 
-import { createPipeline } from '../../../core/pipeline/pipeline.ts';
-import { createPipelineConfig } from '../../../core/pipeline/pipeline-config.js';
+import { createPipeline } from '../../../core/pipeline/pipeline.js';
+import { createPipelineConfig } from '../../../core/configuration/consolidated-config-factory.js';
 import { createImageProcessor } from '../../../core/engine/image-processor.js';
 import { getGlobalResourcePool } from '../../../core/performance/resource-pool.js';
 import { 
@@ -13,7 +13,7 @@ import {
   createAgeResult,
   createGenderResult,
   createAnalysisResult
-} from '../../../core/configuration/types.ts';
+} from '../../../core/configuration/types.js';
 import { handleError, ErrorCategory, ErrorSeverity } from '../../../shared/utils/error-handler.js';
 
 import {
@@ -26,23 +26,23 @@ import {
   getLifeStageFromAge,
   calculateAgeRange,
   DEFAULT_AGE_RANGES
-} from './base-age-detector.ts';
+} from './base-age-detector.js';
 
 import {
   createFeatureExtractionEngine,
   type FeatureExtractionEngine
-} from './feature-extraction-engine.ts';
+} from './feature-extraction-engine.js';
 
 import {
   createAgeCalculationEngine,
   type AgeCalculationEngine
-} from './age-calculation-engine.ts';
+} from './age-calculation-engine.js';
 
 import {
   createSmoothingFilter,
   type SmoothingFilter,
   type SmoothingResult
-} from './smoothing-filter.ts';
+} from './smoothing-filter.js';
 
 export interface AgeEstimationPipeline extends BaseAgeDetector {
   // Pipeline methods
@@ -379,9 +379,9 @@ export const createAgeEstimationPipeline = (userConfig: Record<string, any> = {}
       runtime: 'browser',
       backend: 'feature-analysis',
       modelLoaded: isInitialized,
-      smoothingEnabled: !!config.enableSmoothing,
+      smoothingEnabled: Boolean(config.enableSmoothing),
       genderDetectionEnabled: ageConfig.enableGenderDetection,
-      resourcePoolAvailable: !!resourcePool
+      resourcePoolAvailable: Boolean(resourcePool)
     }),
 
     getStats: () => ({

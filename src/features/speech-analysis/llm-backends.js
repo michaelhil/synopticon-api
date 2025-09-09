@@ -7,10 +7,10 @@ import { LLM_BACKENDS } from './llm-config.js';
 // Create mock backend for testing and fallback
 export const createMockBackend = () => {
   const responses = [
-    "This appears to be a neutral conversation with professional tone.",
-    "The speaker seems engaged and focused on the topic.",
-    "Key themes include technology, collaboration, and problem-solving.",
-    "The emotional tone is positive and constructive."
+    'This appears to be a neutral conversation with professional tone.',
+    'The speaker seems engaged and focused on the topic.',
+    'Key themes include technology, collaboration, and problem-solving.',
+    'The emotional tone is positive and constructive.'
   ];
   
   return {
@@ -29,13 +29,13 @@ export const createMockBackend = () => {
       
       // Return a relevant mock response based on prompt content
       if (prompt.toLowerCase().includes('sentiment')) {
-        return "positive, optimistic, engaged, constructive, collaborative";
+        return 'positive, optimistic, engaged, constructive, collaborative';
       } else if (prompt.toLowerCase().includes('controversial')) {
-        return "No controversial statements detected. The conversation maintains a respectful tone.";
+        return 'No controversial statements detected. The conversation maintains a respectful tone.';
       } else if (prompt.toLowerCase().includes('theme')) {
-        return "Main themes: technology discussion, problem-solving approach, team collaboration.";
+        return 'Main themes: technology discussion, problem-solving approach, team collaboration.';
       } else if (prompt.toLowerCase().includes('emotion')) {
-        return "Emotional tone: Professional confidence with collaborative engagement.";
+        return 'Emotional tone: Professional confidence with collaborative engagement.';
       } else {
         return responses[Math.floor(Math.random() * responses.length)];
       }
@@ -88,7 +88,7 @@ export const createWebLLMBackend = () => {
       
       // Fallback for demo
       console.log('🕸️ WebLLM would generate response here');
-      return "WebLLM response would appear here";
+      return 'WebLLM response would appear here';
     },
     
     cleanup: async () => {
@@ -141,7 +141,7 @@ export const createTransformersJSBackend = () => {
       
       // Fallback for demo
       console.log('🤗 Transformers.js would generate response here');
-      return "Transformers.js response would appear here";
+      return 'Transformers.js response would appear here';
     },
     
     cleanup: async () => {

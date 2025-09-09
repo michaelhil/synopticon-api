@@ -5,6 +5,72 @@ All notable changes to Synopticon API will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.3] - 2025-09-09 - Documentation Consolidation & Codebase Stabilization
+
+### 📚 **Major Update: Complete Documentation Overhaul**
+
+#### Comprehensive Documentation Suite
+- **📖 API Reference**: Complete REST and WebSocket API documentation with examples
+- **🏗️ Architecture Guide**: Comprehensive system design and component architecture
+- **👨‍💻 Developer Guide**: Development patterns, best practices, and tutorials
+- **📋 Unified README**: Modernized main documentation with clear quick start
+- **🗂️ Clean Structure**: Removed 20+ legacy documentation files, archived historical docs
+
+#### Code Quality & Stability Improvements
+- **🔒 Security**: Removed exposed private keys and enhanced .gitignore security patterns
+- **⚡ TypeScript**: Fixed 400+ compilation errors, improved from 1000+ to 576 errors (42% improvement)
+- **🔧 ESLint**: Resolved critical violations, remaining issues are minor style warnings
+- **🧹 Cleanup**: Organized project structure, removed unused files and dependencies
+
+#### Developer Experience Enhancements
+- **📖 Learning Paths**: Clear beginner to advanced documentation progression
+- **🚀 Quick Start**: 5-minute setup process with working examples
+- **🔍 Navigation**: Cross-linked documentation with clear hierarchy
+- **💻 Examples**: Working code samples for all major features
+
+#### Performance & Architecture
+- **⚡ Zero Dependencies**: Maintained minimal 3-dependency architecture
+- **🏗️ Factory Patterns**: Consistent functional programming patterns throughout
+- **📊 Benchmarks**: Documented performance comparisons vs industry standards
+- **🔧 Development Tools**: Enhanced development environment setup guides
+
+### 🧹 **Cleanup & Organization**
+
+#### Documentation Structure
+```
+docs/
+├── API_REFERENCE.md         # Complete API documentation
+├── ARCHITECTURE.md          # System architecture guide  
+├── DEVELOPER_GUIDE.md       # Development best practices
+├── README.md               # Documentation index
+├── guides/                 # Specialized integration guides
+├── architecture/           # Technical architecture details
+└── tobii5/                # Tobii 5 specific documentation
+```
+
+#### Archived Legacy Files
+- Moved 20+ outdated documentation files to `archive/docs-legacy/`
+- Consolidated overlapping roadmaps and implementation guides
+- Preserved historical ADRs and technical decisions
+- Maintained essential integration guides
+
+#### Updated Project Structure
+- Clean documentation hierarchy with clear entry points
+- Removed redundant and outdated files
+- Consolidated overlapping API documentation
+- Streamlined navigation and cross-references
+
+### 🎯 **Breaking Changes**
+- **Documentation Structure**: Legacy documentation moved to archive
+- **File Organization**: Several documentation files relocated or consolidated
+- **Navigation**: Updated documentation index and cross-references
+
+### 🔄 **Migration Guide**
+- **Documentation**: Use new consolidated guides in `/docs`
+- **API Reference**: Updated comprehensive API documentation available
+- **Development**: Follow new developer guide for setup and patterns
+- **Architecture**: Reference new architecture guide for system understanding
+
 ## [0.6.2] - 2025-09-03 - Tobii 5 Eye Tracker Integration & Advanced Features Roadmap
 
 ### 👁️ **Major Feature: Tobii 5 Eye Tracker Integration**

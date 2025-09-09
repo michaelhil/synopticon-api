@@ -9,7 +9,7 @@ import { createNoiseReductionConfig, createNoiseReductionState } from './noise-r
 import { createFFTProcessor } from './noise-reduction-fft.js';
 import { createWindowProcessor } from './noise-reduction-window.js';
 import { createSpectralProcessor } from './noise-reduction-spectral.js';
-import { createAGCConfig, createAGCState } from './agc-config.js';
+import { createAGCConfig, createAGCState } from './agc-config.ts';
 import { createAGCProcessor } from './agc-processor.js';
 import { createPreprocessingConfig, createPreprocessingState } from './preprocessing-config.js';
 import { createModulesManager } from './preprocessing-modules.js';

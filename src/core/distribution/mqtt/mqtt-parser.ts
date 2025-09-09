@@ -223,39 +223,39 @@ export const createMqttParser = () => {
     let packet: MqttPacket;
     
     switch (packetType) {
-      case PACKET_TYPES.CONNACK:
-        packet = parseConnAck(data, payloadOffset);
-        break;
+    case PACKET_TYPES.CONNACK:
+      packet = parseConnAck(data, payloadOffset);
+      break;
         
-      case PACKET_TYPES.PUBLISH:
-        packet = parsePublish(data, payloadOffset, flags, remainingLength);
-        break;
+    case PACKET_TYPES.PUBLISH:
+      packet = parsePublish(data, payloadOffset, flags, remainingLength);
+      break;
         
-      case PACKET_TYPES.PUBACK:
-        packet = parsePubAck(data, payloadOffset);
-        break;
+    case PACKET_TYPES.PUBACK:
+      packet = parsePubAck(data, payloadOffset);
+      break;
         
-      case PACKET_TYPES.SUBACK:
-        packet = parseSubAck(data, payloadOffset, remainingLength);
-        break;
+    case PACKET_TYPES.SUBACK:
+      packet = parseSubAck(data, payloadOffset, remainingLength);
+      break;
         
-      case PACKET_TYPES.UNSUBACK:
-        packet = {
-          type: 'UNSUBACK',
-          messageId: (data[payloadOffset] << 8) | data[payloadOffset + 1]
-        };
-        break;
+    case PACKET_TYPES.UNSUBACK:
+      packet = {
+        type: 'UNSUBACK',
+        messageId: (data[payloadOffset] << 8) | data[payloadOffset + 1]
+      };
+      break;
         
-      case PACKET_TYPES.PINGRESP:
-        packet = { type: 'PINGRESP' };
-        break;
+    case PACKET_TYPES.PINGRESP:
+      packet = { type: 'PINGRESP' };
+      break;
         
-      default:
-        packet = {
-          type: 'UNKNOWN',
-          flags,
-          data: data.slice(payloadOffset, payloadOffset + remainingLength)
-        };
+    default:
+      packet = {
+        type: 'UNKNOWN',
+        flags,
+        data: data.slice(payloadOffset, payloadOffset + remainingLength)
+      };
     }
     
     return { packet, bytesConsumed: totalLength };

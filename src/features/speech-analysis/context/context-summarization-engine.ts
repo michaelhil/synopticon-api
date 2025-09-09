@@ -3,7 +3,7 @@
  * Handles intelligent summarization using different strategies
  */
 
-import type { ConversationContext, ContextChunk, ContextStrategy } from './base-context-manager.ts';
+import type { ConversationContext, ContextChunk, ContextStrategy } from './base-context-manager.js';
 
 export interface SummarizationOptions {
   readonly strategy?: ContextStrategy;
@@ -56,7 +56,7 @@ export const createContextSummarizationEngine = () => {
       return '';
     }
 
-    const recentText = recentChunks.map(chunk => chunk.text).join(' ');
+    const recentText = recentChunks.map(chunk => chunk.text).join('\n') ');
     
     if (!llmClient) {
       // Fallback: simple truncation with key points
@@ -64,7 +64,9 @@ export const createContextSummarizationEngine = () => {
     }
 
     const prompt = options.customPrompt || 
-      `Summarize this recent conversation in ${options.maxLength || 200} words or less. Focus on main topics and key points:\n\n${recentText}`;
+      `Summarize this recent conversation in ${options.maxLength || 200} words or less. Focus on main topics and key points:
+
+${recentText}`;
 
     try {
       const summary = await llmClient.generate(prompt, {
@@ -95,7 +97,7 @@ export const createContextSummarizationEngine = () => {
       return existingSummary;
     }
 
-    const recentText = recentChunks.map(chunk => chunk.text).join(' ');
+    const recentText = recentChunks.map(chunk => chunk.text).join('\n') ');
 
     if (!llmClient) {
       // Fallback: combine existing summary with key points from recent text
@@ -104,8 +106,14 @@ export const createContextSummarizationEngine = () => {
     }
 
     const prompt = existingSummary
-      ? `Update this summary with new information. Existing summary: "${existingSummary}"\n\nNew information: "${recentText}"\n\nProvide an updated summary in ${options.maxLength || 300} words or less.`
-      : `Summarize this conversation in ${options.maxLength || 300} words or less:\n\n${recentText}`;
+      ? `Update this summary with new information. Existing summary: "${existingSummary}"
+
+New information: "${recentText}"
+
+Provide an updated summary in ${options.maxLength || 300} words or less.`
+      : `Summarize this conversation in ${options.maxLength || 300} words or less:
+
+${recentText}`;
 
     try {
       const summary = await llmClient.generate(prompt, {
@@ -137,7 +145,7 @@ export const createContextSummarizationEngine = () => {
       return existingSummary;
     }
 
-    const recentText = recentChunks.map(chunk => chunk.text).join(' ');
+    const recentText = recentChunks.map(chunk => chunk.text).join('\n') ');
 
     if (!llmClient) {
       const recentKeyPoints = extractKeyPointsSummary(recentText, 250);
@@ -145,8 +153,16 @@ export const createContextSummarizationEngine = () => {
     }
 
     const prompt = existingSummary
-      ? `Create a comprehensive summary combining previous context and recent discussion.\n\nPrevious context: "${existingSummary}"\n\nRecent discussion: "${recentText}"\n\nProvide a unified summary in ${options.maxLength || 400} words or less that captures both historical context and recent developments.`
-      : `Summarize this conversation comprehensively in ${options.maxLength || 400} words or less:\n\n${recentText}`;
+      ? `Create a comprehensive summary combining previous context and recent discussion.
+
+Previous context: "${existingSummary}"
+
+Recent discussion: "${recentText}"
+
+Provide a unified summary in ${options.maxLength || 400} words or less that captures both historical context and recent developments.`
+      : `Summarize this conversation comprehensively in ${options.maxLength || 400} words or less:
+
+${recentText}`;
 
     try {
       const summary = await llmClient.generate(prompt, {
@@ -258,7 +274,7 @@ export const createContextSummarizationEngine = () => {
     options: SummarizationOptions = {}
   ): Promise<SummaryResult> => {
     const startTime = performance.now();
-    const originalText = context.chunks.map(chunk => chunk.text).join(' ');
+    const originalText = context.chunks.map(chunk => chunk.text).join('\n') ');
     const originalLength = originalText.length;
     
     let summary: string;
@@ -266,16 +282,16 @@ export const createContextSummarizationEngine = () => {
 
     try {
       switch (strategy) {
-        case ContextStrategy.ROLLING_WINDOW:
-          summary = await summarizeWithRollingWindow(context, llmClient, options);
-          break;
-        case ContextStrategy.SUMMARY_BASED:
-          summary = await summarizeWithSummaryBased(context, llmClient, options);
-          break;
-        case ContextStrategy.HYBRID:
-        default:
-          summary = await summarizeWithHybrid(context, llmClient, options);
-          break;
+      case ContextStrategy.ROLLING_WINDOW:
+        summary = await summarizeWithRollingWindow(context, llmClient, options);
+        break;
+      case ContextStrategy.SUMMARY_BASED:
+        summary = await summarizeWithSummaryBased(context, llmClient, options);
+        break;
+      case ContextStrategy.HYBRID:
+      default:
+        summary = await summarizeWithHybrid(context, llmClient, options);
+        break;
       }
 
       const processingTime = performance.now() - startTime;
@@ -356,13 +372,13 @@ export const createContextSummarizationEngine = () => {
     const maxLength = options.maxLength || 500;
     
     switch (strategy) {
-      case ContextStrategy.ROLLING_WINDOW:
-        return Math.min(Math.ceil(textLength * 0.3), maxLength);
-      case ContextStrategy.SUMMARY_BASED:
-        return Math.min(Math.ceil(textLength * 0.25), maxLength);
-      case ContextStrategy.HYBRID:
-      default:
-        return Math.min(Math.ceil(textLength * 0.4), maxLength);
+    case ContextStrategy.ROLLING_WINDOW:
+      return Math.min(Math.ceil(textLength * 0.3), maxLength);
+    case ContextStrategy.SUMMARY_BASED:
+      return Math.min(Math.ceil(textLength * 0.25), maxLength);
+    case ContextStrategy.HYBRID:
+    default:
+      return Math.min(Math.ceil(textLength * 0.4), maxLength);
     }
   };
 

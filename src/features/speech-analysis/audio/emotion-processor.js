@@ -149,8 +149,8 @@ export const createEmotionProcessor = (config, memoryPool) => {
   const getState = () => ({
     isInitialized: state.isInitialized,
     lastEmotionUpdate: state.lastEmotionUpdate,
-    hasProsodicAnalyzer: !!state.prosodicAnalyzer,
-    hasEmotionClassifier: !!state.emotionClassifier,
+    hasProsodicAnalyzer: Boolean(state.prosodicAnalyzer),
+    hasEmotionClassifier: Boolean(state.emotionClassifier),
     config: { ...state.config }
   });
 

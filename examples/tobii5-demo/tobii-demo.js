@@ -143,8 +143,8 @@ class TobiiVisualizationDemo {
     }
     
     processGazeData(message) {
-        const data = message.data;
-        const timestamp = message.timestamp;
+        const {data} = message;
+        const {timestamp} = message;
         
         // Update current gaze position
         if (data.hasGaze && data.gaze) {
@@ -152,7 +152,7 @@ class TobiiVisualizationDemo {
                 x: data.gaze.x,
                 y: data.gaze.y,
                 confidence: data.gaze.confidence,
-                timestamp: timestamp
+                timestamp
             };
             
             // Add to scan path
@@ -194,7 +194,7 @@ class TobiiVisualizationDemo {
         this.scanPath.push({
             x: canvasX,
             y: canvasY,
-            timestamp: timestamp
+            timestamp
         });
         
         // Keep only recent scan path data (last 5 seconds)
@@ -383,7 +383,7 @@ class TobiiVisualizationDemo {
         for (let i = 1; i < recent.length; i++) {
             const dx = recent[i].x - recent[i-1].x;
             const dy = recent[i].y - recent[i-1].y;
-            totalDistance += Math.sqrt(dx * dx + dy * dy);
+            totalDistance += Math.sqrt((dx * dx) + (dy * dy));
         }
         
         // Normalize to 0-1 scale

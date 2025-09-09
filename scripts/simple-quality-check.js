@@ -77,7 +77,7 @@ try {
 console.log('4️⃣ Essential Files Check...');
 const essentialFiles = [
   'src/index.js',
-  'src/services/api/server.js',
+  'src/services/api/server.ts',
   'src/services/mcp/server.ts',
   'package.json'
 ];

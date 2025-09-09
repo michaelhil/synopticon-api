@@ -320,35 +320,37 @@ export const createContextAggregator = (config: ContextAggregatorConfig = {}): C
     const summary = await generateContextSummary();
     
     switch (format) {
-      case 'json':
-        return JSON.stringify(summary, null, 2);
+    case 'json':
+      return JSON.stringify(summary, null, 2);
       
-      case 'csv':
-        // Simple CSV export for conversation turns
-        if (summary.conversation) {
-          const header = 'timestamp,speaker,content,confidence\n';
-          const rows = summary.conversation.turns.map(turn =>
-            `${turn.timestamp},${turn.participantId},"${turn.content}",${turn.confidence}`
-          ).join('\n');
-          return header + rows;
-        }
-        return '';
+    case 'csv':
+      // Simple CSV export for conversation turns
+      if (summary.conversation) {
+        const header = 'timestamp,speaker,content,confidence
+';
+        const rows = summary.conversation.turns.map(turn =>
+          `${turn.timestamp},${turn.participantId},"${turn.content}",${turn.confidence}`
+        ).join('\n')
+
+        return header + rows;
+      }
+      return '';
       
-      case 'summary':
-        const unified = summary.unified;
-        return {
-          sessionInfo: {
-            duration: unified?.statistics.totalDuration || 0,
-            participants: unified?.statistics.participantCount || 0,
-            turns: unified?.statistics.turnCount || 0
-          },
-          keyInsights: unified?.insights.dominantTopics || [],
-          sentiment: unified?.insights.overallSentiment || 0,
-          quality: unified?.statistics.avgConfidence || 0
-        };
+    case 'summary':
+      const {unified} = summary;
+      return {
+        sessionInfo: {
+          duration: unified?.statistics.totalDuration || 0,
+          participants: unified?.statistics.participantCount || 0,
+          turns: unified?.statistics.turnCount || 0
+        },
+        keyInsights: unified?.insights.dominantTopics || [],
+        sentiment: unified?.insights.overallSentiment || 0,
+        quality: unified?.statistics.avgConfidence || 0
+      };
       
-      default:
-        return summary;
+    default:
+      return summary;
     }
   };
 

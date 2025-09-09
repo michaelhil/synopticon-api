@@ -390,9 +390,9 @@ export const createExecutionScheduler = (config: ExecutionSchedulerConfig) => {
   const getStats = (): SchedulerStats => {
     const totalPending = Array.from(state.priorityQueues.values()).reduce((sum, queue) => sum + queue.length, 0);
     const totalRunning = state.runningExecutions.size;
-    const totalCompleted = state.metrics.totalCompleted;
-    const totalFailed = state.metrics.totalFailed;
-    const totalCancelled = state.metrics.totalCancelled;
+    const {totalCompleted} = state.metrics;
+    const {totalFailed} = state.metrics;
+    const {totalCancelled} = state.metrics;
 
     return {
       totalScheduled: state.metrics.totalScheduled,

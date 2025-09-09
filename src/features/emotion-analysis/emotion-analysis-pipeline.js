@@ -4,7 +4,7 @@
  */
 
 import { createPipeline } from '../../core/pipeline/pipeline.ts';
-import { createPipelineConfig } from '../../core/pipeline/pipeline-config.js';
+import { createPipelineConfig } from '../../core/configuration/consolidated-config-factory.js';
 import { 
   Capability,
   createAnalysisResult,
@@ -129,7 +129,7 @@ export const createEmotionAnalysisPipeline = (userConfig = {}) => {
           cnnModel = null;
         }
         
-// No MediaPipe cleanup needed in server mode
+        // No MediaPipe cleanup needed in server mode
         
         isInitialized = false;
         console.log('✅ Real emotion analysis pipeline cleaned up');
@@ -142,7 +142,7 @@ export const createEmotionAnalysisPipeline = (userConfig = {}) => {
     },
 
     getHealthStatus: () => ({
-      healthy: isInitialized && !!cnnModel,
+      healthy: isInitialized && Boolean(cnnModel),
       runtime: 'browser',
       backend: 'real-cnn',
       modelLoaded: cnnModel?.isLoaded || false,

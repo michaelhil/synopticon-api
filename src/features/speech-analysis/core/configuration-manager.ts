@@ -241,7 +241,7 @@ export const createConfigurationManager = (initialConfig: Record<string, any> = 
       const errors = validateConfiguration(newConfig);
       
       if (errors.length > 0) {
-        throw new Error(`Configuration validation failed: ${errors.join(', ')}`);
+        throw new Error(`Configuration validation failed: ${errors.join(', ')`);
       }
       
       currentConfig = newConfig;

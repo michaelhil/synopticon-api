@@ -3,25 +3,23 @@
  * Provides dynamic distributor control and session-based configuration
  */
 
-import { createDistributionManager, DistributionManager, DistributionResponse } from './distribution-manager.ts';
-import { createLogger } from '../../shared/utils/logger.ts';
-import { createHttpDistributor, HttpDistributor } from './distributors/http-distributor.ts';
-import { createWebSocketDistributor, WebSocketDistributor } from './distributors/websocket-distributor.ts';
-import { createMqttDistributor, MqttDistributor } from './distributors/mqtt-distributor-builtin.ts';
-import { createUdpDistributor, UdpDistributor } from './distributors/udp-distributor.ts';
-import { createSseDistributor, SseDistributor } from './distributors/sse-distributor.ts';
-import { BaseDistributor, SendOptions } from './base-distributor.ts';
+import { createUniversalDistributor, UniversalDistributor, DistributionResult, DistributionTarget, DistributeOptions } from './universal-distributor.js';
+import { createHttpAdapter, createWebSocketAdapter, createMqttAdapter, createSSEAdapter, createUdpAdapter, ProtocolAdapter } from './adapters/index.js';
+import { createLogger } from '../../shared/utils/logger.js';
+
+import { createDistributionManager, DistributionManager, DistributionResponse } from './distribution-manager.js';
+import { BaseDistributor, SendOptions } from './base-distributor.js';
 
 const logger = createLogger({ level: 2 });
 
 // Type definitions for the session manager
 
 export interface DistributorFactory {
-  (config: any): BaseDistributor;
+  (config: any): ProtocolAdapter;
 }
 
 export interface DistributorData {
-  instance: BaseDistributor;
+  instance: ProtocolAdapter;
   name: string;
   config: Record<string, any>;
 }
@@ -104,11 +102,11 @@ export interface DistributionSessionManager {
  * Distributor factory registry
  */
 const DISTRIBUTOR_FACTORIES: Record<string, DistributorFactory> = {
-  http: createHttpDistributor,
-  websocket: createWebSocketDistributor,
-  mqtt: createMqttDistributor,
-  udp: createUdpDistributor,
-  sse: createSseDistributor
+  http: createHttpAdapter,
+  websocket: createWebSocketAdapter,
+  mqtt: createMqttAdapter,
+  udp: createUdpAdapter,
+  sse: createSSEAdapter
 };
 
 /**
@@ -216,7 +214,7 @@ export const createDistributionSessionManager = (globalConfig: SessionConfig = {
       if (result.status === 'fulfilled') {
         logger.info(`✅ ${type} distributor initialized for session ${session.id}`);
       } else {
-        const reason = result.reason;
+        const {reason} = result;
         const errorMessage = reason instanceof Error ? reason.message : String(reason);
         logger.error(`❌ Failed to initialize ${type} distributor: ${errorMessage}`);
       }
@@ -488,14 +486,14 @@ export const createDistributionSessionManager = (globalConfig: SessionConfig = {
    * Cleanup all sessions
    */
   const cleanup = async (): Promise<void> => {
-    logger.info(`🧹 Cleaning up all distribution sessions...`);
+    logger.info('🧹 Cleaning up all distribution sessions...');
     
     const sessionIds = Array.from(state.sessions.keys());
     const cleanupPromises = sessionIds.map(sessionId => closeSession(sessionId));
     
     await Promise.allSettled(cleanupPromises);
     
-    logger.info(`✅ All distribution sessions cleaned up`);
+    logger.info('✅ All distribution sessions cleaned up');
   };
 
   return {

@@ -3,7 +3,7 @@
  * Comprehensive performance monitoring and benchmarking for face analysis engine
  */
 
-import { ErrorCategory, ErrorSeverity, createErrorHandler } from './error-handler.js';
+import { ErrorCategory, ErrorSeverity, createErrorHandler } from './error-handler.ts';
 
 // Performance test categories
 export const TestCategory = {

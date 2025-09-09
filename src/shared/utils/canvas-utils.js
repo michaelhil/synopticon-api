@@ -144,7 +144,7 @@ export const isWebGLSupported = () => {
   try {
     const canvas = createCanvas();
     const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
-    return !!gl;
+    return Boolean(gl);
   } catch (error) {
     return false;
   }
@@ -157,7 +157,7 @@ export const isWebGL2Supported = () => {
   try {
     const canvas = createCanvas();
     const gl = canvas.getContext('webgl2');
-    return !!gl;
+    return Boolean(gl);
   } catch (error) {
     return false;
   }

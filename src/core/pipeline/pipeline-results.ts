@@ -251,22 +251,22 @@ export const createPoseResult = (data: Partial<PosePipelineResult>): PosePipelin
   // Calculate average pose
   const avgPose = poses.length > 0 
     ? poses.reduce((avg, pose) => ({
-        yaw: avg.yaw + pose.yaw / poses.length,
-        pitch: avg.pitch + pose.pitch / poses.length,
-        roll: avg.roll + pose.roll / poses.length,
-        confidence: avg.confidence + pose.confidence / poses.length,
-        timestamp: Date.now()
-      }), { yaw: 0, pitch: 0, roll: 0, confidence: 0, timestamp: Date.now() })
+      yaw: avg.yaw + pose.yaw / poses.length,
+      pitch: avg.pitch + pose.pitch / poses.length,
+      roll: avg.roll + pose.roll / poses.length,
+      confidence: avg.confidence + pose.confidence / poses.length,
+      timestamp: Date.now()
+    }), { yaw: 0, pitch: 0, roll: 0, confidence: 0, timestamp: Date.now() })
     : { yaw: 0, pitch: 0, roll: 0, confidence: 0, timestamp: Date.now() };
     
   // Calculate stability (variance from average)
   const stability = poses.length > 1
     ? 1 - (poses.reduce((variance, pose) => {
-        const yawDiff = pose.yaw - avgPose.yaw;
-        const pitchDiff = pose.pitch - avgPose.pitch;
-        const rollDiff = pose.roll - avgPose.roll;
-        return variance + (yawDiff * yawDiff + pitchDiff * pitchDiff + rollDiff * rollDiff);
-      }, 0) / poses.length) / Math.PI
+      const yawDiff = pose.yaw - avgPose.yaw;
+      const pitchDiff = pose.pitch - avgPose.pitch;
+      const rollDiff = pose.roll - avgPose.roll;
+      return variance + (yawDiff * yawDiff + pitchDiff * pitchDiff + rollDiff * rollDiff);
+    }, 0) / poses.length) / Math.PI
     : 1;
   
   return {
@@ -287,13 +287,13 @@ export const createEyeResult = (data: Partial<EyePipelineResult>): EyePipelineRe
   // Calculate average gaze direction
   const gazeDirection = eyes.length > 0
     ? eyes.reduce((avg, eyePair) => {
-        const leftGaze = eyePair.left.gazeDirection ?? { x: 0, y: 0, z: 1 };
-        const rightGaze = eyePair.right.gazeDirection ?? { x: 0, y: 0, z: 1 };
-        return {
-          x: avg.x + (leftGaze.x + rightGaze.x) / (2 * eyes.length),
-          y: avg.y + (leftGaze.y + rightGaze.y) / (2 * eyes.length)
-        };
-      }, { x: 0, y: 0 })
+      const leftGaze = eyePair.left.gazeDirection ?? { x: 0, y: 0, z: 1 };
+      const rightGaze = eyePair.right.gazeDirection ?? { x: 0, y: 0, z: 1 };
+      return {
+        x: avg.x + (leftGaze.x + rightGaze.x) / (2 * eyes.length),
+        y: avg.y + (leftGaze.y + rightGaze.y) / (2 * eyes.length)
+      };
+    }, { x: 0, y: 0 })
     : { x: 0, y: 0 };
     
   // Calculate blink rate and attention score
@@ -495,24 +495,24 @@ export const mergeResults = <T>(
   let mergedConfidence: number;
   
   switch (strategy) {
-    case 'average':
-      mergedData = [successResults[0].data]; // Simplified for typing
-      mergedConfidence = successResults.reduce((sum, r) => sum + r.confidence, 0) / successResults.length;
-      break;
+  case 'average':
+    mergedData = [successResults[0].data]; // Simplified for typing
+    mergedConfidence = successResults.reduce((sum, r) => sum + r.confidence, 0) / successResults.length;
+    break;
       
-    case 'best':
-      const bestResult = successResults.reduce((best, current) => 
-        current.confidence > best.confidence ? current : best
-      );
-      mergedData = [bestResult.data];
-      mergedConfidence = bestResult.confidence;
-      break;
+  case 'best':
+    const bestResult = successResults.reduce((best, current) => 
+      current.confidence > best.confidence ? current : best
+    );
+    mergedData = [bestResult.data];
+    mergedConfidence = bestResult.confidence;
+    break;
       
-    case 'combine':
-    default:
-      mergedData = successResults.map(r => r.data);
-      mergedConfidence = Math.max(...successResults.map(r => r.confidence));
-      break;
+  case 'combine':
+  default:
+    mergedData = successResults.map(r => r.data);
+    mergedConfidence = Math.max(...successResults.map(r => r.confidence));
+    break;
   }
   
   const mergedProcessingTime = successResults.reduce((sum, r) => sum + r.processingTime, 0);
@@ -545,27 +545,28 @@ export const convertResult = (
   };
   
   switch (format) {
-    case 'json':
-      const jsonString = JSON.stringify(convertibleResult, null, compress ? 0 : 2);
-      return jsonString;
+  case 'json':
+    const jsonString = JSON.stringify(convertibleResult, null, compress ? 0 : 2);
+    return jsonString;
       
-    case 'csv':
-      // Simplified CSV conversion
-      const headers = Object.keys(convertibleResult).join(',');
-      const values = Object.values(convertibleResult).map(v => 
-        typeof v === 'object' ? JSON.stringify(v) : String(v)
-      ).join(',');
-      return `${headers}\n${values}`;
+  case 'csv':
+    // Simplified CSV conversion
+    const headers = Object.keys(convertibleResult).join('\n'),');
+    const values = Object.values(convertibleResult).map(v => 
+      typeof v === 'object' ? JSON.stringify(v) : String(v)
+    ).join('\n'),');
+    return `${headers}
+${values}`;
       
-    case 'binary':
-      return new TextEncoder().encode(JSON.stringify(convertibleResult));
+  case 'binary':
+    return new TextEncoder().encode(JSON.stringify(convertibleResult));
       
-    case 'protobuf':
-      // Placeholder - would need protobuf library
-      return JSON.stringify(convertibleResult);
+  case 'protobuf':
+    // Placeholder - would need protobuf library
+    return JSON.stringify(convertibleResult);
       
-    default:
-      throw new Error(`Unsupported format: ${format}`);
+  default:
+    throw new Error(`Unsupported format: ${format}`);
   }
 };
 

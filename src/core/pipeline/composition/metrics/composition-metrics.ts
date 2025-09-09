@@ -79,7 +79,7 @@ export const createCompositionMetrics = () => {
     state.metrics.patternUsage[pattern] = (state.metrics.patternUsage[pattern] || 0) + 1;
 
     // Update average execution time
-    const totalExecutions = state.metrics.totalExecutions;
+    const {totalExecutions} = state.metrics;
     state.metrics.avgExecutionTime = 
       (state.metrics.avgExecutionTime * (totalExecutions - 1) + executionTime) / totalExecutions;
 

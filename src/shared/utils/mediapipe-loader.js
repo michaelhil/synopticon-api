@@ -66,6 +66,6 @@ export const createMediaPipeLoader = (dependencies) => {
     loadFaceMesh,
     loadIris,
     cleanup,
-    isLoaded: () => ({ faceMesh: !!faceMesh, iris: !!iris })
+    isLoaded: () => ({ faceMesh: Boolean(faceMesh), iris: Boolean(iris) })
   };
 };

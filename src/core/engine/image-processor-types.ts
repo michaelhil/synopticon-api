@@ -182,11 +182,6 @@ export interface ImageProcessor {
   filter: FilterProcessor;
   crop: CropProcessor;
   
-  // Legacy compatibility - wrapped functions
-  resizeImage: (imageData: ImageData, width: number, height: number, method?: InterpolationMethod) => ImageData;
-  convertColorSpace: (imageData: ImageData, from: ImageFormatType, to: ImageFormatType) => ImageData;
-  applyFilter: (imageData: ImageData, type: FilterType, intensity?: number) => ImageData;
-  cropImage: (imageData: ImageData, x: number, y: number, width: number, height: number) => ImageData;
   normalizeImage: (imageData: ImageData) => ImageData;
   
   // Utility functions

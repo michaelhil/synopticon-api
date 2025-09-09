@@ -53,7 +53,7 @@ const createMockGazeData = (frameData: FrameData): GazeData => ({
 export const createEyeTrackingSensor = (config: EyeTrackingConfig) => {
   let isCalibrated = false;
   let isTracking = false;
-  let calibrationData: unknown = null;
+  const calibrationData: unknown = null;
 
   const startCalibration = async (): Promise<boolean> => {
     console.log('Starting eye tracking calibration...');

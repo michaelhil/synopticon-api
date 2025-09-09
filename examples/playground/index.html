@@ -46,6 +46,42 @@
             line-height: 1.6;
         }
 
+        .mobile-access {
+            background: #f0f4ff;
+            border: 2px solid #667eea;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px 0;
+            text-align: center;
+        }
+
+        .mobile-access h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .mobile-links {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .mobile-links a {
+            background: #667eea;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        .mobile-links a:hover {
+            background: #764ba2;
+            transform: translateY(-2px);
+        }
+
         .stats {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -209,6 +245,14 @@
             Powered by zero-dependency, Bun-native architecture</p>
         </div>
 
+        <div class="mobile-access" id="mobile-access">
+            <h3>📱 Access from iPhone/iPad</h3>
+            <p style="color: #666; margin-bottom: 10px;">Click any link below to access from your mobile device:</p>
+            <div class="mobile-links" id="mobile-links">
+                <!-- Links will be dynamically inserted here -->
+            </div>
+        </div>
+
         <div class="demos">
             <a href="/examples/playground/face-tracking-demo.html" class="demo-card">
                 <div class="demo-title">
@@ -255,6 +299,21 @@
                 </div>
             </a>
 
+            <a href="/examples/playground/webrtc-receiver-demo.html" class="demo-card">
+                <div class="demo-title">
+                    <span class="demo-icon">📡</span>
+                    <span>WebRTC Stream Receiver</span>
+                    <span class="demo-badge">NEW</span>
+                </div>
+                <div class="demo-description">
+                    Receive real-time video streams from face tracking broadcasters via WebRTC peer-to-peer connections.
+                </div>
+                <div class="demo-features">
+                    <span class="feature-badge">WebRTC P2P</span>
+                    <span class="feature-badge">Stream Receiver</span>
+                    <span class="feature-badge">Real-time</span>
+                </div>
+            </a>
 
             <div class="demo-card coming-soon">
                 <div class="demo-title">
@@ -271,20 +330,6 @@
                 </div>
             </div>
 
-            <a href="/examples/streaming/mediapipe-webrtc-demo.html" class="demo-card">
-                <div class="demo-title">
-                    <span class="demo-icon">🧠</span>
-                    <span>MediaPipe WebRTC</span>
-                </div>
-                <div class="demo-description">
-                    Real-time peer-to-peer video streaming with MediaPipe face analysis. WebRTC data channels for analysis transmission.
-                </div>
-                <div class="demo-features">
-                    <span class="feature-badge">WebRTC P2P</span>
-                    <span class="feature-badge">Face Mesh</span>
-                    <span class="feature-badge">Data Channels</span>
-                </div>
-            </a>
         </div>
 
         <div class="stats">
@@ -311,5 +356,45 @@
             <p>Built with Bun native architecture • 94% bundle size reduction • Enterprise-grade performance</p>
         </div>
     </div>
+
+    <script>
+        // Generate mobile access links
+        function generateMobileLinks() {
+            const protocol = window.location.protocol;
+            const port = window.location.port;
+            
+            // Common IP addresses for local network access
+            const ipAddresses = [
+                '172.20.10.2',
+                '198.19.249.3',
+                '192.168.215.0'
+            ];
+            
+            const linksContainer = document.getElementById('mobile-links');
+            
+            // Only show mobile access section if on HTTPS
+            if (protocol === 'https:') {
+                ipAddresses.forEach(ip => {
+                    const link = document.createElement('a');
+                    link.href = `${protocol}//${ip}:${port}/`;
+                    link.textContent = `${protocol}//${ip}:${port}/`;
+                    link.target = '_blank';
+                    linksContainer.appendChild(link);
+                });
+                
+                // Add instruction
+                const instruction = document.createElement('p');
+                instruction.style.cssText = 'color: #999; font-size: 14px; margin-top: 15px;';
+                instruction.textContent = 'Accept the certificate warning on your iPhone to proceed';
+                linksContainer.appendChild(instruction);
+            } else {
+                // Hide mobile access section if not on HTTPS
+                document.getElementById('mobile-access').style.display = 'none';
+            }
+        }
+        
+        // Run on page load
+        generateMobileLinks();
+    </script>
 </body>
 </html>

@@ -27,7 +27,7 @@ const SPEECH_BACKENDS = {
     description: 'Browser native speech recognition with Web Audio API integration',
     requirements: ['browser', 'https'],
     availability: 'chrome_edge'
-  },
+  }
 };
 
 // Create speech recognition factory
@@ -147,7 +147,7 @@ export const createSpeechRecognition = (config = {}) => {
         
         eventManager.notifyCallbacks(state.callbacks.onEnd, endEvent, 'onEnd');
         
-        console.log(`🔇 Speech recognition stopped. Session summary:`, sessionSummary);
+        console.log('🔇 Speech recognition stopped. Session summary:', sessionSummary);
       }
       
     } catch (error) {

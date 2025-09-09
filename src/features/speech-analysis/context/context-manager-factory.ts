@@ -8,7 +8,7 @@ import {
   createConversationContext,
   createSpeechChunk,
   createSpeechEvent
-} from '../../../core/configuration/types.ts';
+} from '../../../core/configuration/types.js';
 
 import {
   type BaseContextManager,
@@ -26,7 +26,7 @@ import {
   validateContextChunk,
   validateConversationContext,
   createContextEvent
-} from './base-context-manager.ts';
+} from './base-context-manager.js';
 
 export interface ContextManagerState {
   llmClient: any;
@@ -90,7 +90,7 @@ export const createBaseContextManager = (
       try {
         callback(event);
       } catch (error) {
-        console.warn(`Context manager event callback error:`, error);
+        console.warn('Context manager event callback error:', error);
       }
     });
   };
@@ -144,7 +144,7 @@ export const createBaseContextManager = (
     // Validate chunk
     const validationResult = validateContextChunk(chunk);
     if (!validationResult.isValid) {
-      throw new Error(`Invalid context chunk: ${validationResult.errors.join(', ')}`);
+      throw new Error(`Invalid context chunk: ${validationResult.errors.join(', ')`);
     }
     
     // Create speech chunk and add to context

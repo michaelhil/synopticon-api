@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Stream Receiver - Synopticon</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .back-link {
+            position: absolute;
+            top: 0;
+            left: 0;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 14px;
+            transition: transform 0.2s;
+        }
+
+        .back-link:hover {
+            transform: translateX(-5px);
+        }
+
+        .demo-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 30px;
+            align-items: start;
+        }
+
+        .video-section {
+            background: #000;
+            border-radius: 10px;
+            overflow: hidden;
+            position: relative;
+            min-height: 400px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .video-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        .remote-video {
+            width: 100%;
+            height: auto;
+            display: block;
+            border-radius: 10px;
+        }
+
+        .video-placeholder {
+            color: white;
+            text-align: center;
+            padding: 40px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .info-panel {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+        }
+
+        .status {
+            margin-bottom: 20px;
+        }
+
+        .status h3 {
+            color: #333;
+            margin-bottom: 15px;
+            font-size: 18px;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .status-label {
+            font-weight: 500;
+            color: #666;
+        }
+
+        .status-value {
+            font-weight: bold;
+            color: #333;
+        }
+
+        .log-section {
+            margin-top: 20px;
+        }
+
+        .log-section h3 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .log-container {
+            background: #1a1a1a;
+            color: #00ff00;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            height: 200px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            word-break: break-all;
+        }
+
+        .log-error {
+            color: #ff4444;
+        }
+
+        .log-success {
+            color: #44ff44;
+        }
+
+        .log-info {
+            color: #4444ff;
+        }
+
+        .error {
+            background: #ffe6e6;
+            color: #cc0000;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #cc0000;
+        }
+
+        .success {
+            background: #e6ffe6;
+            color: #006600;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border-left: 4px solid #006600;
+        }
+
+        @media (max-width: 768px) {
+            .demo-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <a href="index.html" class="back-link">← Back to Demos</a>
+            <h1>📡 WebRTC Stream Receiver</h1>
+            <p>Receive real-time video streams from face tracking broadcasters</p>
+        </div>
+
+        <div class="demo-container">
+            <div class="video-section">
+                <div class="video-container">
+                    <div id="videoPlaceholder" class="video-placeholder">
+                        <h3>📺 Waiting for Stream</h3>
+                        <p>Click "Receive Stream" to connect to a broadcaster</p>
+                    </div>
+                    <video id="remoteVideo" class="remote-video" autoplay muted playsinline style="display: none;"></video>
+                    <canvas id="faceOverlay" class="remote-video" style="display: none; position: absolute; top: 0; left: 0; pointer-events: none;"></canvas>
+                </div>
+                
+                <div class="controls">
+                    <button id="receiveBtn" class="btn">Receive Stream 📡</button>
+                    <button id="disconnectBtn" class="btn" disabled>Disconnect ⏹️</button>
+                    <button id="toggleVisualizationBtn" class="btn" disabled>Toggle Face Viz 👁️</button>
+                </div>
+            </div>
+
+            <div class="info-panel">
+                <div class="status">
+                    <h3>📊 Connection Status</h3>
+                    <div class="status-item">
+                        <span class="status-label">WebSocket:</span>
+                        <span class="status-value" id="wsStatus">Disconnected</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">WebRTC:</span>
+                        <span class="status-value" id="webrtcStatus">Not connected</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Stream:</span>
+                        <span class="status-value" id="streamStatus">No stream</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">Session ID:</span>
+                        <span class="status-value" id="sessionId">--</span>
+                    </div>
+                </div>
+                
+                <!-- Sender Stats Panel -->
+                <div class="stats-panel" style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.1); border-radius: 8px; font-family: monospace; font-size: 12px;">
+                    <h4 style="margin: 0 0 10px 0; color: #fff;">📊 Stream Stats</h4>
+                    <div class="stats-row">
+                        <span class="stats-label">Broadcaster:</span>
+                        <span id="broadcasterSession" class="stats-value">--</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stats-label">Data Packets:</span>
+                        <span id="dataPacketCount" class="stats-value">0</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stats-label">Face Data Rate:</span>
+                        <span id="faceDataRate" class="stats-value">0 fps</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stats-label">Video Resolution:</span>
+                        <span id="videoResolution" class="stats-value">--</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stats-label">Face Count:</span>
+                        <span id="faceCount" class="stats-value">0</span>
+                    </div>
+                    <div class="stats-row">
+                        <span class="stats-label">Connection Time:</span>
+                        <span id="connectionTime" class="stats-value">--</span>
+                    </div>
+                </div>
+
+                <div class="log-section">
+                    <h3>🔧 Connection Log</h3>
+                    <div class="log-container" id="logContainer">
+                        <div class="log-entry log-info">Ready to receive streams...</div>
+                    </div>
+                </div>
+
+                <div id="error" class="error" style="display: none;"></div>
+                <div id="success" class="success" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let webrtcClient = null;
+        let isConnected = false;
+        let sessionId = null;
+        let faceDataChannel = null;
+        let currentFaceData = null;
+        let visualizationMode = 0; // 0: off, 1: landmarks, 2: mesh, 3: contours, 4: eyes, 5: lips, 6: combined
+        let visualizationEnabled = false;
+        let connectionStartTime = null;
+        let broadcasterSessionId = null;
+        let totalPacketCount = 0;
+        let lastFpsUpdate = Date.now();
+        let fpsCounter = 0;
+
+        // UI helpers
+        function showError(message) {
+            const errorDiv = document.getElementById('error');
+            errorDiv.textContent = message;
+            errorDiv.style.display = 'block';
+            setTimeout(() => errorDiv.style.display = 'none', 5000);
+            addLog(message, 'error');
+        }
+
+        function showSuccess(message) {
+            const successDiv = document.getElementById('success');
+            successDiv.textContent = message;
+            successDiv.style.display = 'block';
+            setTimeout(() => successDiv.style.display = 'none', 3000);
+            addLog(message, 'success');
+        }
+
+        function addLog(message, level = 'info') {
+            const logContainer = document.getElementById('logContainer');
+            const entry = document.createElement('div');
+            const timestamp = new Date().toLocaleTimeString();
+            
+            entry.className = `log-entry log-${level}`;
+            entry.textContent = `[${timestamp}] ${message}`;
+            
+            logContainer.appendChild(entry);
+            logContainer.scrollTop = logContainer.scrollHeight;
+        }
+
+        // WebRTC Receiver Client
+        function createWebRTCReceiver({ wsUrl, onLog, onStream, onDisconnect }) {
+            let ws = null;
+            let sessionId = null;
+            let peerConnection = null;
+            let pendingCandidates = [];
+
+            function sendMessage(message) {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify(message));
+                }
+            }
+
+            function handleMessage(message) {
+                switch (message.type) {
+                    case 'webrtc_offer':
+                        handleOffer(message);
+                        break;
+                    case 'webrtc_ice':
+                        handleIceCandidate(message);
+                        break;
+                    case 'connected':
+                        onLog('WebSocket session established', 'success');
+                        break;
+                    case 'error':
+                        onLog(`Server error: ${message.error || message.message || 'Unknown error'}`, 'error');
+                        break;
+                    default:
+                        onLog(`Unknown message: ${message.type}`);
+                }
+            }
+
+            async function handleOffer(message) {
+                if (!message.sdp || !message.sourceSession) return;
+                
+                broadcasterSessionId = message.sourceSession;
+                connectionStartTime = Date.now();
+                onLog(`Received offer from broadcaster ${message.sourceSession}`);
+                
+                try {
+                    if (!peerConnection) {
+                        peerConnection = new RTCPeerConnection({
+                            iceServers: [
+                                { urls: 'stun:stun.l.google.com:19302' },
+                                { urls: 'stun:stun1.l.google.com:19302' },
+                                { urls: 'stun:stun2.l.google.com:19302' }
+                            ]
+                        });
+                        
+                        peerConnection.onicecandidate = (event) => {
+                            if (event.candidate) {
+                                onLog(`Sending ICE candidate to broadcaster`);
+                                sendMessage({
+                                    type: 'webrtc_ice',
+                                    deviceId: sessionId,
+                                    targetSession: message.sourceSession,
+                                    timestamp: Date.now(),
+                                    candidate: event.candidate
+                                });
+                            } else {
+                                onLog('ICE gathering completed');
+                            }
+                        };
+                        
+                        peerConnection.ontrack = (event) => {
+                            onLog('Received remote stream!', 'success');
+                            onStream(event.streams[0]);
+                        };
+                        
+                        peerConnection.onconnectionstatechange = () => {
+                            const state = peerConnection.connectionState;
+                            onLog(`WebRTC connection state: ${state}`, state === 'failed' ? 'error' : 'info');
+                            
+                            if (state === 'disconnected' || state === 'failed') {
+                                onDisconnect();
+                            }
+                        };
+                        
+                        peerConnection.oniceconnectionstatechange = () => {
+                            const state = peerConnection.iceConnectionState;
+                            onLog(`ICE connection state: ${state}`, state === 'failed' ? 'error' : 'info');
+                        };
+                        
+                        peerConnection.onicegatheringstatechange = () => {
+                            const state = peerConnection.iceGatheringState;
+                            onLog(`ICE gathering state: ${state}`);
+                        };
+                        
+                        peerConnection.ondatachannel = (event) => {
+                            const channel = event.channel;
+                            onLog(`Data channel received: ${channel.label}`, 'success');
+                            
+                            if (channel.label === 'faceData') {
+                                faceDataChannel = channel;
+                                
+                                channel.onopen = () => {
+                                    onLog('Face data channel opened', 'success');
+                                };
+                                
+                                let receiveCount = 0;
+                                channel.onmessage = (event) => {
+                                    try {
+                                        currentFaceData = JSON.parse(event.data);
+                                        receiveCount++;
+                                        totalPacketCount++;
+                                        fpsCounter++;
+                                        
+                                        // Update stats
+                                        updateStats();
+                                        
+                                        // Log every 30 receives to avoid spam
+                                        if (receiveCount % 30 === 0) {
+                                            onLog(`Received ${receiveCount} face data packets, current: ${currentFaceData.landmarks?.length || 0} faces`, 'info');
+                                        }
+                                        
+                                        if (visualizationMode > 0) {
+                                            drawFaceVisualization();
+                                        }
+                                    } catch (error) {
+                                        onLog(`Failed to parse face data: ${error}`, 'error');
+                                    }
+                                };
+                                
+                                channel.onclose = () => {
+                                    onLog('Face data channel closed');
+                                    faceDataChannel = null;
+                                };
+                            }
+                        };
+                    }
+                    
+                    await peerConnection.setRemoteDescription(message.sdp);
+                    
+                    // Add any pending ICE candidates
+                    for (const candidate of pendingCandidates) {
+                        await peerConnection.addIceCandidate(candidate);
+                    }
+                    pendingCandidates = [];
+                    
+                    const answer = await peerConnection.createAnswer();
+                    await peerConnection.setLocalDescription(answer);
+                    
+                    sendMessage({
+                        type: 'webrtc_answer',
+                        deviceId: sessionId,
+                        targetSession: message.sourceSession,
+                        timestamp: Date.now(),
+                        sdp: answer
+                    });
+                    
+                    onLog(`Sent answer to broadcaster ${message.sourceSession}`, 'success');
+                    
+                } catch (error) {
+                    onLog(`Failed to handle offer: ${error}`, 'error');
+                }
+            }
+
+            async function handleIceCandidate(message) {
+                if (!message.candidate) return;
+                
+                onLog(`Received ICE candidate from broadcaster`);
+                
+                try {
+                    if (peerConnection && peerConnection.remoteDescription) {
+                        await peerConnection.addIceCandidate(message.candidate);
+                        onLog('ICE candidate added successfully');
+                    } else {
+                        // Store candidate for later
+                        pendingCandidates.push(message.candidate);
+                        onLog('ICE candidate stored for later (no remote description yet)');
+                    }
+                } catch (error) {
+                    onLog(`Failed to add ICE candidate: ${error}`, 'error');
+                }
+            }
+
+            return {
+                connect: () => new Promise((resolve, reject) => {
+                    ws = new WebSocket(wsUrl);
+                    sessionId = `ws_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    
+                    ws.onopen = () => {
+                        onLog('Connected to signaling server', 'success');
+                        resolve(sessionId);
+                    };
+                    
+                    ws.onerror = () => reject(new Error('WebSocket connection failed'));
+                    
+                    ws.onmessage = (event) => {
+                        try {
+                            const message = JSON.parse(event.data);
+                            handleMessage(message);
+                        } catch (error) {
+                            onLog(`Failed to parse message: ${error}`, 'error');
+                        }
+                    };
+                }),
+                
+                seekBroadcasters: () => {
+                    sendMessage({
+                        type: 'webrtc_seek_broadcaster',
+                        deviceId: sessionId,
+                        timestamp: Date.now()
+                    });
+                    onLog('Seeking broadcasters...');
+                },
+                
+                disconnect: () => {
+                    if (peerConnection) {
+                        peerConnection.close();
+                        peerConnection = null;
+                    }
+                    if (ws) {
+                        ws.close();
+                        ws = null;
+                    }
+                    pendingCandidates = [];
+                    onDisconnect();
+                }
+            };
+        }
+
+        // Main receiver functionality
+        async function startReceiving() {
+            if (isConnected) return;
+            
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            
+            webrtcClient = createWebRTCReceiver({
+                wsUrl,
+                onLog: addLog,
+                onStream: (stream) => {
+                    const video = document.getElementById('remoteVideo');
+                    const placeholder = document.getElementById('videoPlaceholder');
+                    
+                    video.srcObject = stream;
+                    video.style.display = 'block';
+                    placeholder.style.display = 'none';
+                    
+                    // Enable face visualization controls
+                    document.getElementById('toggleVisualizationBtn').disabled = false;
+                    
+                    // Update canvas size when video metadata loads
+                    video.addEventListener('loadedmetadata', () => {
+                        updateCanvasSize();
+                        updateVideoResolution();
+                    });
+                    
+                    document.getElementById('streamStatus').textContent = 'Receiving';
+                    document.getElementById('webrtcStatus').textContent = 'Connected';
+                    showSuccess('Stream connected successfully!');
+                },
+                onDisconnect: () => {
+                    const video = document.getElementById('remoteVideo');
+                    const placeholder = document.getElementById('videoPlaceholder');
+                    const canvas = document.getElementById('faceOverlay');
+                    
+                    video.style.display = 'none';
+                    canvas.style.display = 'none';
+                    placeholder.style.display = 'block';
+                    
+                    // Disable face visualization controls and reset
+                    document.getElementById('toggleVisualizationBtn').disabled = true;
+                    visualizationMode = 0;
+                    document.getElementById('toggleVisualizationBtn').textContent = 'Toggle Face Viz 👁️';
+                    currentFaceData = null;
+                    
+                    // Reset stats
+                    resetStats();
+                    
+                    document.getElementById('streamStatus').textContent = 'No stream';
+                    document.getElementById('webrtcStatus').textContent = 'Disconnected';
+                    
+                    isConnected = false;
+                    document.getElementById('receiveBtn').disabled = false;
+                    document.getElementById('disconnectBtn').disabled = true;
+                }
+            });
+            
+            try {
+                sessionId = await webrtcClient.connect();
+                document.getElementById('wsStatus').textContent = 'Connected';
+                document.getElementById('sessionId').textContent = sessionId.substring(0, 12) + '...';
+                
+                // Seek broadcasters
+                webrtcClient.seekBroadcasters();
+                
+                isConnected = true;
+                document.getElementById('receiveBtn').disabled = true;
+                document.getElementById('disconnectBtn').disabled = false;
+                
+                showSuccess('Connected - looking for broadcasters...');
+                
+            } catch (error) {
+                showError(`Connection failed: ${error.message}`);
+                document.getElementById('wsStatus').textContent = 'Failed';
+            }
+        }
+
+        function disconnect() {
+            if (webrtcClient) {
+                webrtcClient.disconnect();
+                webrtcClient = null;
+            }
+            
+            document.getElementById('wsStatus').textContent = 'Disconnected';
+            document.getElementById('webrtcStatus').textContent = 'Not connected';
+            document.getElementById('streamStatus').textContent = 'No stream';
+            document.getElementById('sessionId').textContent = '--';
+            
+            isConnected = false;
+            document.getElementById('receiveBtn').disabled = false;
+            document.getElementById('disconnectBtn').disabled = true;
+            
+            showSuccess('Disconnected from stream');
+        }
+
+        // Face visualization functions
+        function drawFaceVisualization() {
+            if (!currentFaceData || !currentFaceData.landmarks || visualizationMode === 0) {
+                const canvas = document.getElementById('faceOverlay');
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                return;
+            }
+
+            switch (visualizationMode) {
+                case 1:
+                    drawLandmarkPoints();
+                    break;
+                case 2:
+                    drawFaceMesh();
+                    break;
+                case 3:
+                    drawFaceContours();
+                    break;
+                case 4:
+                    drawEyeTracking();
+                    break;
+                case 5:
+                    drawLipTracking();
+                    break;
+                case 6:
+                    drawCombinedVisualization();
+                    break;
+            }
+        }
+
+        function drawLandmarkPoints() {
+            const canvas = document.getElementById('faceOverlay');
+            const ctx = canvas.getContext('2d');
+            
+            updateCanvasSize();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            currentFaceData.landmarks.forEach(face => {
+                ctx.fillStyle = '#00FF00';
+                face.forEach(landmark => {
+                    const x = landmark.x * canvas.width;
+                    const y = landmark.y * canvas.height;
+                    ctx.beginPath();
+                    ctx.arc(x, y, 0.5, 0, 2 * Math.PI); // Smaller dots: 0.5px radius
+                    ctx.fill();
+                });
+            });
+        }
+
+        function drawFaceMesh() {
+            const canvas = document.getElementById('faceOverlay');
+            const ctx = canvas.getContext('2d');
+            
+            updateCanvasSize();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            currentFaceData.landmarks.forEach(face => {
+                ctx.strokeStyle = '#00FFFF';
+                ctx.lineWidth = 1;
+                ctx.globalAlpha = 0.6;
+
+                // Draw connections between adjacent points
+                for (let i = 0; i < face.length - 1; i++) {
+                    const point1 = face[i];
+                    const point2 = face[i + 1];
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(point1.x * canvas.width, point1.y * canvas.height);
+                    ctx.lineTo(point2.x * canvas.width, point2.y * canvas.height);
+                    ctx.stroke();
+                }
+                ctx.globalAlpha = 1.0;
+            });
+        }
+
+        function drawFaceContours() {
+            const canvas = document.getElementById('faceOverlay');
+            const ctx = canvas.getContext('2d');
+            
+            updateCanvasSize();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            currentFaceData.landmarks.forEach(face => {
+                ctx.strokeStyle = '#FF6B6B';
+                ctx.lineWidth = 2;
+                
+                // Face oval (approximate outline using subset of points)
+                const faceOutline = [10, 151, 9, 8, 168, 6, 197, 195, 5, 4, 1, 19, 94, 125, 142, 36, 205, 206, 207, 213, 192, 147, 123, 116, 117, 118, 119, 120, 121, 126, 142, 36, 205, 206, 207, 213, 192, 147, 123, 116];
+                
+                if (face.length > Math.max(...faceOutline)) {
+                    ctx.beginPath();
+                    faceOutline.forEach((index, i) => {
+                        if (index < face.length) {
+                            const point = face[index];
+                            const x = point.x * canvas.width;
+                            const y = point.y * canvas.height;
+                            if (i === 0) ctx.moveTo(x, y);
+                            else ctx.lineTo(x, y);
+                        }
+                    });
+                    ctx.stroke();
+                }
+
+                // Draw simple dots for other landmarks
+                ctx.fillStyle = '#FF6B6B';
+                face.forEach((landmark, index) => {
+                    if (!faceOutline.includes(index)) {
+                        const x = landmark.x * canvas.width;
+                        const y = landmark.y * canvas.height;
+                        ctx.beginPath();
+                        ctx.arc(x, y, 1, 0, 2 * Math.PI);
+                        ctx.fill();
+                    }
+                });
+            });
+        }
+
+        function drawEyeTracking() {
+            const canvas = document.getElementById('faceOverlay');
+            const ctx = canvas.getContext('2d');
+            
+            updateCanvasSize();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            currentFaceData.landmarks.forEach(face => {
+                // Eye landmark indices for MediaPipe Face Mesh
+                const leftEye = [33, 7, 163, 144, 145, 153, 154, 155, 133, 173, 157, 158, 159, 160, 161, 246];
+                const rightEye = [362, 382, 381, 380, 374, 373, 390, 249, 263, 466, 388, 387, 386, 385, 384, 398];
+                
+                // Draw left eye
+                ctx.strokeStyle = '#00FFFF';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                leftEye.forEach((index, i) => {
+                    if (index < face.length) {
+                        const point = face[index];
+                        const x = point.x * canvas.width;
+                        const y = point.y * canvas.height;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                });
+                ctx.closePath();
+                ctx.stroke();
+                
+                // Draw right eye
+                ctx.beginPath();
+                rightEye.forEach((index, i) => {
+                    if (index < face.length) {
+                        const point = face[index];
+                        const x = point.x * canvas.width;
+                        const y = point.y * canvas.height;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                });
+                ctx.closePath();
+                ctx.stroke();
+            });
+        }
+
+        function drawLipTracking() {
+            const canvas = document.getElementById('faceOverlay');
+            const ctx = canvas.getContext('2d');
+            
+            updateCanvasSize();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            currentFaceData.landmarks.forEach(face => {
+                // Lip landmark indices for MediaPipe Face Mesh
+                const outerLips = [61, 84, 17, 314, 405, 320, 307, 375, 321, 308, 324, 318];
+                const innerLips = [78, 95, 88, 178, 87, 14, 317, 402, 318, 324, 308, 415];
+                
+                // Draw outer lips
+                ctx.strokeStyle = '#FF6B6B';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                outerLips.forEach((index, i) => {
+                    if (index < face.length) {
+                        const point = face[index];
+                        const x = point.x * canvas.width;
+                        const y = point.y * canvas.height;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                });
+                ctx.closePath();
+                ctx.stroke();
+                
+                // Draw inner lips  
+                ctx.strokeStyle = '#FFB3B3';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                innerLips.forEach((index, i) => {
+                    if (index < face.length) {
+                        const point = face[index];
+                        const x = point.x * canvas.width;
+                        const y = point.y * canvas.height;
+                        if (i === 0) ctx.moveTo(x, y);
+                        else ctx.lineTo(x, y);
+                    }
+                });
+                ctx.closePath();
+                ctx.stroke();
+            });
+        }
+
+        function drawCombinedVisualization() {
+            const canvas = document.getElementById('faceOverlay');
+            const ctx = canvas.getContext('2d');
+            
+            updateCanvasSize();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Draw minimal face outline + eyes + lips
+            drawFaceContours();
+            
+            // Overlay eyes with different style
+            ctx.globalAlpha = 0.8;
+            drawEyeTracking();
+            
+            // Overlay lips
+            drawLipTracking();
+            ctx.globalAlpha = 1.0;
+        }
+
+        function updateCanvasSize() {
+            const video = document.getElementById('remoteVideo');
+            const canvas = document.getElementById('faceOverlay');
+            
+            if (video.videoWidth && video.videoHeight) {
+                canvas.width = video.clientWidth;
+                canvas.height = video.clientHeight;
+            }
+        }
+
+        function toggleFaceVisualization() {
+            visualizationMode = (visualizationMode + 1) % 7;
+            
+            const canvas = document.getElementById('faceOverlay');
+            const modes = ['Off', 'Points', 'Mesh', 'Contours', 'Eyes', 'Lips', 'Combined'];
+            
+            document.getElementById('toggleVisualizationBtn').textContent = `Face Viz: ${modes[visualizationMode]} 👁️`;
+            
+            if (visualizationMode === 0) {
+                canvas.style.display = 'none';
+            } else {
+                canvas.style.display = 'block';
+                drawFaceVisualization();
+            }
+        }
+
+        // Stats functions
+        function updateStats() {
+            // Update face count
+            document.getElementById('faceCount').textContent = currentFaceData?.landmarks?.length || 0;
+            
+            // Update data packet count
+            document.getElementById('dataPacketCount').textContent = totalPacketCount;
+            
+            // Update broadcaster session (truncated)
+            if (broadcasterSessionId) {
+                document.getElementById('broadcasterSession').textContent = broadcasterSessionId.substring(0, 12) + '...';
+            }
+            
+            // Calculate and update FPS every second
+            const now = Date.now();
+            if (now - lastFpsUpdate >= 1000) {
+                const fps = Math.round(fpsCounter * 1000 / (now - lastFpsUpdate));
+                document.getElementById('faceDataRate').textContent = `${fps} fps`;
+                fpsCounter = 0;
+                lastFpsUpdate = now;
+            }
+            
+            // Update connection time
+            if (connectionStartTime) {
+                const elapsed = Math.round((now - connectionStartTime) / 1000);
+                const minutes = Math.floor(elapsed / 60);
+                const seconds = elapsed % 60;
+                document.getElementById('connectionTime').textContent = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+            }
+        }
+
+        function updateVideoResolution() {
+            const video = document.getElementById('remoteVideo');
+            if (video.videoWidth && video.videoHeight) {
+                document.getElementById('videoResolution').textContent = `${video.videoWidth}x${video.videoHeight}`;
+            }
+        }
+
+        function resetStats() {
+            totalPacketCount = 0;
+            fpsCounter = 0;
+            lastFpsUpdate = Date.now();
+            connectionStartTime = null;
+            broadcasterSessionId = null;
+            
+            document.getElementById('broadcasterSession').textContent = '--';
+            document.getElementById('dataPacketCount').textContent = '0';
+            document.getElementById('faceDataRate').textContent = '0 fps';
+            document.getElementById('videoResolution').textContent = '--';
+            document.getElementById('faceCount').textContent = '0';
+            document.getElementById('connectionTime').textContent = '--';
+        }
+
+        // Event listeners
+        document.getElementById('receiveBtn').addEventListener('click', startReceiving);
+        document.getElementById('disconnectBtn').addEventListener('click', disconnect);
+        document.getElementById('toggleVisualizationBtn').addEventListener('click', toggleFaceVisualization);
+
+        // Cleanup on page unload
+        window.addEventListener('beforeunload', () => {
+            if (webrtcClient) {
+                webrtcClient.disconnect();
+            }
+        });
+
+        addLog('WebRTC receiver ready');
+    </script>
+</body>
+</html>

@@ -232,6 +232,8 @@
                 
                 <div class="controls">
                     <button id="toggleBtn" class="btn">Start Camera</button>
+                    <button id="switchCameraBtn" class="btn" disabled>Switch Camera 🔄</button>
+                    <button id="streamBtn" class="btn" disabled>Stream via WebRTC 📡</button>
                     <button id="screenshotBtn" class="btn" disabled>Screenshot</button>
                 </div>
             </div>
@@ -250,6 +252,10 @@
                     <div class="status-item">
                         <span class="status-label">Camera Status:</span>
                         <span class="status-value" id="cameraStatus">Not started</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-label">WebRTC Status:</span>
+                        <span class="status-value" id="webrtcStatus">Not connected</span>
                     </div>
                 </div>
 
@@ -299,6 +305,11 @@
         let frameCount = 0;
         let lastTime = 0;
         let fps = 0;
+        let currentFacingMode = 'user'; // 'user' for front camera, 'environment' for rear
+        let webrtcClient = null;
+        let isStreaming = false;
+        let faceDataChannel = null;
+        let currentFaceData = null;
 
         // Initialize MediaPipe Face Mesh
         async function initializeFaceMesh() {
@@ -346,11 +357,24 @@
             // Update metrics
             updateMetrics(results);
 
-            // Draw face mesh if faces detected
+            // Store face data for WebRTC transmission
             if (results.multiFaceLandmarks && results.multiFaceLandmarks.length > 0) {
+                currentFaceData = {
+                    landmarks: results.multiFaceLandmarks,
+                    timestamp: Date.now(),
+                    videoWidth: canvasElement.width,
+                    videoHeight: canvasElement.height
+                };
+                
+                // Send face data through WebRTC data channel
+                sendFaceData(currentFaceData);
+                
+                // Draw face mesh
                 for (const landmarks of results.multiFaceLandmarks) {
                     drawLandmarks(canvasCtx, landmarks, canvasElement.width, canvasElement.height);
                 }
+            } else {
+                currentFaceData = null;
             }
         }
 
@@ -426,10 +450,13 @@
             document.getElementById('frameCount').textContent = frameCount;
         }
 
-        // Start camera
-        async function startCamera() {
+        // Start camera with specified facing mode
+        async function startCamera(facingMode = null) {
             try {
                 const videoElement = document.getElementById('inputVideo');
+                
+                // Use provided facingMode or current one
+                const mode = facingMode || currentFacingMode;
                 
                 camera = new Camera(videoElement, {
                     onFrame: async () => {
@@ -438,7 +465,8 @@
                         }
                     },
                     width: 640,
-                    height: 480
+                    height: 480,
+                    facingMode: mode
                 });
 
                 await camera.start();
@@ -446,16 +474,35 @@
                 isRunning = true;
                 frameCount = 0;
                 lastTime = performance.now();
+                currentFacingMode = mode;
 
                 document.getElementById('toggleBtn').textContent = 'Stop Camera';
                 document.getElementById('screenshotBtn').disabled = false;
+                document.getElementById('switchCameraBtn').disabled = false;
+                document.getElementById('streamBtn').disabled = false;
                 document.getElementById('cameraStatus').textContent = 'Running';
 
-                showSuccess('Camera started successfully!');
+                showSuccess(`Camera started (${mode === 'user' ? 'Front' : 'Rear'} camera)`);
                 
             } catch (error) {
                 showError('Failed to start camera: ' + error.message);
             }
+        }
+        
+        // Switch between front and rear camera
+        async function switchCamera() {
+            if (!isRunning) return;
+            
+            // Stop current camera
+            if (camera) {
+                camera.stop();
+            }
+            
+            // Toggle facing mode
+            currentFacingMode = currentFacingMode === 'user' ? 'environment' : 'user';
+            
+            // Restart with new camera
+            await startCamera(currentFacingMode);
         }
 
         // Stop camera
@@ -468,6 +515,8 @@
 
             document.getElementById('toggleBtn').textContent = 'Start Camera';
             document.getElementById('screenshotBtn').disabled = true;
+            document.getElementById('switchCameraBtn').disabled = true;
+            document.getElementById('streamBtn').disabled = true;
             document.getElementById('cameraStatus').textContent = 'Stopped';
 
             // Clear canvas
@@ -504,6 +553,288 @@
             setTimeout(() => successDiv.style.display = 'none', 3000);
         }
 
+        // Send face data through WebRTC data channel with throttling
+        let lastSendTime = 0;
+        let sendCount = 0;
+        function sendFaceData(faceData) {
+            const now = Date.now();
+            
+            // Throttle to ~30fps max
+            if (now - lastSendTime < 33) return;
+            
+            if (faceDataChannel && faceDataChannel.readyState === 'open') {
+                try {
+                    const data = JSON.stringify(faceData);
+                    faceDataChannel.send(data);
+                    sendCount++;
+                    lastSendTime = now;
+                    
+                    // Log every 30 sends to avoid spam
+                    if (sendCount % 30 === 0) {
+                        console.log(`Sent ${sendCount} face data packets, current:`, faceData.landmarks?.length || 0, 'faces');
+                    }
+                } catch (error) {
+                    console.warn('Failed to send face data:', error);
+                }
+            } else if (sendCount === 0) {
+                // Only log once when starting
+                console.log('Data channel not ready:', faceDataChannel?.readyState || 'null');
+            }
+        }
+
+        // WebRTC Streaming functionality
+        async function initializeWebRTC() {
+            if (webrtcClient) return;
+            
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            
+            // Import WebRTC client (simplified inline for now)
+            webrtcClient = createSimpleWebRTCClient({
+                wsUrl,
+                role: 'broadcaster',
+                onLog: (message, level) => {
+                    if (level === 'error') {
+                        showError(message);
+                    } else {
+                        showSuccess(message);
+                    }
+                }
+            });
+            
+            try {
+                await webrtcClient.connect();
+                document.getElementById('webrtcStatus').textContent = 'Connected';
+                return true;
+            } catch (error) {
+                showError(`WebRTC connection failed: ${error.message}`);
+                document.getElementById('webrtcStatus').textContent = 'Connection failed';
+                return false;
+            }
+        }
+
+        async function toggleStreaming() {
+            if (!isRunning) {
+                showError('Please start the camera first');
+                return;
+            }
+            
+            if (isStreaming) {
+                // Stop streaming
+                if (webrtcClient) {
+                    webrtcClient.disconnect();
+                    webrtcClient = null;
+                }
+                isStreaming = false;
+                document.getElementById('streamBtn').textContent = 'Stream via WebRTC 📡';
+                document.getElementById('webrtcStatus').textContent = 'Not connected';
+                showSuccess('WebRTC streaming stopped');
+            } else {
+                // Start streaming
+                if (await initializeWebRTC()) {
+                    try {
+                        const videoElement = document.getElementById('inputVideo');
+                        const stream = videoElement.srcObject;
+                        
+                        await webrtcClient.startBroadcasting(stream);
+                        
+                        isStreaming = true;
+                        document.getElementById('streamBtn').textContent = 'Stop Streaming ⏹️';
+                        document.getElementById('webrtcStatus').textContent = 'Broadcasting';
+                        showSuccess('WebRTC streaming started - waiting for receivers');
+                    } catch (error) {
+                        showError(`Failed to start streaming: ${error.message}`);
+                    }
+                }
+            }
+        }
+
+        // Simple WebRTC client (inline implementation)
+        function createSimpleWebRTCClient({ wsUrl, role, onLog }) {
+            let ws = null;
+            let sessionId = null;
+            let peerConnection = null;
+            let connectedPeers = new Set();
+            
+            function sendMessage(message) {
+                if (ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify(message));
+                }
+            }
+            
+            function handleMessage(message) {
+                switch (message.type) {
+                    case 'webrtc_seek_broadcaster':
+                        if (message.sourceSession) {
+                            onLog(`Receiver ${message.sourceSession} seeking broadcaster`);
+                            createOfferForReceiver(message.sourceSession);
+                        }
+                        break;
+                    case 'webrtc_answer':
+                        if (message.sdp && message.sourceSession) {
+                            onLog(`Received answer from receiver ${message.sourceSession}`);
+                            handleAnswer(message);
+                        }
+                        break;
+                    case 'webrtc_ice':
+                        if (message.candidate) {
+                            onLog(`Received ICE candidate from receiver`);
+                            handleIceCandidate(message);
+                        }
+                        break;
+                    case 'connected':
+                        onLog('WebSocket session established', 'success');
+                        break;
+                    case 'error':
+                        onLog(`Server error: ${message.error || message.message || 'Unknown error'}`, 'error');
+                        break;
+                    default:
+                        // Ignore unknown messages silently
+                        break;
+                }
+            }
+            
+            async function handleAnswer(message) {
+                if (!peerConnection || !message.sdp) return;
+                
+                try {
+                    await peerConnection.setRemoteDescription(message.sdp);
+                    onLog(`WebRTC connection established with ${message.sourceSession}`, 'success');
+                } catch (error) {
+                    onLog(`Failed to handle answer: ${error}`, 'error');
+                }
+            }
+            
+            async function handleIceCandidate(message) {
+                if (!peerConnection || !message.candidate) return;
+                
+                try {
+                    await peerConnection.addIceCandidate(message.candidate);
+                    onLog('ICE candidate added successfully');
+                } catch (error) {
+                    onLog(`Failed to add ICE candidate: ${error}`, 'error');
+                }
+            }
+            
+            async function createOfferForReceiver(receiverId) {
+                if (!peerConnection) return;
+                
+                try {
+                    const offer = await peerConnection.createOffer();
+                    await peerConnection.setLocalDescription(offer);
+                    
+                    sendMessage({
+                        type: 'webrtc_offer',
+                        deviceId: sessionId,
+                        targetSession: receiverId,
+                        timestamp: Date.now(),
+                        sdp: offer
+                    });
+                    
+                    connectedPeers.add(receiverId);
+                    onLog(`Sent offer to receiver ${receiverId}`);
+                } catch (error) {
+                    onLog(`Failed to create offer: ${error}`, 'error');
+                }
+            }
+            
+            return {
+                connect: () => new Promise((resolve, reject) => {
+                    ws = new WebSocket(wsUrl);
+                    sessionId = `ws_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    
+                    ws.onopen = () => {
+                        onLog('Connected to signaling server');
+                        resolve();
+                    };
+                    
+                    ws.onerror = (error) => reject(new Error('WebSocket connection failed'));
+                    
+                    ws.onmessage = (event) => {
+                        try {
+                            const message = JSON.parse(event.data);
+                            handleMessage(message);
+                        } catch (error) {
+                            onLog(`Failed to parse message: ${error}`, 'error');
+                        }
+                    };
+                }),
+                
+                startBroadcasting: async (stream) => {
+                    peerConnection = new RTCPeerConnection({
+                        iceServers: [
+                            { urls: 'stun:stun.l.google.com:19302' },
+                            { urls: 'stun:stun1.l.google.com:19302' },
+                            { urls: 'stun:stun2.l.google.com:19302' }
+                        ]
+                    });
+                    
+                    // Create data channel for face landmarks
+                    faceDataChannel = peerConnection.createDataChannel('faceData', {
+                        ordered: false, // Allow some packets to arrive out of order for lower latency
+                        maxRetransmits: 0 // Don't retransmit, prioritize low latency
+                    });
+                    
+                    faceDataChannel.onopen = () => {
+                        onLog('Face data channel opened', 'success');
+                    };
+                    
+                    faceDataChannel.onclose = () => {
+                        onLog('Face data channel closed');
+                    };
+                    
+                    faceDataChannel.onerror = (error) => {
+                        onLog(`Face data channel error: ${error}`, 'error');
+                    };
+                    
+                    stream.getTracks().forEach(track => {
+                        peerConnection.addTrack(track, stream);
+                    });
+                    
+                    peerConnection.onicecandidate = (event) => {
+                        if (event.candidate) {
+                            onLog(`Sending ICE candidate to receivers`);
+                            connectedPeers.forEach(peerId => {
+                                sendMessage({
+                                    type: 'webrtc_ice',
+                                    deviceId: sessionId,
+                                    targetSession: peerId,
+                                    timestamp: Date.now(),
+                                    candidate: event.candidate
+                                });
+                            });
+                        } else {
+                            onLog('ICE gathering completed');
+                        }
+                    };
+                    
+                    peerConnection.onconnectionstatechange = () => {
+                        const state = peerConnection.connectionState;
+                        onLog(`WebRTC connection state: ${state}`, state === 'failed' ? 'error' : 'info');
+                    };
+                    
+                    peerConnection.oniceconnectionstatechange = () => {
+                        const state = peerConnection.iceConnectionState;
+                        onLog(`ICE connection state: ${state}`, state === 'failed' ? 'error' : 'info');
+                    };
+                    
+                    onLog('WebRTC broadcaster ready');
+                },
+                
+                disconnect: () => {
+                    if (peerConnection) {
+                        peerConnection.close();
+                        peerConnection = null;
+                    }
+                    if (ws) {
+                        ws.close();
+                        ws = null;
+                    }
+                    connectedPeers.clear();
+                }
+            };
+        }
+
         // Toggle button functionality
         function toggleCamera() {
             if (isRunning) {
@@ -516,6 +847,8 @@
         // Event listeners
         document.getElementById('toggleBtn').addEventListener('click', toggleCamera);
         document.getElementById('screenshotBtn').addEventListener('click', captureScreenshot);
+        document.getElementById('switchCameraBtn').addEventListener('click', switchCamera);
+        document.getElementById('streamBtn').addEventListener('click', toggleStreaming);
 
         // Cleanup on page unload
         window.addEventListener('beforeunload', () => {

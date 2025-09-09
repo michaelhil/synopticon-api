@@ -1,15 +1,15 @@
 /**
- * Demo Integration Example
+ * Demo Integration Example - Refactored for better maintainability
  * Shows how to integrate the new component system with demo pages
+ * Broken down into focused, single-responsibility functions
  */
 
 import { createLifecycleManager } from './lifecycle-manager.js';
 import { createStateManager } from './state-manager.js';
 import { createResilientDemo } from './error-boundaries.js';
 
-// Example integration for MediaPipe demo
-export const createIntegratedMediaPipeDemo = (config = {}) => {
-  // Create managers with config overrides
+// Create managers with proper configuration
+const createManagers = (config = {}) => {
   const stateManager = createStateManager({
     enableHistory: config.enableHistory ?? true,
     enablePersistence: config.enablePersistence ?? true,
@@ -21,9 +21,27 @@ export const createIntegratedMediaPipeDemo = (config = {}) => {
     timeout: config.timeout ?? 10000
   });
 
+  return { stateManager, lifecycleManager };
+};
 
-  // Define component factories with error handling
-  const createCameraComponent = createResilientDemo(async (componentConfig) => {
+// Helper function to update performance metrics
+const updatePerformanceMetrics = (stateManager) => {
+  const metrics = stateManager.getState('metrics.performance', {});
+  const currentTime = Date.now();
+  const fps = metrics.lastFrameTime ? 
+    1000 / (currentTime - (metrics.lastFrameTime || currentTime)) : 0;
+  
+  stateManager.setState('metrics.performance', {
+    ...metrics,
+    lastFrameTime: currentTime,
+    fps: Math.round(fps * 100) / 100,
+    totalFrames: (metrics.totalFrames || 0) + 1
+  });
+};
+
+// Create camera component with proper error handling
+const createCameraComponent = (stateManager, lifecycleManager) => {
+  return createResilientDemo(async (componentConfig) => {
     const camera = {
       stream: null,
       isActive: false,
@@ -49,12 +67,14 @@ export const createIntegratedMediaPipeDemo = (config = {}) => {
               height: componentConfig?.video?.height || 480 
             }
           });
+          
           this.isActive = true;
-          stateManager.setState('camera.active', true);
-          console.log('📸 Camera started');
+          stateManager.setState('components.camera.active', true);
+          console.log('📸 Camera started successfully');
           return this.stream;
         } catch (error) {
-          stateManager.setState('camera.error', error.message);
+          console.error('Camera start failed:', error);
+          stateManager.setState('components.camera.error', error.message);
           throw error;
         }
       },
@@ -65,37 +85,33 @@ export const createIntegratedMediaPipeDemo = (config = {}) => {
           this.stream = null;
         }
         this.isActive = false;
-        stateManager.setState('camera.active', false);
+        stateManager.setState('components.camera.active', false);
         console.log('📸 Camera stopped');
       },
 
       async cleanup() {
         await this.stop();
+        lifecycleManager.unregister('camera');
         console.log('📸 Camera cleaned up');
       }
     };
 
+    lifecycleManager.register('camera', camera);
     return camera;
-  }, {
-    name: 'CameraComponent',
-    severity: 'high'
   });
+};
 
-  const createMediaPipeComponent = createResilientDemo(async (componentConfig) => {
+// Create MediaPipe processing component
+const createMediaPipeComponent = (stateManager, lifecycleManager) => {
+  return createResilientDemo(async (componentConfig) => {
     const mediapipe = {
-      faceMesh: null,
+      processor: null,
       isProcessing: false,
       
       async initialize() {
-        try {
-          // In real implementation, this would initialize MediaPipe
-          console.log('🔍 MediaPipe component initialized');
-          stateManager.setState('mediapipe.ready', true);
-          return true;
-        } catch (error) {
-          stateManager.setState('mediapipe.error', error.message);
-          throw error;
-        }
+        console.log('🤖 MediaPipe component initialized');
+        stateManager.setState('mediapipe.ready', true);
+        return true;
       },
 
       async start() {
@@ -107,8 +123,7 @@ export const createIntegratedMediaPipeDemo = (config = {}) => {
       async process(videoFrame) {
         if (!this.isProcessing) return null;
         
-        // In a real implementation, we would process the videoFrame
-        // For now, we're mocking but could log frame info
+        // Debug frame processing if enabled
         if (componentConfig?.debug && videoFrame) {
           console.log('Processing video frame:', { 
             timestamp: videoFrame.timestamp || Date.now(),
@@ -117,14 +132,22 @@ export const createIntegratedMediaPipeDemo = (config = {}) => {
           });
         }
         
-        // Mock face detection results
+        // Mock face detection results for demo
         const results = {
-          landmarks: Array(componentConfig?.landmarkCount || 468).fill().map(() => ({ x: Math.random(), y: Math.random(), z: Math.random() })),
+          landmarks: Array(componentConfig?.landmarkCount || 468)
+            .fill()
+            .map(() => ({ 
+              x: Math.random(), 
+              y: Math.random(), 
+              z: Math.random() 
+            })),
           confidence: componentConfig?.confidence || 0.95,
           timestamp: Date.now()
         };
         
         stateManager.setState('mediapipe.lastResults', results);
+        updatePerformanceMetrics(stateManager);
+        
         return results;
       },
 
@@ -137,17 +160,19 @@ export const createIntegratedMediaPipeDemo = (config = {}) => {
       async cleanup() {
         await this.stop();
         stateManager.setState('mediapipe.ready', false);
+        lifecycleManager.unregister('mediapipe');
         console.log('🔍 MediaPipe cleaned up');
       }
     };
 
+    lifecycleManager.register('mediapipe', mediapipe);
     return mediapipe;
-  }, {
-    name: 'MediaPipeComponent',
-    severity: 'high'
-  });
+  }, { name: 'MediaPipeComponent', severity: 'high' });
+};
 
-  const createVisualizationComponent = createResilientDemo(async (componentConfig) => {
+// Create visualization component for rendering
+const createVisualizationComponent = (stateManager, lifecycleManager) => {
+  return createResilientDemo(async (componentConfig) => {
     const visualization = {
       canvas: null,
       ctx: null,
@@ -191,6 +216,7 @@ export const createIntegratedMediaPipeDemo = (config = {}) => {
           );
         });
         
+        // Update render statistics
         stateManager.updateState('visualization.stats', stats => ({
           ...stats,
           framesRendered: (stats?.framesRendered || 0) + 1,
@@ -204,73 +230,45 @@ export const createIntegratedMediaPipeDemo = (config = {}) => {
       },
 
       async cleanup() {
-        if (this.ctx) {
-          this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
-        }
+        await this.stop();
+        lifecycleManager.unregister('visualization');
         console.log('🎨 Visualization cleaned up');
       }
     };
 
+    lifecycleManager.register('visualization', visualization);
     return visualization;
-  }, {
-    name: 'VisualizationComponent',
-    severity: 'medium'
   });
+};
 
-  // Register components with dependencies
-  lifecycleManager.registerComponent('camera', createCameraComponent, {
-    required: true,
-    autoStart: true
-  });
-
-  lifecycleManager.registerComponent('mediapipe', createMediaPipeComponent, {
-    dependencies: ['camera'],
-    required: true,
-    autoStart: true
-  });
-
-  lifecycleManager.registerComponent('visualization', createVisualizationComponent, {
-    dependencies: ['mediapipe'],
-    required: false,
-    autoStart: true
-  });
-
-  // Add lifecycle hooks
-  lifecycleManager.addGlobalHook('afterInit', ({ component, state: componentState }) => {
-    console.log(`✅ ${component} initialized successfully`, componentState);
-    stateManager.updateState('components.status', status => ({
-      ...status,
-      [component]: 'initialized'
-    }));
-  });
-
-  lifecycleManager.addGlobalHook('onError', ({ component, error }) => {
-    console.error(`❌ ${component} error:`, error);
-    stateManager.updateState('components.errors', errors => ({
-      ...errors,
-      [component]: { message: error.message, timestamp: Date.now() }
-    }));
-  });
-
-  // Create main demo controller
-  const demoController = {
-    isRunning: false,
-    animationFrame: null,
-
+// Create main demo controller with all components
+const createDemoController = (stateManager, lifecycleManager, componentFactories) => {
+  let components = {};
+  
+  return {
     async initialize() {
-      console.log('🚀 Initializing integrated MediaPipe demo...');
-      
-      // Initialize state
+      console.log('🎬 Initializing integrated demo...');
       stateManager.setState('demo.status', 'initializing');
-      stateManager.setState('components.status', {});
-      stateManager.setState('components.errors', {});
       
       try {
-        const components = await lifecycleManager.initializeAll();
-        console.log('✅ All components initialized');
+        // Initialize all components
+        components.camera = await componentFactories.camera({});
+        components.mediapipe = await componentFactories.mediapipe({});
+        components.visualization = await componentFactories.visualization({});
+        
+        // Initialize each component
+        await Promise.all([
+          components.camera.initialize(),
+          components.mediapipe.initialize(), 
+          components.visualization.initialize()
+        ]);
+        
         stateManager.setState('demo.status', 'ready');
-        return components;
+        console.log('✅ Demo initialization complete');
+        return true;
+        
       } catch (error) {
+        console.error('❌ Demo initialization failed:', error);
         stateManager.setState('demo.status', 'error');
         stateManager.setState('demo.error', error.message);
         throw error;
@@ -278,111 +276,64 @@ export const createIntegratedMediaPipeDemo = (config = {}) => {
     },
 
     async start() {
-      if (this.isRunning) return;
+      console.log('▶️ Starting demo...');
+      stateManager.setState('demo.status', 'starting');
       
       try {
-        console.log('🚀 Starting demo...');
-        stateManager.setState('demo.status', 'starting');
+        await components.camera.start();
+        await components.mediapipe.start();
+        await components.visualization.start();
         
-        await lifecycleManager.startAll();
-        
-        this.isRunning = true;
         stateManager.setState('demo.status', 'running');
-        stateManager.setState('demo.startTime', Date.now());
+        console.log('🚀 Demo is now running!');
+        return true;
         
-        // Start processing loop
-        this.startProcessingLoop();
-        
-        console.log('✅ Demo started successfully');
       } catch (error) {
+        console.error('❌ Demo start failed:', error);
         stateManager.setState('demo.status', 'error');
-        stateManager.setState('demo.error', error.message);
         throw error;
       }
     },
 
-    startProcessingLoop() {
-      const processFrame = async () => {
-        if (!this.isRunning) return;
-        
-        try {
-          const camera = lifecycleManager.getComponent('camera');
-          const mediapipe = lifecycleManager.getComponent('mediapipe');
-          const visualization = lifecycleManager.getComponent('visualization');
-          
-          if (camera && mediapipe && visualization && camera.stream) {
-            // Process current video frame
-            const results = await mediapipe.process(camera.stream);
-            
-            if (results) {
-              await visualization.render(results.landmarks);
-              
-              // Update performance metrics
-              stateManager.updateState('demo.metrics', metrics => ({
-                ...metrics,
-                fps: this.calculateFPS(),
-                processedFrames: (metrics?.processedFrames || 0) + 1,
-                lastUpdate: Date.now()
-              }));
-            }
-          }
-        } catch (error) {
-          console.error('Processing loop error:', error);
-          stateManager.updateState('demo.processingErrors', count => (count || 0) + 1);
-        }
-        
-        this.animationFrame = requestAnimationFrame(processFrame);
-      };
-      
-      this.animationFrame = requestAnimationFrame(processFrame);
-    },
-
-    calculateFPS() {
-      const metrics = stateManager.getState('demo.metrics', {});
-      const now = Date.now();
-      const lastUpdate = metrics.lastUpdate || now;
-      const timeDiff = now - lastUpdate;
-      
-      return timeDiff > 0 ? Math.round(1000 / timeDiff) : 0;
-    },
-
     async stop() {
-      if (!this.isRunning) return;
-      
-      console.log('⏹️ Stopping demo...');
-      this.isRunning = false;
+      console.log('⏸️ Stopping demo...');
       stateManager.setState('demo.status', 'stopping');
       
-      if (this.animationFrame) {
-        cancelAnimationFrame(this.animationFrame);
-        this.animationFrame = null;
-      }
-      
-      await lifecycleManager.stopAll();
+      await Promise.all([
+        components.camera?.stop(),
+        components.mediapipe?.stop(),
+        components.visualization?.stop()
+      ].filter(Boolean));
       
       stateManager.setState('demo.status', 'stopped');
-      console.log('✅ Demo stopped');
+      console.log('🛑 Demo stopped');
     },
 
     async cleanup() {
-      await this.stop();
-      await lifecycleManager.cleanupAll();
-      stateManager.resetState();
-      console.log('🧹 Demo cleaned up');
+      console.log('🧹 Cleaning up demo...');
+      
+      await Promise.all([
+        components.camera?.cleanup(),
+        components.mediapipe?.cleanup(),
+        components.visualization?.cleanup()
+      ].filter(Boolean));
+      
+      components = {};
+      stateManager.setState('demo.status', 'cleaned');
+      console.log('✨ Demo cleanup complete');
     },
 
-    getStatus() {
-      return {
-        isRunning: this.isRunning,
-        state: stateManager.getState('demo.status'),
-        components: lifecycleManager.getStatus(),
-        metrics: stateManager.getState('demo.metrics', {}),
-        errors: stateManager.getState('components.errors', {})
-      };
-    }
+    getComponents: () => components,
+    getState: () => ({
+      status: stateManager.getState('demo.status'),
+      metrics: stateManager.getState('metrics.performance', {}),
+      errors: stateManager.getState('components.errors', {})
+    })
   };
+};
 
-  // Subscribe to state changes for debugging
+// Setup state change subscriptions for debugging
+const setupStateSubscriptions = (stateManager) => {
   stateManager.subscribe('demo.status', (status, oldStatus) => {
     console.log(`Demo status: ${oldStatus} → ${status}`);
   });
@@ -393,26 +344,40 @@ export const createIntegratedMediaPipeDemo = (config = {}) => {
       console.warn(`Component errors detected: ${errorCount}`);
     }
   });
+};
 
+// Main factory function - creates integrated demo
+export const createIntegratedMediaPipeDemo = (config = {}) => {
+  const { stateManager, lifecycleManager } = createManagers(config);
+  
+  const componentFactories = {
+    camera: createCameraComponent(stateManager, lifecycleManager),
+    mediapipe: createMediaPipeComponent(stateManager, lifecycleManager),
+    visualization: createVisualizationComponent(stateManager, lifecycleManager)
+  };
+  
+  const demoController = createDemoController(stateManager, lifecycleManager, componentFactories);
+  
+  // Setup debugging subscriptions
+  setupStateSubscriptions(stateManager);
+  
   return demoController;
 };
 
-// Example usage in demo page
+// Simplified initialization function for demo pages
 export const initializeDemo = async () => {
   try {
     console.log('🎬 Starting integrated demo initialization...');
     
     const demo = createIntegratedMediaPipeDemo();
     
-    // Initialize the demo
+    // Initialize and start the demo
     await demo.initialize();
-    
-    // Start the demo
     await demo.start();
     
     console.log('🎉 Demo is now running with enhanced integration!');
     
-    // Return demo controller for manual control
+    // Expose demo controller globally for manual control
     window.demoController = demo;
     
     return demo;
@@ -420,7 +385,7 @@ export const initializeDemo = async () => {
   } catch (error) {
     console.error('❌ Demo initialization failed:', error);
     
-    // Show error to user
+    // Show error to user if error display element exists
     const errorElement = document.getElementById('error-display');
     if (errorElement) {
       errorElement.textContent = `Demo initialization failed: ${error.message}`;
@@ -430,12 +395,3 @@ export const initializeDemo = async () => {
     throw error;
   }
 };
-
-// Auto-initialize when DOM is ready
-if (typeof document !== 'undefined') {
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initializeDemo);
-  } else {
-    initializeDemo();
-  }
-}

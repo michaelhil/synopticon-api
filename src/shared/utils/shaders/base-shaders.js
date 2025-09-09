@@ -206,20 +206,20 @@ void main() {
  * Shader compilation helper function
  */
 export function getShaderSource(name, isWebGL2 = true) {
-    const shaders = {
-        vertex_fullscreen: isWebGL2 ? VERTEX_SHADER_FULLSCREEN : VERTEX_SHADER_FULLSCREEN_V1,
-        fragment_grayscale: isWebGL2 ? FRAGMENT_SHADER_GRAYSCALE : FRAGMENT_SHADER_GRAYSCALE_V1,
-        fragment_blur: FRAGMENT_SHADER_BLUR,
-        fragment_sobel: FRAGMENT_SHADER_SOBEL,
-        fragment_integral_h: FRAGMENT_SHADER_INTEGRAL_H,
-        fragment_histogram_eq: FRAGMENT_SHADER_HISTOGRAM_EQ,
-        fragment_template_match: FRAGMENT_SHADER_TEMPLATE_MATCH
-    };
+  const shaders = {
+    vertex_fullscreen: isWebGL2 ? VERTEX_SHADER_FULLSCREEN : VERTEX_SHADER_FULLSCREEN_V1,
+    fragment_grayscale: isWebGL2 ? FRAGMENT_SHADER_GRAYSCALE : FRAGMENT_SHADER_GRAYSCALE_V1,
+    fragment_blur: FRAGMENT_SHADER_BLUR,
+    fragment_sobel: FRAGMENT_SHADER_SOBEL,
+    fragment_integral_h: FRAGMENT_SHADER_INTEGRAL_H,
+    fragment_histogram_eq: FRAGMENT_SHADER_HISTOGRAM_EQ,
+    fragment_template_match: FRAGMENT_SHADER_TEMPLATE_MATCH
+  };
     
-    const source = shaders[name];
-    if (!source) {
-        throw new Error(`Shader '${name}' not found`);
-    }
+  const source = shaders[name];
+  if (!source) {
+    throw new Error(`Shader '${name}' not found`);
+  }
     
-    return source;
+  return source;
 }

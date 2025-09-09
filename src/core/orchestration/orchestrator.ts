@@ -306,7 +306,7 @@ export const createOrchestrator = (userConfig: OrchestratorConfig = {}) => {
     const compatible = findCompatiblePipelines(available, requirements);
     
     if (compatible.length === 0) {
-      throw new Error(`No pipelines available for capabilities: ${requirements.capabilities.join(', ')}`);
+      throw new Error(`No pipelines available for capabilities: ${requirements.capabilities.join(', ')`);
     }
 
     // Filter out pipelines with open circuits

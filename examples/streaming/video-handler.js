@@ -22,7 +22,7 @@ export const createVideoHandler = () => {
             return stream;
             
         } catch (_error) {
-            console.error('Camera access failed:', error);
+            console.error('Camera access failed:', _error);
             throw new Error(`Camera access denied: ${_error.message}`);
         }
     };

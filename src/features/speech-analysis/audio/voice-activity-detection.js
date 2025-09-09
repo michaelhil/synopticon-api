@@ -5,7 +5,7 @@
  */
 
 import { createEnhancedMemoryPool } from '../../../shared/utils/enhanced-memory-pool.js';
-import { createVADConfig, updateVADConfig } from './vad-config.js';
+import { createVADConfig, updateVADConfig } from './vad-config.ts';
 import { createVADConsensus } from './vad-consensus.js';
 import { createVADStats } from './vad-stats.js';
 
@@ -29,7 +29,7 @@ export const createEnergyBasedVAD = (config = {}) => {
       
       // Frequency analysis
       speechFreqMin: config.speechFreqMin || 80, // Hz
-      speechFreqMax: config.speechFreqMax || 8000, // Hz
+      speechFreqMax: config.speechFreqMax || 8000 // Hz
     },
     
     // Adaptive state

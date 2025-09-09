@@ -3,7 +3,7 @@
  * Unified system for managing all resources across the application
  */
 
-import { createResourcePool, type ResourcePool } from '../performance/resource-pool.js';
+import { createResourcePool, type ResourcePool } from '../performance/resource-pool.js'
 import { createMemoryManager } from './managers/memory-manager.js';
 import { createCacheManager } from './managers/cache-manager.js';
 import { createLifecycleManager } from './managers/lifecycle-manager.js';
@@ -207,27 +207,27 @@ export const createResourceManager = (config: ResourceManagerConfig = {}): Resou
     let resource: T;
 
     switch (type) {
-      case 'canvas':
-        resource = resourcePool.getCanvas(spec.width, spec.height) as T;
-        break;
-      case 'webgl':
-        resource = resourcePool.getWebGLContext(spec.type, spec.attributes) as T;
-        break;
-      case 'buffer':
-        if (spec.imageBuffer) {
-          resource = resourcePool.getImageBuffer(spec.width, spec.height, spec.channels) as T;
-        } else {
-          resource = resourcePool.getTypedArray(spec.type, spec.size) as T;
-        }
-        break;
-      case 'memory':
-        resource = await memory.allocate<T>(spec.size, spec.options);
-        break;
-      case 'cache':
-        resource = await cache.allocate<T>(spec.key, spec.value, spec.options) as T;
-        break;
-      default:
-        throw new Error(`Unknown resource type: ${type}`);
+    case 'canvas':
+      resource = resourcePool.getCanvas(spec.width, spec.height) as T;
+      break;
+    case 'webgl':
+      resource = resourcePool.getWebGLContext(spec.type, spec.attributes) as T;
+      break;
+    case 'buffer':
+      if (spec.imageBuffer) {
+        resource = resourcePool.getImageBuffer(spec.width, spec.height, spec.channels) as T;
+      } else {
+        resource = resourcePool.getTypedArray(spec.type, spec.size) as T;
+      }
+      break;
+    case 'memory':
+      resource = await memory.allocate<T>(spec.size, spec.options);
+      break;
+    case 'cache':
+      resource = await cache.allocate<T>(spec.key, spec.value, spec.options) as T;
+      break;
+    default:
+      throw new Error(`Unknown resource type: ${type}`);
     }
 
     // Register and track the resource
@@ -248,25 +248,25 @@ export const createResourceManager = (config: ResourceManagerConfig = {}): Resou
     }
 
     switch (resourceInfo.type) {
-      case 'canvas':
-        resourcePool.returnCanvas(resource);
-        break;
-      case 'webgl':
-        resourcePool.returnWebGLContext(resource);
-        break;
-      case 'buffer':
-        if (resource instanceof Uint8Array) {
-          resourcePool.returnImageBuffer(resource);
-        } else {
-          resourcePool.returnTypedArray(resource);
-        }
-        break;
-      case 'memory':
-        await memory.deallocate(resource);
-        break;
-      case 'cache':
-        await cache.deallocate(resource);
-        break;
+    case 'canvas':
+      resourcePool.returnCanvas(resource);
+      break;
+    case 'webgl':
+      resourcePool.returnWebGLContext(resource);
+      break;
+    case 'buffer':
+      if (resource instanceof Uint8Array) {
+        resourcePool.returnImageBuffer(resource);
+      } else {
+        resourcePool.returnTypedArray(resource);
+      }
+      break;
+    case 'memory':
+      await memory.deallocate(resource);
+      break;
+    case 'cache':
+      await cache.deallocate(resource);
+      break;
     }
 
     // Unregister and stop tracking

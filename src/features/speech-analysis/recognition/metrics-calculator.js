@@ -402,13 +402,13 @@ export const createMetricsCalculator = () => {
     const report = generateMetricsReport(state, 'full');
     
     switch (format.toLowerCase()) {
-      case 'csv':
-        return convertToCSV(report);
-      case 'txt':
-        return convertToText(report);
-      case 'json':
-      default:
-        return JSON.stringify(report, null, 2);
+    case 'csv':
+      return convertToCSV(report);
+    case 'txt':
+      return convertToText(report);
+    case 'json':
+    default:
+      return JSON.stringify(report, null, 2);
     }
   };
 

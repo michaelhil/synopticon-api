@@ -3,7 +3,7 @@
  * Manages resource lifecycle, tracking, and automated cleanup
  */
 
-import type { ResourcePool } from '../../performance/resource-pool.js';
+import type { ResourcePool } from '../../performance/resource-pool.js'
 import type { createMemoryManager } from './memory-manager.js';
 import type { createCacheManager } from './cache-manager.js';
 
@@ -221,35 +221,35 @@ export const createLifecycleManager = (
 
       // Type-specific cleanup
       switch (tracked.type) {
-        case 'canvas':
-          if (state.managers.resourcePool) {
-            state.managers.resourcePool.returnCanvas(tracked.resource);
+      case 'canvas':
+        if (state.managers.resourcePool) {
+          state.managers.resourcePool.returnCanvas(tracked.resource);
+        }
+        break;
+      case 'webgl':
+        if (state.managers.resourcePool) {
+          state.managers.resourcePool.returnWebGLContext(tracked.resource);
+        }
+        break;
+      case 'buffer':
+        if (state.managers.resourcePool) {
+          if (tracked.resource instanceof Uint8Array) {
+            state.managers.resourcePool.returnImageBuffer(tracked.resource);
+          } else {
+            state.managers.resourcePool.returnTypedArray(tracked.resource);
           }
-          break;
-        case 'webgl':
-          if (state.managers.resourcePool) {
-            state.managers.resourcePool.returnWebGLContext(tracked.resource);
-          }
-          break;
-        case 'buffer':
-          if (state.managers.resourcePool) {
-            if (tracked.resource instanceof Uint8Array) {
-              state.managers.resourcePool.returnImageBuffer(tracked.resource);
-            } else {
-              state.managers.resourcePool.returnTypedArray(tracked.resource);
-            }
-          }
-          break;
-        case 'memory':
-          if (state.managers.memory) {
-            await state.managers.memory.deallocate(tracked.resource);
-          }
-          break;
-        case 'cache':
-          if (state.managers.cache) {
-            await state.managers.cache.deallocate(tracked.resource);
-          }
-          break;
+        }
+        break;
+      case 'memory':
+        if (state.managers.memory) {
+          await state.managers.memory.deallocate(tracked.resource);
+        }
+        break;
+      case 'cache':
+        if (state.managers.cache) {
+          await state.managers.cache.deallocate(tracked.resource);
+        }
+        break;
       }
 
       // Remove from tracking

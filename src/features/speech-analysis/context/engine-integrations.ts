@@ -8,7 +8,7 @@ import {
   type SemanticSearchEngine,
   type SemanticSearchOptions,
   type SemanticSearchResult
-} from './semantic-search-engine.ts';
+} from './semantic-search-engine.js';
 
 import {
   createTopicModelingEngine,
@@ -17,17 +17,17 @@ import {
   type TopicExtractionResult,
   type TopicEvolutionResult,
   type TopicModelingOptions
-} from './topic-modeling-engine.ts';
+} from './topic-modeling-engine.js';
 
 import {
   createContextSummarizationEngine,
   type ContextSummarizationEngine,
   type SummarizationOptions,
   type SummaryResult
-} from './context-summarization-engine.ts';
+} from './context-summarization-engine.js';
 
 import { type ContextManagerState } from './context-manager-factory.js';
-import { type ConversationContext } from './base-context-manager.ts';
+import { type ConversationContext } from './base-context-manager.js';
 
 /**
  * Creates engine integration functions for the context manager

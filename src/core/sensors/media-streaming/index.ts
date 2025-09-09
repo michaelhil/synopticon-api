@@ -52,7 +52,7 @@ const handleFrameDistribution = async (
 export const createMediaStreamingSensor = (config: MediaStreamConfig) => {
   const distributor = createUniversalDistributor({ maxClients: 50, compressionLevel: 6 });
   let isStreaming = false;
-  let stats = createStreamingStats(config.quality);
+  const stats = createStreamingStats(config.quality);
 
   const startStream = async (): Promise<boolean> => {
     try {

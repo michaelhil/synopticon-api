@@ -138,13 +138,13 @@ export const createEmptyStats = (): SpeakerAnalysisStats => ({
  */
 export const generateSpeakerId = (index: number): string => {
   const labels = ['Speaker A', 'Speaker B', 'Speaker C', 'Speaker D', 'Speaker E', 
-                 'Speaker F', 'Speaker G', 'Speaker H', 'Speaker I', 'Speaker J'];
+    'Speaker F', 'Speaker G', 'Speaker H', 'Speaker I', 'Speaker J'];
   
   if (index < labels.length) {
     return labels[index];
   }
   
-  return `Speaker ${String.fromCharCode(65 + (index % 26))}${Math.floor(index / 26) || ''}`;
+  return `Speaker ${String.fromCharCode(65 + (index % 26)${Math.floor(index / 26) || ''}`;
 };
 
 /**

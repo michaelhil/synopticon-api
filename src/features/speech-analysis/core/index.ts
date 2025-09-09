@@ -6,18 +6,18 @@
 import { 
   createConfigurationManager,
   type SpeechAnalysisConfiguration 
-} from './configuration-manager.ts';
+} from './configuration-manager.js';
 
 import { 
   createEventManager,
   type EventManager,
   type EventSubscription 
-} from './event-manager.ts';
+} from './event-manager.js';
 
 import { 
   createComponentFactory,
   type ComponentFactory 
-} from './component-factory.ts';
+} from './component-factory.js';
 
 // Re-export utility functions
 import { validatePrompts, suggestPrompts } from '../analysis-engine.js';
@@ -31,7 +31,7 @@ import {
   createLLMConfig,
   createSpeechPipelineStatus,
   createSpeechEvent
-} from '../../../core/configuration/types.ts';
+} from '../../../core/configuration/types.js';
 
 export interface SpeechAnalysisAPI {
   // Core functionality
@@ -117,7 +117,7 @@ export const createSpeechAnalysisAPI = (config: Record<string, any> = {}): Speec
       const initResult = await componentFactory.initializeComponents(configuration);
 
       if (!initResult.success) {
-        throw new Error(`Component initialization failed: ${initResult.errors.join(', ')}`);
+        throw new Error(`Component initialization failed: ${initResult.errors.join(', ')`);
       }
 
       // Setup event forwarding from components
@@ -281,16 +281,17 @@ export const createSpeechAnalysisAPI = (config: Record<string, any> = {}): Speec
     };
 
     switch (format.toLowerCase()) {
-      case 'json':
-        return JSON.stringify(exportData, null, 2);
-      case 'csv':
-        // Simple CSV conversion for analysis history
-        const csvRows = history.map(item => 
-          `"${item.timestamp}","${item.text?.replace(/"/g, '""') || ''}","${item.analysis?.join('; ') || ''}"`
-        );
-        return ['Timestamp,Text,Analysis', ...csvRows].join('\n');
-      default:
-        return exportData;
+    case 'json':
+      return JSON.stringify(exportData, null, 2);
+    case 'csv':
+      // Simple CSV conversion for analysis history
+      const csvRows = history.map(item => 
+        `"${item.timestamp}","${item.text?.replace(/"/g, '""') || ''}","${item.analysis?.join('\n'); ') || ''}"`
+      );
+      return ['Timestamp,Text,Analysis', ...csvRows].join('\n')
+
+    default:
+      return exportData;
     }
   };
 

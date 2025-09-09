@@ -5,7 +5,7 @@
  */
 
 import { createEnhancedMemoryPool } from '../../shared/utils/enhanced-memory-pool.js';
-import { createQualityAnalyzerConfig, createQualityAnalyzerState } from './quality-analyzer-config.js';
+import { createQualityAnalyzerConfig, createQualityAnalyzerState } from './quality-analyzer-config.ts';
 import { createQualityAnalysisCore } from './quality-analyzer-core.js';
 import { createQualityStatsManager } from './quality-analyzer-stats.js';
 

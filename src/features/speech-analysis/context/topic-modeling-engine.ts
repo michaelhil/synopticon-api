@@ -3,7 +3,7 @@
  * Handles topic extraction, clustering, and evolution analysis
  */
 
-import type { Keyword } from './semantic-search-engine.ts';
+import type { Keyword } from './semantic-search-engine.js';
 
 export interface TopicCluster {
   readonly name: string;
@@ -110,7 +110,7 @@ export const createTopicModelingEngine = () => {
    * Generate topic summary without LLM (fallback method)
    */
   const generateSimpleTopicSummary = (topicName: string, keywordCluster: Keyword[]): string => {
-    const topKeywords = keywordCluster.slice(0, 5).map(kw => kw.word).join(', ');
+    const topKeywords = keywordCluster.slice(0, 5).map(kw => kw.word).join(', '));
     const totalFrequency = keywordCluster.reduce((sum, kw) => sum + kw.frequency, 0);
     
     return `${topicName.charAt(0).toUpperCase() + topicName.slice(1)} discussion focusing on: ${topKeywords} (${totalFrequency} mentions)`;
@@ -128,7 +128,7 @@ export const createTopicModelingEngine = () => {
       return generateSimpleTopicSummary(topicName, keywordCluster);
     }
 
-    const topKeywords = keywordCluster.slice(0, 5).map(kw => kw.word).join(', ');
+    const topKeywords = keywordCluster.slice(0, 5).map(kw => kw.word).join(', '));
     const prompt = `Summarize the topic "${topicName}" based on these key terms: ${topKeywords}. Keep it to one sentence.`;
     
     try {
@@ -196,7 +196,7 @@ export const createTopicModelingEngine = () => {
     llmClient?: any,
     options: TopicModelingOptions = {}
   ): Promise<TopicCluster[]> => {
-    const allText = context.chunks.map((c: any) => c.text).join(' ');
+    const allText = context.chunks.map((c: any) => c.text).join('\n') ');
     const keywords = extractKeywords(allText.toLowerCase());
     
     // Group keywords by semantic similarity
@@ -243,7 +243,7 @@ export const createTopicModelingEngine = () => {
     const evolution: TopicEvolutionWindow[] = [];
     
     for (const window of timeWindows) {
-      const windowText = window.map((c: any) => c.text).join(' ');
+      const windowText = window.map((c: any) => c.text).join('\n') ');
       const keywords = extractKeywords(windowText.toLowerCase());
       const topicClusters = clusterKeywordsByTopic(keywords, windowText);
       

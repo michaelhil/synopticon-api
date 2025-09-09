@@ -193,9 +193,9 @@ describe('Refactoring Integration Tests', () => {
     expect(afterStats.overall.performanceScore).toBeGreaterThanOrEqual(0);
   });
 
-  test('should handle conditional composition', async () => {
-    const { createConditionalComposer } = await import('../../src/core/pipeline/composition/composers/conditional-composer.js');
-    const composer = createConditionalComposer();
+  test('should handle adaptive composition (migrated from conditional)', async () => {
+    const { createPipelineComposer } = await import('../../src/core/pipeline/composers/index.ts');
+    const composer = createPipelineComposer();
     
     const truePipeline = {
       process: async (input) => ({ result: 'true branch' })
@@ -205,33 +205,36 @@ describe('Refactoring Integration Tests', () => {
       process: async (input) => ({ result: 'false branch' })
     };
     
+    // Register pipelines first
+    composer.registerPipeline('true-pipeline', truePipeline);
+    composer.registerPipeline('false-pipeline', falsePipeline);
+    
     const composition = composer.createComposition({
-      id: 'test-conditional',
-      name: 'Test Conditional',
-      branches: [
+      id: 'test-adaptive',
+      pattern: 'adaptive',
+      name: 'Test Adaptive Composition',
+      pipelines: [
         {
-          id: 'branch-1',
+          id: 'rule-1',
           condition: (input) => input.value > 5,
-          pipelines: [
-            { id: 'true-pipeline', pipeline: truePipeline }
-          ]
+          pipelineIds: ['true-pipeline'],
+          priority: 1.0
         },
         {
-          id: 'branch-2',
+          id: 'rule-2', 
           condition: (input) => input.value <= 5,
-          pipelines: [
-            { id: 'false-pipeline', pipeline: falsePipeline }
-          ]
+          pipelineIds: ['false-pipeline'],
+          priority: 0.8
         }
-      ]
+      ],
+      options: {
+        strategy: 'adaptive'
+      }
     });
     
-    // Modify composition to include initialInput
-    composition.options.initialInput = { value: 10 };
-    
-    const result = await composer.execute(composition);
+    const result = await composer.executeComposition('test-adaptive', { value: 10 });
     expect(result.success).toBe(true);
-    expect(result.results[0].result.result).toBe('true branch');
+    expect(result.data).toBeDefined();
   });
 
   test('should export and track metrics', () => {

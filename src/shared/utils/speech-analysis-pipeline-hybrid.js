@@ -13,7 +13,7 @@ import {
   createSpeechAnalysisResult
 } from '../core/types.js';
 import { createSpeechAnalysisAPI } from '../speech-analysis/index.js';
-import { createSpeechAnalysisConfig } from './speech-analysis-config.js';
+import { createSpeechAnalysisConfig } from './speech-analysis-config.ts';
 import { createSessionManager } from './speech-analysis-session.js';
 import { createMetricsTracker } from './speech-analysis-metrics.js';
 import { createEventManager } from './speech-analysis-events.js';

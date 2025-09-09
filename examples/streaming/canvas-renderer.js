@@ -68,7 +68,7 @@ export const createCanvasRenderer = () => {
         ctx.beginPath();
         
         // Move to first point
-        const firstPoint = points[0];
+        const [firstPoint] = points;
         ctx.moveTo(firstPoint.x * ctx.canvas.width, firstPoint.y * ctx.canvas.height);
         
         // Draw lines to subsequent points

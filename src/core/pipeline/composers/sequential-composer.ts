@@ -11,7 +11,7 @@ import {
   ExecutionResult,
   PipelineInfo,
   executeWithTimeout
-} from './base-composer.ts';
+} from './base-composer.js';
 
 export interface SequentialCompositionOptions {
   passResults?: boolean;
@@ -146,10 +146,6 @@ export const executeSequential = async (
       results.push(errorResult);
       failedPipelines++;
 
-      // Handle retry logic
-      if (composition.options.retryCount && composition.options.retryCount > 0) {
-        // TODO: Implement retry logic
-      }
 
       if (composition.options.executionStrategy === ExecutionStrategy.FAIL_FAST) {
         throw error;

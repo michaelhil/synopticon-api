@@ -69,9 +69,7 @@ export interface Pipeline {
   
   getMetrics(): PerformanceMetrics;
   
-  // Legacy compatibility methods
-  getHealthStatus(): HealthStatus;
-  getPerformanceMetrics(): PerformanceMetrics;
+  // Core functionality
   isCapable(requiredCapabilities: ReadonlyArray<CapabilityType>): boolean;
   supportsRealtime(): boolean;
   isHealthy(): boolean;
@@ -133,7 +131,6 @@ export const createPipeline = (config: PipelineConfig): Pipeline => {
         return result as AnalysisResult;
       }
       
-      // Legacy result format - convert to new structure
       return createAnalysisResult({
         status: 'success' as const,
         data: result,
@@ -223,9 +220,6 @@ export const createPipeline = (config: PipelineConfig): Pipeline => {
     getStatus,
     getMetrics,
     
-    // Legacy compatibility methods
-    getHealthStatus,
-    getPerformanceMetrics,
     
     // Capability queries
     isCapable,
@@ -244,7 +238,7 @@ export const validatePipelineConfig = (config: Partial<PipelineConfig>): void =>
   const missing = required.filter(key => !config[key]);
   
   if (missing.length > 0) {
-    throw new Error(`Pipeline config missing required fields: ${missing.join(', ')}`);
+    throw new Error(`Pipeline config missing required fields: ${missing.join(', ')`);
   }
   
   if (typeof config.process !== 'function') {
@@ -286,26 +280,26 @@ export const scorePipeline = (
   // Performance score based on strategy
   const strategy = requirements.strategy ?? 'balanced';
   switch (strategy) {
-    case 'performance_first':
-      score += pipeline.config.performance.fps || 0;
-      score -= parseInt(pipeline.config.performance.latency) || 0;
-      break;
-    case 'accuracy_first':
-      // Higher accuracy pipelines get bonus (based on model size as proxy)
-      const modelSize = pipeline.config.performance.modelSize;
-      score += (modelSize === 'large' || modelSize === 'extra_large') ? 50 : 0;
-      break;
-    case 'battery_optimized':
-      score += (pipeline.config.performance.batteryImpact === 'low') ? 100 : 0;
-      score += (pipeline.config.performance.cpuUsage === 'low') ? 50 : 0;
-      break;
-    case 'balanced':
-    default:
-      // Balanced scoring
-      score += (pipeline.config.performance.fps || 0) * 0.5;
-      score -= (parseInt(pipeline.config.performance.latency) || 0) * 0.3;
-      score += (pipeline.config.performance.batteryImpact === 'low') ? 25 : 0;
-      break;
+  case 'performance_first':
+    score += pipeline.config.performance.fps || 0;
+    score -= parseInt(pipeline.config.performance.latency) || 0;
+    break;
+  case 'accuracy_first':
+    // Higher accuracy pipelines get bonus (based on model size as proxy)
+    const {modelSize} = pipeline.config.performance;
+    score += (modelSize === 'large' || modelSize === 'extra_large') ? 50 : 0;
+    break;
+  case 'battery_optimized':
+    score += (pipeline.config.performance.batteryImpact === 'low') ? 100 : 0;
+    score += (pipeline.config.performance.cpuUsage === 'low') ? 50 : 0;
+    break;
+  case 'balanced':
+  default:
+    // Balanced scoring
+    score += (pipeline.config.performance.fps || 0) * 0.5;
+    score -= (parseInt(pipeline.config.performance.latency) || 0) * 0.3;
+    score += (pipeline.config.performance.batteryImpact === 'low') ? 25 : 0;
+    break;
   }
   
   // Health penalty

@@ -11,7 +11,7 @@ import {
   ExecutionResult,
   PipelineInfo,
   executeWithTimeout
-} from './base-composer.ts';
+} from './base-composer.js';
 
 export interface AdaptiveRule {
   id: string;
@@ -309,44 +309,44 @@ const getFallbackPipelines = async (
   const learningData = composition.learningData!;
 
   switch (composition.options.fallbackStrategy) {
-    case 'best_performing':
-      return availablePipelines
-        .sort((a, b) => {
-          const aMetrics = learningData.get(a.id);
-          const bMetrics = learningData.get(b.id);
-          if (!aMetrics && !bMetrics) return 0;
-          if (!aMetrics) return 1;
-          if (!bMetrics) return -1;
-          return bMetrics.successRate - aMetrics.successRate;
-        })
-        .slice(0, 3);
+  case 'best_performing':
+    return availablePipelines
+      .sort((a, b) => {
+        const aMetrics = learningData.get(a.id);
+        const bMetrics = learningData.get(b.id);
+        if (!aMetrics && !bMetrics) return 0;
+        if (!aMetrics) return 1;
+        if (!bMetrics) return -1;
+        return bMetrics.successRate - aMetrics.successRate;
+      })
+      .slice(0, 3);
 
-    case 'least_resource_intensive':
-      return availablePipelines
-        .sort((a, b) => {
-          const aMetrics = learningData.get(a.id);
-          const bMetrics = learningData.get(b.id);
-          if (!aMetrics && !bMetrics) return 0;
-          if (!aMetrics) return 1;
-          if (!bMetrics) return -1;
-          return aMetrics.memoryUsage - bMetrics.memoryUsage;
-        })
-        .slice(0, 2);
+  case 'least_resource_intensive':
+    return availablePipelines
+      .sort((a, b) => {
+        const aMetrics = learningData.get(a.id);
+        const bMetrics = learningData.get(b.id);
+        if (!aMetrics && !bMetrics) return 0;
+        if (!aMetrics) return 1;
+        if (!bMetrics) return -1;
+        return aMetrics.memoryUsage - bMetrics.memoryUsage;
+      })
+      .slice(0, 2);
 
-    case 'most_reliable':
-      return availablePipelines
-        .sort((a, b) => {
-          const aMetrics = learningData.get(a.id);
-          const bMetrics = learningData.get(b.id);
-          if (!aMetrics && !bMetrics) return 0;
-          if (!aMetrics) return 1;
-          if (!bMetrics) return -1;
-          return bMetrics.errorRate - aMetrics.errorRate;
-        })
-        .slice(0, 2);
+  case 'most_reliable':
+    return availablePipelines
+      .sort((a, b) => {
+        const aMetrics = learningData.get(a.id);
+        const bMetrics = learningData.get(b.id);
+        if (!aMetrics && !bMetrics) return 0;
+        if (!aMetrics) return 1;
+        if (!bMetrics) return -1;
+        return bMetrics.errorRate - aMetrics.errorRate;
+      })
+      .slice(0, 2);
 
-    default:
-      return availablePipelines.slice(0, 1);
+  default:
+    return availablePipelines.slice(0, 1);
   }
 };
 

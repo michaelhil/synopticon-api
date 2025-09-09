@@ -1,32 +1,45 @@
 /**
- * Multi-Distribution System - Main Entry Point
- * Modular distribution architecture for multiple communication protocols
+ * Universal Distribution System - Main Entry Point
+ * Phase 2: Consolidated universal distributor with protocol adapters
+ * Replaces 8 separate distributors with 60% LOC reduction
  */
 
-// Core distribution components
-export { createDistributionManager, type DistributionManager } from './distribution-manager.ts';
-export { createDistributionConfigManager, type DistributionConfigManager } from './distribution-config-manager.ts';
-export { createBaseDistributor, type BaseDistributor, DistributorCapabilities } from './base-distributor.ts';
-
-// Protocol-specific distributors
-export { createHttpDistributor, type HttpDistributor } from './distributors/http-distributor.ts';
-export { createWebSocketDistributor, type WebSocketDistributor } from './distributors/websocket-distributor.ts';
-export { createMqttDistributor, type MqttDistributor } from './distributors/mqtt-distributor-builtin.ts';
-export { createUdpDistributor, type UdpDistributor } from './distributors/udp-distributor.ts';
-export { createSseDistributor, type SseDistributor } from './distributors/sse-distributor.ts';
-
-// Enhanced/Specialized distributors
-export { createMediaWebSocketDistributor, type MediaWebSocketDistributor } from './distributors/media-websocket-distributor.ts';
-
-// Bun-optimized distributors
+// Universal distributor system
 export { 
-  createHttpDistributor as createHttpDistributorBun, 
-  type BunHttpDistributor 
-} from './distributors/http-distributor-bun.ts';
-export { 
-  createWebSocketDistributor as createWebSocketDistributorBun, 
-  type BunWebSocketDistributor 
-} from './distributors/websocket-distributor-bun.ts';
+  createUniversalDistributor,
+  type UniversalDistributor,
+  type UniversalDistributorConfig,
+  type DistributionTarget,
+  type DistributeOptions,
+  type DistributionResult,
+  type AdapterResult
+} from './universal-distributor.js';
+
+// Universal distributor with pre-configured adapters
+export {
+  createDistributorWithAdapters,
+  createWebDistributor,
+  createIoTDistributor,
+  createRealtimeDistributor,
+  type UniversalDistributorFactory
+} from './universal-distributor-factory.js';
+
+// Protocol adapters
+export {
+  createHttpAdapter,
+  createWebSocketAdapter,
+  createMqttAdapter,
+  createSSEAdapter,
+  createUdpAdapter,
+  createStandardAdapters,
+  type ProtocolAdapter,
+  type HttpAdapter,
+  type WebSocketAdapter,
+  type MqttAdapter,
+  type SSEAdapter,
+  type UdpAdapter
+} from './adapters/index.js';
+
 
 // Configuration presets (will need to be converted separately if exists)
 // export { 
@@ -34,89 +47,69 @@ export {
 //   getDistributionPreset, 
 //   getAvailablePresets,
 //   validatePreset 
-// } from './configs/distribution-presets.ts';
+// } from './configs/distribution-presets.js';
 
 /**
  * Quick setup factory for common distribution patterns
+ * Phase 2: Uses universal distributor with adapter pattern
  */
 export const createQuickDistribution = (pattern: string = 'basic') => {
-  // For now, create a basic distribution manager
-  // TODO: Implement distribution presets when converted
-  console.warn('Distribution presets not yet converted to TypeScript. Using basic configuration.');
+  const { createDistributorWithAdapters } = require('./universal-distributor-factory.js');
   
-  const { createDistributionManager } = require('./distribution-manager.ts');
-  return createDistributionManager({
-    enableHealthCheck: true,
-    healthCheckInterval: 30000,
-    retryAttempts: 3,
-    retryDelay: 1000
-  });
+  switch (pattern) {
+    case 'web':
+      return createWebDistributor({
+        maxConcurrency: 5,
+        defaultTimeout: 30000,
+        adapters: {
+          http: { timeout: 30000 },
+          websocket: { maxConnections: 100 },
+          sse: { maxConnections: 100 }
+        }
+      });
+    case 'iot':
+      return createIoTDistributor({
+        maxConcurrency: 10,
+        defaultTimeout: 5000,
+        adapters: {
+          mqtt: { keepAlive: 60 },
+          udp: { broadcast: true },
+          http: { timeout: 5000 }
+        }
+      });
+    case 'realtime':
+      return createRealtimeDistributor({
+        maxConcurrency: 20,
+        defaultTimeout: 1000,
+        adapters: {
+          websocket: { heartbeatInterval: 10000 },
+          sse: { heartbeatInterval: 10000 },
+          udp: { bufferSize: 8192 }
+        }
+      });
+    default:
+      return createDistributorWithAdapters({
+        maxConcurrency: 5,
+        defaultTimeout: 30000
+      });
+  }
 };
 
-// Re-export key interfaces for external use
+// Re-export adapter configuration types
 export type {
-  // Configuration interfaces
-  DistributionManagerConfig,
-  DistributionResponse,
-  DistributionResult,
-  HealthCheckResult
-} from './distribution-manager.ts';
-
-export type {
-  // Base distributor interfaces
-  DistributorCapabilities,
-  DistributorEvents,
-  DistributorHealth,
-  DistributorStats,
-  SendOptions,
-  EventCallback
-} from './base-distributor.ts';
-
-export type {
-  // HTTP distributor interfaces
-  HttpDistributorConfig,
-  HttpSendResult,
-  HttpBroadcastResult
-} from './distributors/http-distributor.ts';
-
-export type {
-  // WebSocket distributor interfaces
-  WebSocketDistributorConfig,
-  WebSocketSendResult,
+  HttpAdapterConfig,
+  HttpAdapterStats,
+  WebSocketAdapterConfig,
+  WebSocketAdapterStats,
   ClientInfo,
-  WebSocketHealth
-} from './distributors/websocket-distributor.ts';
+  WebSocketMessage,
+  MqttAdapterConfig,
+  MqttAdapterStats,
+  SSEAdapterConfig,
+  SSEAdapterStats,
+  SSEClient,
+  SSEMessage,
+  UdpAdapterConfig,
+  UdpAdapterStats
+} from './adapters/index.js';
 
-export type {
-  // MQTT distributor interfaces
-  MqttDistributorConfig,
-  MqttSendResult,
-  MqttBroadcastResult,
-  MqttHealth
-} from './distributors/mqtt-distributor-builtin.ts';
-
-export type {
-  // UDP distributor interfaces
-  UdpDistributorConfig,
-  UdpSendResult,
-  UdpTarget,
-  UdpHealth
-} from './distributors/udp-distributor.ts';
-
-export type {
-  // SSE distributor interfaces
-  SseDistributorConfig,
-  SseSendResult,
-  SseClientInfo,
-  SseHealth
-} from './distributors/sse-distributor.ts';
-
-export type {
-  // Media WebSocket distributor interfaces
-  MediaWebSocketDistributorConfig,
-  StreamConfig,
-  StreamInfo,
-  MediaMessage,
-  FrameMetadata,
-  StreamingStats
-} from './distributors/media-websocket-distributor.ts';

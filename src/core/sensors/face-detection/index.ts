@@ -38,7 +38,7 @@ const createMockDetectionResult = (frameData: FrameData, startTime: number): Fac
 
 // Factory function for face detection sensor
 export const createFaceDetectionSensor = (config: FaceDetectionConfig) => {
-  let pipeline: any = null;
+  const pipeline: any = null;
   let isInitialized = false;
   const distributor = createUniversalDistributor({});
 

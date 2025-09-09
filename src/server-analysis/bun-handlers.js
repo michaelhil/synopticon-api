@@ -22,55 +22,55 @@ export const createBunHandlers = (sessionManager, processTranscriptsFn, getSessi
         
         // Handle different actions
         switch (action) {
-          case 'analyze':
-          case undefined: // Default action
-            if (!transcripts || !Array.isArray(transcripts)) {
-              return new Response(JSON.stringify({
-                error: 'Transcripts array required'
-              }), { 
-                status: 400,
-                headers: { 'Content-Type': 'application/json' }
-              });
-            }
-            
-            const result = await processTranscriptsFn(sessionId, transcripts);
-            return new Response(JSON.stringify(result), {
-              headers: { 'Content-Type': 'application/json' }
-            });
-            
-          case 'getSession':
-            const sessionData = getSessionFn(sessionId);
-            if (!sessionData) {
-              return new Response(JSON.stringify({
-                error: 'Session not found'
-              }), { 
-                status: 404,
-                headers: { 'Content-Type': 'application/json' }
-              });
-            }
-            return new Response(JSON.stringify(sessionData), {
-              headers: { 'Content-Type': 'application/json' }
-            });
-            
-          case 'updateMetadata':
-            const metadata = updateSessionMetadataFn(sessionId, body.metadata || {});
-            return new Response(JSON.stringify({ sessionId, metadata }), {
-              headers: { 'Content-Type': 'application/json' }
-            });
-            
-          case 'endSession':
-            const ended = endSessionFn(sessionId);
-            return new Response(JSON.stringify({ sessionId, ended }), {
-              headers: { 'Content-Type': 'application/json' }
-            });
-            
-          default:
+        case 'analyze':
+        case undefined: // Default action
+          if (!transcripts || !Array.isArray(transcripts)) {
             return new Response(JSON.stringify({
-              error: `Unknown action: ${action}`
+              error: 'Transcripts array required'
             }), { 
               status: 400,
               headers: { 'Content-Type': 'application/json' }
             });
+          }
+            
+          const result = await processTranscriptsFn(sessionId, transcripts);
+          return new Response(JSON.stringify(result), {
+            headers: { 'Content-Type': 'application/json' }
+          });
+            
+        case 'getSession':
+          const sessionData = getSessionFn(sessionId);
+          if (!sessionData) {
+            return new Response(JSON.stringify({
+              error: 'Session not found'
+            }), { 
+              status: 404,
+              headers: { 'Content-Type': 'application/json' }
+            });
+          }
+          return new Response(JSON.stringify(sessionData), {
+            headers: { 'Content-Type': 'application/json' }
+          });
+            
+        case 'updateMetadata':
+          const metadata = updateSessionMetadataFn(sessionId, body.metadata || {});
+          return new Response(JSON.stringify({ sessionId, metadata }), {
+            headers: { 'Content-Type': 'application/json' }
+          });
+            
+        case 'endSession':
+          const ended = endSessionFn(sessionId);
+          return new Response(JSON.stringify({ sessionId, ended }), {
+            headers: { 'Content-Type': 'application/json' }
+          });
+            
+        default:
+          return new Response(JSON.stringify({
+            error: `Unknown action: ${action}`
+          }), { 
+            status: 400,
+            headers: { 'Content-Type': 'application/json' }
+          });
         }
         
       } catch (error) {
@@ -110,27 +110,27 @@ export const createBunHandlers = (sessionManager, processTranscriptsFn, getSessi
           const message = JSON.parse(data);
           
           switch (message.type) {
-            case 'transcript':
-              const result = await processTranscriptsFn(sessionId, [message.transcript]);
-              ws.send(JSON.stringify({
-                type: 'analysis',
-                ...result
-              }));
-              break;
+          case 'transcript':
+            const result = await processTranscriptsFn(sessionId, [message.transcript]);
+            ws.send(JSON.stringify({
+              type: 'analysis',
+              ...result
+            }));
+            break;
               
-            case 'getStatus':
-              const session = getSessionFn(sessionId);
-              ws.send(JSON.stringify({
-                type: 'status',
-                session: session ? session.summary : null
-              }));
-              break;
+          case 'getStatus':
+            const session = getSessionFn(sessionId);
+            ws.send(JSON.stringify({
+              type: 'status',
+              session: session ? session.summary : null
+            }));
+            break;
               
-            default:
-              ws.send(JSON.stringify({
-                type: 'error',
-                error: `Unknown message type: ${message.type}`
-              }));
+          default:
+            ws.send(JSON.stringify({
+              type: 'error',
+              error: `Unknown message type: ${message.type}`
+            }));
           }
           
         } catch (error) {

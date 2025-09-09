@@ -11,7 +11,7 @@ import {
   ExecutionResult,
   PipelineInfo,
   executeWithTimeout
-} from './base-composer.ts';
+} from './base-composer.js';
 
 export interface CascadeStage {
   id: string;
@@ -176,11 +176,11 @@ export const executeCascading = async (
             result.status === 'fulfilled' 
               ? result.value 
               : {
-                  success: false,
-                  error: result.reason?.message || 'Unknown error',
-                  pipelineId: stage.pipelines[index].id,
-                  stageId: stage.id
-                }
+                success: false,
+                error: result.reason?.message || 'Unknown error',
+                pipelineId: stage.pipelines[index].id,
+                stageId: stage.id
+              }
           ));
 
         } else {
@@ -422,30 +422,30 @@ const updateInputForNextStage = (
   propagation: CascadingCompositionOptions['resultPropagation']
 ): any => {
   switch (propagation) {
-    case 'all':
-      return {
-        original: originalInput,
-        stageResults: stageResults
-      };
+  case 'all':
+    return {
+      original: originalInput,
+      stageResults
+    };
 
-    case 'successful_only':
-      return {
-        original: originalInput,
-        results: stageResults.filter(r => r.success).map(r => r.data)
-      };
+  case 'successful_only':
+    return {
+      original: originalInput,
+      results: stageResults.filter(r => r.success).map(r => r.data)
+    };
 
-    case 'latest':
-      const latestResult = stageResults[stageResults.length - 1];
-      return latestResult?.success ? latestResult.data : originalInput;
+  case 'latest':
+    const latestResult = stageResults[stageResults.length - 1];
+    return latestResult?.success ? latestResult.data : originalInput;
 
-    case 'aggregated':
-      const successfulResults = stageResults.filter(r => r.success);
-      if (successfulResults.length === 0) return originalInput;
-      if (successfulResults.length === 1) return successfulResults[0].data;
-      return successfulResults.map(r => r.data);
+  case 'aggregated':
+    const successfulResults = stageResults.filter(r => r.success);
+    if (successfulResults.length === 0) return originalInput;
+    if (successfulResults.length === 1) return successfulResults[0].data;
+    return successfulResults.map(r => r.data);
 
-    default:
-      return originalInput;
+  default:
+    return originalInput;
   }
 };
 
@@ -460,32 +460,32 @@ const buildFinalResult = (
   const successfulStages = allResults.filter(r => r.success && r.isCascadeStage);
   
   switch (propagation) {
-    case 'all':
-      return {
-        stages: allResults,
-        context: {
-          stageResults: Object.fromEntries(context.stageResults),
-          pipelineResults: Object.fromEntries(context.pipelineResults)
-        }
-      };
+  case 'all':
+    return {
+      stages: allResults,
+      context: {
+        stageResults: Object.fromEntries(context.stageResults),
+        pipelineResults: Object.fromEntries(context.pipelineResults)
+      }
+    };
 
-    case 'successful_only':
-      return {
-        stages: successfulStages.map(s => s.data),
-        executionPath: context.executionPath
-      };
+  case 'successful_only':
+    return {
+      stages: successfulStages.map(s => s.data),
+      executionPath: context.executionPath
+    };
 
-    case 'latest':
-      const latestSuccessful = successfulStages[successfulStages.length - 1];
-      return latestSuccessful ? latestSuccessful.data : null;
+  case 'latest':
+    const latestSuccessful = successfulStages[successfulStages.length - 1];
+    return latestSuccessful ? latestSuccessful.data : null;
 
-    case 'aggregated':
-      if (successfulStages.length === 0) return null;
-      if (successfulStages.length === 1) return successfulStages[0].data;
-      return successfulStages.map(s => s.data);
+  case 'aggregated':
+    if (successfulStages.length === 0) return null;
+    if (successfulStages.length === 1) return successfulStages[0].data;
+    return successfulStages.map(s => s.data);
 
-    default:
-      return allResults;
+  default:
+    return allResults;
   }
 };
 
@@ -503,31 +503,31 @@ const performRollback = async (
 
   try {
     switch (composition.options.rollbackStrategy) {
-      case 'full':
-        // Rollback all completed stages
-        for (let i = lastSuccessfulStage; i >= 0; i--) {
-          const stage = composition.pipelines[i];
-          const rollbackHandler = composition.rollbackHandlers.get(stage.id);
-          if (rollbackHandler) {
-            await rollbackHandler(context);
-          }
+    case 'full':
+      // Rollback all completed stages
+      for (let i = lastSuccessfulStage; i >= 0; i--) {
+        const stage = composition.pipelines[i];
+        const rollbackHandler = composition.rollbackHandlers.get(stage.id);
+        if (rollbackHandler) {
+          await rollbackHandler(context);
         }
-        break;
+      }
+      break;
 
-      case 'stage':
-        // Rollback only the last successful stage
-        if (lastSuccessfulStage >= 0) {
-          const stage = composition.pipelines[lastSuccessfulStage];
-          const rollbackHandler = composition.rollbackHandlers.get(stage.id);
-          if (rollbackHandler) {
-            await rollbackHandler(context);
-          }
+    case 'stage':
+      // Rollback only the last successful stage
+      if (lastSuccessfulStage >= 0) {
+        const stage = composition.pipelines[lastSuccessfulStage];
+        const rollbackHandler = composition.rollbackHandlers.get(stage.id);
+        if (rollbackHandler) {
+          await rollbackHandler(context);
         }
-        break;
+      }
+      break;
 
-      case 'pipeline':
-        // Rollback individual failed pipelines (implementation specific)
-        break;
+    case 'pipeline':
+      // Rollback individual failed pipelines (implementation specific)
+      break;
     }
   } catch (rollbackError) {
     // Log rollback errors but don't fail the entire operation

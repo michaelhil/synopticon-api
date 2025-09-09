@@ -11,7 +11,7 @@ import {
   ExecutionResult,
   PipelineInfo,
   executeWithTimeout
-} from './base-composer.ts';
+} from './base-composer.js';
 
 export interface ConditionalStep {
   id: string;

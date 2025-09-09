@@ -11,7 +11,7 @@ import {
   ExecutionResult,
   PipelineInfo,
   executeWithTimeout
-} from './base-composer.ts';
+} from './base-composer.js';
 
 export interface ParallelCompositionOptions {
   maxConcurrent?: number;
@@ -167,11 +167,11 @@ export const executeParallel = async (
         result.status === 'fulfilled' 
           ? result.value 
           : {
-              pipelineId: sortedPipelines[index].id,
-              success: false,
-              error: result.reason?.message || 'Unknown error',
-              processingTime: 0
-            }
+            pipelineId: sortedPipelines[index].id,
+            success: false,
+            error: result.reason?.message || 'Unknown error',
+            processingTime: 0
+          }
       ));
     } else {
       // Use race condition - return as soon as we have enough successful results
@@ -180,11 +180,11 @@ export const executeParallel = async (
         result.status === 'fulfilled' 
           ? result.value 
           : {
-              pipelineId: sortedPipelines[index].id,
-              success: false,
-              error: result.reason?.message || 'Unknown error',
-              processingTime: 0
-            }
+            pipelineId: sortedPipelines[index].id,
+            success: false,
+            error: result.reason?.message || 'Unknown error',
+            processingTime: 0
+          }
       ));
     }
 

@@ -8,7 +8,7 @@ import {
   createConversationContext,
   createSpeechChunk,
   createSpeechEvent
-} from '../../../core/configuration/types.ts';
+} from '../../../core/configuration/types.js';
 
 export interface ConversationParticipant {
   readonly id: string;
@@ -284,7 +284,7 @@ export const createConversationContextManager = (config: ConversationContextConf
     if (!conversation || !configuration.enableTopicTracking) return [];
 
     // Simple keyword extraction - could be enhanced with LLM
-    const allText = conversation.turns.map(turn => turn.content).join(' ');
+    const allText = conversation.turns.map(turn => turn.content).join('\n') ');
     const words = allText.toLowerCase().split(/\s+/);
     const wordCounts = new Map<string, number>();
 

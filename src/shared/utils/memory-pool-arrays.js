@@ -21,17 +21,17 @@ export const createArrayManager = (state, factoryManager) => {
       const factory = factoryManager.getFactory(type);
       if (!factory) {
         switch (type) {
-          case 'Float32Array':
-            array = new Float32Array(size);
-            break;
-          case 'Uint8Array':
-            array = new Uint8Array(size);
-            break;
-          case 'Uint16Array':
-            array = new Uint16Array(size);
-            break;
-          default:
-            throw new Error(`Unsupported array type: ${type}`);
+        case 'Float32Array':
+          array = new Float32Array(size);
+          break;
+        case 'Uint8Array':
+          array = new Uint8Array(size);
+          break;
+        case 'Uint16Array':
+          array = new Uint16Array(size);
+          break;
+        default:
+          throw new Error(`Unsupported array type: ${type}`);
         }
       } else {
         array = factory(size);

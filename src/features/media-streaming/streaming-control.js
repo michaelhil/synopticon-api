@@ -111,8 +111,8 @@ export const getStreamingStatus = (state, deviceInfo) => ({
   quality: state.quality,
   profile: QUALITY_PROFILES[state.quality],
   stats: { ...state.stats },
-  hasVideo: !!state.videoElement,
-  hasAudio: !!state.audioContext,
+  hasVideo: Boolean(state.videoElement),
+  hasAudio: Boolean(state.audioContext),
   frameBuffer: {
     length: state.frameBuffer.length,
     maxSize: 100
@@ -125,42 +125,42 @@ export const getStreamingStatus = (state, deviceInfo) => ({
 export const processStreamCommand = async (state, deviceInfo, command) => {
   try {
     switch (command.type) {
-      case 'START':
-        return await startStreaming(state, deviceInfo);
+    case 'START':
+      return await startStreaming(state, deviceInfo);
       
-      case 'STOP':
-        return await stopStreaming(state, deviceInfo);
+    case 'STOP':
+      return await stopStreaming(state, deviceInfo);
       
-      case 'CHANGE_QUALITY':
-        if (!command.quality) {
-          throw new Error('Quality parameter required for CHANGE_QUALITY command');
-        }
-        return await changeQuality(state, command.quality);
+    case 'CHANGE_QUALITY':
+      if (!command.quality) {
+        throw new Error('Quality parameter required for CHANGE_QUALITY command');
+      }
+      return await changeQuality(state, command.quality);
       
-      case 'GET_STATUS':
-        return {
-          success: true,
-          status: getStreamingStatus(state, deviceInfo)
-        };
+    case 'GET_STATUS':
+      return {
+        success: true,
+        status: getStreamingStatus(state, deviceInfo)
+      };
       
-      case 'CAPTURE_FRAME':
-        const frameData = state.captureFrame ? state.captureFrame() : null;
-        return {
-          success: true,
-          frame: frameData,
-          timestamp: Date.now()
-        };
+    case 'CAPTURE_FRAME':
+      const frameData = state.captureFrame ? state.captureFrame() : null;
+      return {
+        success: true,
+        frame: frameData,
+        timestamp: Date.now()
+      };
       
-      case 'CAPTURE_AUDIO':
-        const audioData = state.captureAudioData ? state.captureAudioData() : null;
-        return {
-          success: true,
-          audio: audioData,
-          timestamp: Date.now()
-        };
+    case 'CAPTURE_AUDIO':
+      const audioData = state.captureAudioData ? state.captureAudioData() : null;
+      return {
+        success: true,
+        audio: audioData,
+        timestamp: Date.now()
+      };
       
-      default:
-        throw new Error(`Unknown stream command: ${command.type}`);
+    default:
+      throw new Error(`Unknown stream command: ${command.type}`);
     }
   } catch (error) {
     console.error(`Stream command '${command.type}' failed:`, error);

@@ -41,7 +41,7 @@ export const initializeMediaCapture = async (state, requestedQuality = 'medium')
       // Server-side: create virtual stream state
       state.quality = requestedQuality;
       state.mediaStream = null; // Virtual stream
-      console.log(`✅ Virtual media capture initialized successfully`);
+      console.log('✅ Virtual media capture initialized successfully');
       return true;
     }
 
@@ -64,7 +64,7 @@ export const initializeMediaCapture = async (state, requestedQuality = 'medium')
     await setupVideoFrameCapture(state);
     await setupAudioCapture(state);
     
-    console.log(`✅ Media capture initialized successfully`);
+    console.log('✅ Media capture initialized successfully');
     return true;
   } catch (error) {
     console.error('Media capture initialization failed:', error);
